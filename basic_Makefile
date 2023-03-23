@@ -1,0 +1,9 @@
+CXX = g++ -O3
+
+all: traj
+
+traj: src/trajectory.cpp
+	$(CXX) src/trajectory.cpp -o bin/mdtraj
+
+clean:
+	rm bin/mdtraj
