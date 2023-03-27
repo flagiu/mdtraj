@@ -8,16 +8,8 @@ https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
 #include<cstdlib>
 #include<complex>
 #include<cmath>
+#include "utility.hpp"
 using namespace std;
-
-void assert(bool condition, string msg)
-{
-  if(!condition)
-  {
-    cout << "[ERROR: " << msg << "]\n";
-    exit(1);
-  }
-}
 
 template<class ntype>
 complex<ntype> Y(int l, int m, myvec<ntype,3> R)

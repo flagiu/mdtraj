@@ -60,5 +60,5 @@ public:
     delete distro;
   }
 };
-randnumgen<double> randnum;
+static randnumgen<double> randnum;
 #endif

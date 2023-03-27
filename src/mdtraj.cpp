@@ -1,4 +1,10 @@
 #include "lib/mdtraj.hpp"
+#include "args.cpp"
+#include "statics.cpp"
+#include "dynamics.cpp"
+using namespace std;
+using ntype=double;
+using ptype=particle<ntype>;
 
 //-----------------Main----------------------------------------//
 

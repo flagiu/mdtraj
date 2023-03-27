@@ -11,7 +11,7 @@ class vecflex
   unsigned long int idx=0;
 public:
   //---- Constructors ----//
-  vecflex(){}
+  vecflex(){ N=0; }
   ~vecflex() {} // QUESTO DAREBBE ERRORE munmap_chunk(): invalid pointer --> { delete[] v; }
   //------- Operations ----------//
   void resize(int NN)

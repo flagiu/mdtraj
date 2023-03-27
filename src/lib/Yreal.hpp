@@ -6,15 +6,7 @@
 #define _Y_REAL_H_
 #include<cstdlib>
 #include "particle.hpp"
-
-void assert(bool condition, string msg)
-{
-  if(!condition)
-  {
-    cout << "[ERROR: " << msg << "]\n";
-    exit(1);
-  }
-}
+#include "utility.hpp"
 
 template<class ntype>
 ntype Y(int l, int m, myvec<ntype,3> r)
@@ -85,4 +77,4 @@ ntype Y(int l, int m, myvec<ntype,3> r)
   }
   return 10000.0; // useless return
 }
-# endif
+#endif

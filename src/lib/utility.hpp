@@ -1,3 +1,6 @@
+#ifndef _UTILITY_H_
+#define _UTILITY_H_
+
 #include<cstdlib>
 #include<fstream>
 #include<iostream>
@@ -6,7 +9,7 @@
 using namespace std;
 
 // Number of lines in a file
-int getLineCount(string file)
+static int getLineCount(string file)
 {
   int i=0;
   string str;
@@ -45,3 +48,5 @@ public:
     }
   }
 };
+
+#endif
