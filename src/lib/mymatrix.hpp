@@ -65,6 +65,16 @@ public:
     cout<<str<<": ";
     show();
   }
+  void write(fstream& o) const
+  {
+    for (auto i=0;i<rows();i++)
+    	for (auto j=0;j<cols();j++)
+    		{
+    		  o << setprecision(20) << M[i][j];
+    		  if(i==rows()-1 && j==cols()-1) o << '\n';
+    		  else				 o << ' ';
+    		}
+  }
   template <class ntype2>
   void to_array(ntype2 arr[Nr][Nc]) const
   {
@@ -83,6 +93,13 @@ public:
     int i;
     for (i=0; i < rows(); i++)
       M[i] += other[i];
+    return *this;
+  }
+  inline mymatrix<ntype,Nr,Nc>& operator -= (const mymatrix<ntype,Nr,Nc>& other)
+  {//matrix diff
+    int i;
+    for (i=0; i < rows(); i++)
+      M[i] -= other[i];
     return *this;
   }
   inline mymatrix<ntype,Nr,Nc>& operator += (const ntype& sc)
@@ -113,8 +130,25 @@ public:
       M[i] /= sc;
     return *this;
   }
+  
+  myvec<ntype,Nr> operator*(myvec<ntype,Nc> vec)
+  {//vector multiplication from right
+    myvec<ntype,Nr> vv;
+    for (auto i=0;i<Nr;i++) {
+      vv[i] = M[i]*vec;
+    }
+    return vv;
+  }
+  mymatrix<ntype,Nr,Nr> operator*(const mymatrix<ntype,Nc,Nr>& other)
+  {//matrix multiplication
+    mymatrix<ntype,Nr,Nr> mat;
+    for (auto i=0;i<Nr;i++)
+      mat[i] = M[i]*other;
+    return mat;
+  }
 
-  mymatrix<ntype,Nc,Nr> T()
+  //----------------------------------
+  mymatrix<ntype,Nc,Nr> T() const
   {
     mymatrix<ntype,Nc,Nr> mat;
     for (auto i=0;i<rows();i++)
@@ -135,15 +169,27 @@ public:
       }
     return mat;
   }
+  
+  mymatrix<ntype,Nr,Nr> square() const
+  {
+    
+    mymatrix<ntype,Nc,Nr> mat = (*this);
+    return mat*(this->T());
+  }
+  
+  ntype tr() const
+  {
+    ntype t=0.0;
+    if (rows()!=cols()) { cout << "Error: trace is defined only for square matrices."<<endl; exit(1); }
+    for(auto i=0;i<rows();i++) t+=M[i][i];
+    return t;
+  }
 
   ntype det() const
   {
     ntype d=0.0;
-    if (rows()!=cols())
-      {
-	cout << "Error: determinant is defined only for square matrices. Returning zero."<<endl;
-      }
-    else if (Nr==1) M[0][0];
+    if (rows()!=cols()) { cout << "Error: determinant is defined only for square matrices."<<endl; exit(1);}
+    if (Nr==1) d=M[0][0];
     else
       {
 	int sign=1;
@@ -164,31 +210,138 @@ public:
     for (auto i=0;i<rows();i++)
       M[i].ranf();
   }
+  
+  void set_identity()
+  {
+    if (rows()!=cols()) { cout << "Error: identity is defined only for square matrices."<<endl; exit(1);}
+    for (auto i=0;i<rows();i++) {
+      for (auto j=0;j<rows();j++) {
+        if(i==j) set(i,j, 1.0);
+        else     set(i,j, 0.0);
+      }
+    }
+    return;
+  }
+  
+  void set_diag(myvec<ntype,Nr> vec)
+  {
+    if (rows()!=cols()) { cout << "Error: diagonal is defined only for square matrices."<<endl; exit(1);}
+    for (auto i=0;i<rows();i++) {
+      for (auto j=0;j<rows();j++) {
+        if(i==j) set(i,j, vec[i]);
+        else     set(i,j,    0.0);
+      }
+    }
+    return;
+  }
+
+  myvec<ntype,Nr> diag() const
+  {
+    myvec<ntype,Nr> vec;
+    if (rows()!=cols()) { cout << "Error: diagonal is defined only for square matrices."<<endl; exit(1);}
+    for (auto i=0;i<rows();i++) vec[i] = M[i][i];
+    return vec;
+  }
+  
+  mymatrix<ntype,Nr,Nc> inverse() const
+  {
+    mymatrix<ntype,Nr,Nc> m;
+    ntype d;
+    if (rows()==2 && cols()==2) {
+       d = M[0][0]*M[1][1] - M[0][1]*M[1][0];
+       if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+       m[0][0] =  M[1][1]/d;
+       m[0][1] = -M[0][1]/d;
+       m[1][0] = -M[1][0]/d;
+       m[1][1] =  M[0][0]/d;
+    }
+    else if (rows()==3 && cols()==3) {
+       d = det();
+       if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+       ntype trace, traceSq;
+       mymatrix<ntype,Nr,Nc> self, sq, eye;
+       self = (*this);
+       sq = this->square();
+       eye.set_identity();
+       trace = tr();
+       traceSq = sq.tr();
+       m = ( ( 0.5*(trace*trace - traceSq)*eye ) - ( trace*self ) + sq ) / d;
+    }
+    else { cout << "[ERROR: inverse() not yet implemented for " << rows() << "x" << cols() << " matrices.]"<<endl; exit(1); }
+    return m;
+  }
 };
+
 template<class ntype,int Nr,int Nc>
-myvec<ntype,Nr> operator*(mymatrix<ntype,Nr,Nc>& mat, myvec<ntype,Nc>& vec)
+inline mymatrix<ntype,Nr,Nc>& operator+(mymatrix<ntype,Nr,Nc>& m1, mymatrix<ntype,Nr,Nc>& m2)
+{//pointwise sum
+  return m1+=m2;
+}
+template<class ntype,int Nr,int Nc>
+inline mymatrix<ntype,Nr,Nc>& operator-(mymatrix<ntype,Nr,Nc>& m1, mymatrix<ntype,Nr,Nc>& m2)
+{//pointwise diff
+  return m1-=m2;
+}
+
+template<class ntype,int Nr,int Nc>
+inline mymatrix<ntype,Nr,Nc>& operator*(const ntype sc, mymatrix<ntype,Nr,Nc>& m)
+{//scalar mult from left
+  return m*=sc;
+}
+
+template<class ntype,int Nr,int Nc>
+inline mymatrix<ntype,Nr,Nc>& operator*(mymatrix<ntype,Nr,Nc>& m, const ntype sc)
+{//scalar mult from right
+  return m*=sc;
+}
+
+template<class ntype,int Nr,int Nc>
+inline mymatrix<ntype,Nr,Nc>& operator/(mymatrix<ntype,Nr,Nc>& m, const ntype sc)
+{//scalar div from right
+  return m/=sc;
+}
+/*
+template<class ntype,int Nr,int Nc>
+myvec<ntype,Nr> operator*(const mymatrix<ntype,Nr,Nc>& mat, const myvec<ntype,Nc>& vec)
 {//vector multiplication from right
   myvec<ntype,Nr> vv;
   for (auto i=0;i<Nr;i++)
     vv[i] = mat[i]*vec;
   return vv;
 }
+
 template<class ntype,int Nr,int Nc>
-myvec<ntype,Nc> operator*( myvec<ntype,Nr>& vec, mymatrix<ntype,Nr,Nc>& mat)
-{//vector multiplication from left
-  mymatrix<ntype,Nc,Nr> matT=mat.T();
-  return matT*vec;
-}
-template<class ntype,int Nr,int Nc>
-mymatrix<ntype,Nr,Nr> operator*(mymatrix<ntype,Nr,Nc>& m1, mymatrix<ntype,Nc,Nr>& m2)
+mymatrix<ntype,Nr,Nr>& operator*(const mymatrix<ntype,Nr,Nc>& m1, const mymatrix<ntype,Nc,Nr>& m2)
 {//matrix multiplication
   mymatrix<ntype,Nr,Nr> mat;
   for (auto i=0;i<Nr;i++)
     mat[i] = m1[i]*m2;
   return mat;
 }
+*/
+template<class ntype,int Nr,int Nc>
+myvec<ntype,Nc> operator*(myvec<ntype,Nr>& vec, const mymatrix<ntype,Nr,Nc>& mat)
+{//vector multiplication from left
+  mymatrix<ntype,Nc,Nr> matT=mat.T();
+  return matT*vec;
+}
+//vector multiplication from right is implemented inside the class!
+
+template<class ntype, int N>
+myvec<ntype,N> mic(mymatrix<ntype,N,N> box, mymatrix<ntype,N,N>& boxInv, myvec<ntype,N>& vec)
+{ // apply MIC for non-orthorombic boxes (if you already know the inverse)
+  return vec - box * round(boxInv*vec);
+}
+template<class ntype, int N>
+myvec<ntype,N> mic(mymatrix<ntype,N,N>& box, myvec<ntype,N>& vec)
+{ // apply MIC for non-orthorombic boxes
+  return mic(box, box.inverse(), vec);
+}
+
+
 using matrix3d=mymatrix<double,3,3>;
 
+//-----------------------------------------------------------------//
 template <class ntype> class mymatrix<ntype,1,1>
 {
   using mv=myvec<ntype,1>;
@@ -214,6 +367,13 @@ public:
   ntype det()
   {
     return M[0][0];
+  }
+  const mymatrix<ntype,1,1> inverse() const
+  {
+    mymatrix<ntype,1,1> m;
+    if( M[0][0]==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+    m[0][0] = 1.0/M[0][0];
+    return m;
   }
   mymatrix()
   {

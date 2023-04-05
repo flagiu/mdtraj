@@ -1,5 +1,6 @@
 #include "lib/mdtraj.hpp"
 #include "args.cpp"
+#include "input.cpp"
 #include "statics.cpp"
 #include "dynamics.cpp"
 using namespace std;

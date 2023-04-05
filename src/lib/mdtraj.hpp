@@ -2,7 +2,11 @@
 #define _MDTRAJ_H_
 
 /*
- TO DO: 
+ TO DO:
+  - Correct non-orthorombic PBC
+  - Add more input file types
+  - Read non-orthorombic frames from xyz or similar
+  - Implement multi-species
  Optimization ideas:
 
 */
@@ -14,20 +18,27 @@
 #include "utility.hpp"
 #include "vecflex.hpp"
 #include "particle.hpp"
+#include "mymatrix.hpp"
 #include "Ycomplex.hpp"
 using namespace std;
+
+enum class FileType {
+  XYZ, CONTCAR, XDATCAR
+};
 
 template<class ntype, class ptype>
 class Trajectory {
 public:
   using vec=myvec<ntype,3>;
+  using mat=mymatrix<ntype,3,3>;
   int N; // number of particles
   vec L; // dimensions of an orthorombic simulation box ( ??? centered in 0: -Lx/2 < x < Lx/2 )
+  mat box, boxInv; // most general simulation box 
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep, period, rdf_nbins, adf_nbins;
   bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf; // compute or not
-  string s_xyz, tag, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf; // for file naming
+  string s_in, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf; // for file naming
   int l; //angular momentum  for bond orientational parameter
   static const int Nshells=3;
   ntype cutoff[Nshells]; // cutoff radii
@@ -48,6 +59,7 @@ private:
   fstream fin, fout;
   stringstream ss;
   ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw;
+  FileType filetype;
 
   int ij2int(int i, int j, int N){
     return (i<j ? N*i+j : N*j+i); // i<j = 0,...,N-1
@@ -80,7 +92,8 @@ public:
     cout << " c_rdf = \t " << c_rdf << endl;
     cout << " c_adf = \t " << c_adf << endl;
     cout << " l = \t " << l << endl;
-    cout << " L = \t "; L.show();
+    cout << " box = \t "; box.show();
+    cout << " box inverse = \t "; boxInv.show();
     cout << " p1 = \t " << p1 << endl;
     cout << " p2 = \t " << p2 << endl;
     cout << " period = \t " << period << endl;
@@ -90,7 +103,7 @@ public:
     cout << " tag = \t " << tag << endl;
     cout << " V = \t " << V << endl;
     for(auto  i=0;i<Nshells;i++) cout << " rcut" << i << " = \t " << cutoff[i] << endl;
-    cout << " s_xyz = \t " << s_xyz << endl;
+    cout << " s_in = \t " << s_in << endl;
     cout << endl;
   }
 
@@ -103,7 +116,9 @@ public:
     c_msd = false;
     c_rdf = false;
     c_adf = false;
-    s_xyz="dump.run.xyz";
+    filetype=FileType::XYZ;
+    s_ndens="ndens";
+    s_box="box";
     s_coordnum="coordnum";
     s_bondorient="boo";
     s_bondcorr="boc";
@@ -114,13 +129,15 @@ public:
     s_adf="adf";
     tag="";
     period = -1; // default: don't average over t0 for MSD
+    L << 20, 20, 20; // makes sense only if box is diagonal (orthoromibic box)
+    set_box_from_L();
     cutoff[0] = 3.75; // 3.6 in glass, 3.75-3.89 in xtal
     cutoff[1] = 5.15;
     cutoff[2] = 8.8;
     l = 4;
-    L << 20,20,20;
     p1half=6;
     qldot_th = 0.65;
+    adf_nbins=0;
     rdf_nbins=0;
     // Update parameters with input arguments:
     args(argc, argv);
@@ -140,14 +157,21 @@ public:
     if(l==0) cout << "[WARNING: bond orientation order parameter with l=0 is always equal to 1.0]\n";
   }
   
-  void set_L(ntype Lx, ntype Ly, ntype Lz) {
-    L << Lx, Ly, Lz;
+  void set_box_from_L() {
+    box.set_diag(L);
+    boxInv = box.inverse();
     compute_volume();
   }
 
   void compute_volume() {
-    V = L.prod(); // valid only for orthorombic box
+    //V = L.prod(); // valid only for orthorombic box
+    V = fabs(box.det());
   }
+  
+  void read_frame(fstream &i, bool resetN);
+  void read_contcar_frame(fstream &i, bool resetN);
+  void read_xdatcar_frame(fstream &i, bool resetN);
+  void read_xyz_frame(fstream &i, bool resetN);
   
   //------- COMPUTE things ---------------//
   
@@ -155,33 +179,38 @@ public:
   {
     PrintProgress printProgress;
     if(verbose || debug) {cout << "Begin of run():\n"; print_state();}
-    nlines = getLineCount(s_xyz);
-    if(debug) cout << "Read " << nlines << " lines in file " << s_xyz << ". Opening again for reading trajectory.\n";
-    fin.open(s_xyz, ios::in);
-    read_xyz_frame(fin, true);
-    invN = 1.0/N;
-    nframes = nlines / (N+2);
+    nlines = getLineCount(s_in);
+    if(debug) cout << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
+    fin.open(s_in, ios::in);
+    
+    if(filetype==FileType::CONTCAR) {timestep=-1; dtframe = 1; } // set manual time for CONTCAR
+    read_frame(fin, true);
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << ", t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << " (assuming N is constant).\n";
-    read_xyz_frame(fin, false);
-    dtframe = timestep - t0frame;
+    
+    read_frame(fin, false);
+    if(filetype!=FileType::CONTCAR) dtframe = timestep - t0frame;
     if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
     init_computations();
     if(debug) cout << "Initialized arrays for computations.\n";
     fin.close();
+    
     // Restart reading
-    fin.open(s_xyz, ios::in);
+    fin.open(s_in, ios::in);
     printProgress.init( 0.0 );
+    if(filetype==FileType::CONTCAR) {timestep=-1; } // set manual time
     for(int i=0; i<nframes; i++)
     {
-      read_xyz_frame(fin, false);
+      read_frame(fin, false);
       if(N != ps.size()) { cout << "[ERROR: N has changed]\n"; exit(1); }
       if( (timestep - t0frame)%dtframe != 0) {
         cout << "[ERROR: timestep interval has changed]\n";
         cout << "[t0frame = "<<t0frame<<", dtframe = "<<dtframe<<", timestep = "<<timestep<<"]\n";
         exit(1);
       }
+      print_box();
+      compute_density();
       if(maxshell>0) build_neigh();
       if(c_coordnum) compute_coordnum();
       if(c_bondorient) compute_bondorient();
@@ -196,26 +225,12 @@ public:
     if(debug || verbose) cout << "\n\nExecution completed.\n\n";
   }
 
-  void read_xyz_frame(fstream &i, bool resetN)
-  {
-    string line, a,b,c,d;
-    getline(i,line); // first line
-    istringstream(line) >> a;
-    N = stoi(a);
-    if(debug) cout << "  Line 1: " << N << " atoms\n";
-    getline(i,line); // second line
-    istringstream(line) >> b >> c >> d;
-    timestep = stoi(d);
-    if(debug) cout << "  Line 2: Timestep " << timestep << endl;
-    if(resetN) ps.resize(N);
-    for(auto &p: ps) p.read_xyz(i); // N particle lines
-    if(debug) cout << "  Read particle positions DONE.\n";
-  }
 
-  //-------------Trajectory analysis---------------------------//
+  //-------------Trajectory analysis, implemented in ../statics.cpp and ../dynamics.cpp -----------------//
 
   void init_computations() {
-    ndens = N/V;
+    init_box();
+    init_density();
     if(maxshell>0) init_neigh();
     if(c_coordnum) init_coordnum();
     if(c_bondorient) init_bondorient();
@@ -224,6 +239,30 @@ public:
     if(c_adf) init_adf();
   }
 
+  void init_density() {
+    compute_volume();
+    ndens = N/V;
+    ss.str(std::string()); ss << s_ndens << tag << ".dat"; fout.open(ss.str(), ios::out);
+    fout << "#Timestep, Number density\n";
+    fout.close();
+  }
+  void compute_density() {
+    compute_volume();
+    ndens = N/V;
+    ss.str(std::string()); ss << s_ndens << tag << ".dat"; fout.open(ss.str(), ios::app);
+    fout << timestep << " " << ndens << endl;
+    fout.close();
+  }
+  void init_box() {
+    ss.str(std::string()); ss << s_box << tag << ".dat"; fout.open(ss.str(), ios::out);
+    fout << "#Ax Bx Cx Ay By Cy Az Bz Cz\n";
+    fout.close();
+  }
+  void print_box() {
+    ss.str(std::string()); ss << s_box << tag << ".dat"; fout.open(ss.str(), ios::app);
+    box.write(fout);
+    fout.close();
+  }
   void init_neigh(){
     int u;
     for(u=0;u<maxshell;u++){

@@ -360,11 +360,11 @@ inline myvec<ntype,N>& operator*(const int& sc,  myvec<ntype,N> v1)
   return v1*=sc;
 }
 template<class ntype, int N>
-myvec<ntype,N> rint(myvec<ntype,N> v1)
-{ // round to integer the whole vector
+myvec<ntype,N> round(myvec<ntype,N> v1)
+{ // round the whole vector
   myvec<ntype,N> u;
   for(auto i=0;i<N;i++)
-    u[i] = (ntype)rint(v1[i]);
+    u[i] = (ntype)round(v1[i]);
   return u;
 }
 //using vec2d=myvec<double,2>;

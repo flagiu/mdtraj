@@ -230,6 +230,19 @@ public:
     o << setprecision(20) << label << " " << r[0] << " " << r[1] << " " << r[2] << endl;
   }
   
+  virtual void read_3cols(fstream& i) // .xyz format
+  {
+    string line, a[3];
+    getline(i, line);
+    istringstream(line) >> a[0] >> a[1] >> a[2];
+    for(auto j=0;j<3;j++) r[j] = stof(a[j]);
+  }
+  virtual void write_3cols(fstream& o)
+  {
+    o << setprecision(20) << r[0] << " " << r[1] << " " << r[2] << endl;
+  }
+  
+  
   virtual void write_pdb(fstream& o, int myIndex, ntype myVal)
   {
     o << setprecision(10) << "ATOM \t " << myIndex+1 << " X\tXXX X " << label << "\t" << r[0] << " " << r[1] << " " << r[2] << " 1.00 " << myVal << "\t X\n";

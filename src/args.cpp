@@ -5,15 +5,36 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "Usage: %s [-d -h -v] [-adf] [-bo] [-cn] [-in] [-l] [-L] [-msd] [-p/--period] [-p1half] [-rcut1] [-rcut2] [-rcut3] [-rdf] [-tag]\n", argv0);
+  fprintf(stderr, "Usage: %s [-d -h -v] [-contcar -xdatcar -xyz] [-adf] [-bo] [-cn] [-l] [-L] [-msd] [-period] [-p1half] [-rcut1] [-rcut2] [-rcut3] [-rdf] [-tag]\n", argv0);
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_summary()
   {
-  const char *a_xyz = s_xyz.c_str();
-  fprintf(stderr, "\nThis program computes some statistical quantities over a MD trajectory.\n");
-  fprintf(stderr, "\n -h/--help \t Print this summary.\n -adf \t Compute Angular Distribution Function within the radial cutoff rcut1, using the given number of bins.\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.\n -cn \t Compute the coordination number.\n -d/--debug \t Open in debug mode.\n -in/--input \t Input .xyz trajectory file [default: %s].\n -l \t Angular momentum for the computed bond order parameters [default %d].\n -L \t Lx,Ly,Lz sizes of the orthorombic supercell [default %.2f %.2f %.2f].\n -msd \t Compute Mean Squared Displacement.\n -p/--period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].\n -rcut2 \t Cutoff radius for cutoff functions in 2nd shell [default %.2f].\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].\n -rdf \t Compute Radial Distribution Function using the given number of bins.\n -tag \t Add this text tag inside output files' name [default none].\n -v/--verbose \t Print a lot of outputs during execution.\n\n", a_xyz, l, L[0],L[1],L[2], period, p1half, cutoff[0],cutoff[1],cutoff[2]);
+  fprintf(stderr, "\nComputes some statistical quantities over the MD trajectory of a mono-species system.\n");
+  fprintf(stderr, "\n -h/--help \t Print this summary.");
+  fprintf(stderr, "\n -d/--debug \t Open in debug mode.");
+  fprintf(stderr, "\n -v/--verbose \t Print a lot of outputs during execution.");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\n Only one of the following types of input files must be selected, followed by the file name:");
+  fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
+  fprintf(stderr, "\n -xdatcat \t XDATCAR format.");
+  fprintf(stderr, "\n -xyz \t .xyz format.");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the radial cutoff rcut1, using the given number of bins.");
+  fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.");
+  fprintf(stderr, "\n -cn \t Compute the coordination number.");
+  fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
+  fprintf(stderr, "\n -L \t Lx,Ly,Lz sizes of the orthorombic supercell [default %.2f %.2f %.2f].",L[0],L[1],L[2]);
+  fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement.");
+  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].", period);
+  fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
+  fprintf(stderr, "\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].", cutoff[0]);
+  fprintf(stderr, "\n -rcut2 \t Cutoff radius for cutoff functions in 2nd shell [default %.2f].", cutoff[1]);
+  fprintf(stderr, "\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].", cutoff[2]);
+  fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function using the given number of bins.");
+  fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
+  fprintf(stderr, "\n\n");
   }
   
 template <class ntype, class ptype>
@@ -47,16 +68,6 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      c_bondorient = true;
 	  else if ( !strcmp(argv[i], "-cn") )
 	      c_coordnum = true;
-	  else if ( !strcmp(argv[i], "-in") || !strcmp(argv[i],"--input") )
-	    {
-	      i++;
-	      if (i == argc)
-		{
-		  fprintf(stderr, "ERROR: '-in' must be followed by file name!\n");
-		  exit(-1);
-		}
-	      s_xyz = string(argv[i]);
-	    }
 	  else if ( !strcmp(argv[i], "-l") )
 	    {
 	      i++;
@@ -75,15 +86,16 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 			}
 		      L[j] = atof(argv[i]);
 		    }
+		set_box_from_L();
 	    }
 	  else if ( !strcmp(argv[i], "-msd") )
 	      c_msd = true;
-	  else if ( !strcmp(argv[i], "-p") || !strcmp(argv[i], "--period") )
+	  else if ( !strcmp(argv[i], "-period") )
 	    {
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-p/--period' must be followed by a positive integer value!\n"); exit(-1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-period' must be followed by a positive integer value!\n"); exit(-1); }
 	      period = atoi(argv[i]);
-	      if(period<=0) { fprintf(stderr, "ERROR: '-p/--period must be a positive integer value!\n"); exit(-1); }
+	      if(period<=0) { fprintf(stderr, "ERROR: '-period must be a positive integer value!\n"); exit(-1); }
 	    }
 	  else if ( !strcmp(argv[i], "-p1half") )
 	    {
@@ -127,6 +139,39 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      if (i == argc) { fprintf(stderr, "ERROR: '-tag' must be followed by some text!\n"); exit(-1); }
 	      tag = argv[i];
 	      tag.insert(0, 1, '.'); // add a dot to the beginning of the tag
+	    }
+	  else if ( !strcmp(argv[i], "-contcar") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-contcar' must be followed by file name!\n");
+		  exit(-1);
+		}
+              filetype = FileType::CONTCAR;
+	      s_in = string(argv[i]);
+	    }
+	  else if ( !strcmp(argv[i], "-xdatcar") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-xdatcar' must be followed by file name!\n");
+		  exit(-1);
+		}
+              filetype = FileType::XDATCAR;
+	      s_in = string(argv[i]);
+	    }
+	  else if ( !strcmp(argv[i], "-xyz") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-xyz' must be followed by file name!\n");
+		  exit(-1);
+		}
+              filetype = FileType::XYZ;
+	      s_in = string(argv[i]);
 	    }
 	  else
 	    {

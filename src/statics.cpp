@@ -30,7 +30,8 @@ build_neigh() {
     for(i=0;i<N;i++){
       for(j=i+1;j<N;j++){
         rij = ps[j].r - ps[i].r;
-        rij = ps[i].mic(rij, L); // minimum image convention
+        //rij = ps[i].mic(rij, L); // minimum image convention
+        rij = mic(box, boxInv, rij);
         rijSq = rij.sq();
         for(u=0;u<maxshell;u++){
           if(rijSq <= cutoffSq[u]){
@@ -81,7 +82,8 @@ compute_coordnum() {
     for(auto i=0;i<N-1;i++){
       for(auto j=i+1;j<N;j++){
         rij = ps[j].r - ps[i].r;
-        rij = ps[i].mic(rij, L); // minimum image convention
+        //rij = ps[i].mic(rij, L); // minimum image convention
+        rij = mic(box, boxInv, rij);
         fval = fcut( rij.sq()/cutoffSq[0], p1half, p2half );
         neigh[0][i] += fval;
         neigh[0][j] += fval;
@@ -321,7 +323,8 @@ compute_rdf(int frameidx)
     if(debug) cout << "*** RDF computation for timestep " << timestep << " STARTED ***\n";
     for(i=0;i<N;i++){
       for(j=i+1;j<N;j++){
-         rij = ( ps[i].r - ps[j].r ).mic(L);
+         //rij = ( ps[j].r - ps[i].r ).mic(L);
+         rij = mic(box, boxInv, ps[j].r - ps[i].r );
          r = rij.norm();
          k = int(floor( r/rdf_binw));
          if(k<rdf_nbins){
