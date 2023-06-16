@@ -2,6 +2,10 @@
 
 This program computes statistical quantities over a Molecular Dynamics TRAJectory.
 
+Current limited to: monospecies system, constant number of particles, uniform timestep.
+
+Bugs to be corrected: exact value of q_l order parameters.
+
 ## Requirements
 
 Basic C++ compiler and libraries.
