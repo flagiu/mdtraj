@@ -215,7 +215,7 @@ public:
     
     // Restart reading
     fin.open(s_in, ios::in);
-    printProgress.init( 0.0 );
+    printProgress.init( nframes );
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES) {timestep=-1; } // set manual time
     string junk_line;
     if(filetype==FileType::XDATCARV) { for(int i=0;i<7;i++) getline(fin, junk_line); } // skip first 7 lines (so that you can use resetN=false)
@@ -237,10 +237,10 @@ public:
       if(c_msd) compute_msd(i);
       if(c_rdf) compute_rdf(i);
       if(c_adf) compute_adf(i);
-      printProgress.update( (i+1)/(float)nframes *100.0 );
+      printProgress.update( i+1 );
     }
+    printProgress.end();
     fin.close();
-    cout << "\n";
     if(debug) cout << "Closed input file.\n";
     if(c_msd) print_msd();
     if(debug || verbose) cout << "\nExecution completed.\n\n";

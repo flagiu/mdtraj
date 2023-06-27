@@ -219,7 +219,8 @@ compute_bondorient() {
       for(a=0;a<l_deg; a++) {
          Cl_ij[k] += ( real(qlm[a][i])*real(qlm[a][j]) + imag(qlm[a][i])*imag(qlm[a][j]) );
       }
-      Cl_ij[k] /= (ql[i]*ql[j]); // Cl_ij[k] done
+      if( ql[i]==0.0 || ql[j]==0.0) Cl_ij[k]=0.0; // safety condition (NOT JUSTIFIED!)
+      else Cl_ij[k] /= (ql[i]*ql[j]); // Cl_ij[k] done
       a = indexOf<int>( ps[i].neigh_list[1], j ); // find index of j in i's neighbour list
       rijSq = ps[i].rijSq_list[1][a]; // and use it to recover the radius
       fval = fcut( rijSq/cutoffSq[1], p1half, p2half );

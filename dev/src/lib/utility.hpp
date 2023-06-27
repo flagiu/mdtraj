@@ -34,18 +34,29 @@ class PrintProgress
 {
 private:
   int perc; // in percentage units
+  int total_steps, nblocks, block_size, current_block;
 public:
-  void init(float p)
+  void init(int tot)
   {
-    perc = floor(p);
+    total_steps = tot;
+    nblocks = 10;
+    if(total_steps<nblocks) nblocks=total_steps;
+    block_size = total_steps/nblocks;
+    current_block=0;
+    perc=0;
   }
-  void update(float p)
+  void update(int step)
   {
-    if(p-perc >= 1.0)
+    if( step-current_block*block_size >= block_size)
     {
-      perc = floor(p);
-      cout << '\r' << setfill('0') << "[" << perc << "%]";
+      current_block++;
+      perc = floor( step/(float)total_steps * 100.0);
+      cout << "\r[" << setfill(' ') << setw(3) << perc << "%]" << flush;
     }
+  }
+  void end()
+  {
+    cout << "\r[100%]\n";
   }
 };
 
