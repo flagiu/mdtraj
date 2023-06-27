@@ -130,7 +130,7 @@ public:
     s_nxtal="nc";
     s_msd="msd";
     s_ngp="ngp";
-    s_rdf="RDF";
+    s_rdf="rdf";
     s_adf="adf";
     tag="";
     s_out="traj";
