@@ -1,32 +1,37 @@
+#!/bin/python3
+
 import sys
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 #plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
 
+parser = argparse.ArgumentParser(
+                    prog = sys.argv[0],
+                    description = 'Plots the "trajectory" of angular distribution functions ADF(cosine(angle);t0) and their average ADF(cosine(angle)).',
+                    epilog='End of the summary.'
+)
+parser.add_argument('--intraj', type=argparse.FileType('r'),
+                     default="adf.xxx", required=False,
+                     help="Input file with trajectories (columns:t,x1,x2,...). [default: %(default)s]"
+)
+parser.add_argument('--inavg',  type=argparse.FileType('r'),
+                     default="adf.ave", required=False,
+                     help="Input file with average trajectory (columns:t,RDF,RDF error). [default: %(default)s]"
+)
 
-intraj="adf.traj"
-inavg="adf.ave"
-dt = 0.002 #ps
 outpng="adf.png"
 outpdf="adf.pdf"
-x_tolerance=0.01 # error tolerance on the bins (fraction)
+x_tolerance=1e-5
 
-if len(sys.argv)>4:
-	print("Usage: %s [intraj] [inavg] [dt]\n - intraj: \t input file for trajectories (columns: t,x1,x2,...). Default: %s\n - inavg: \t input file for average (first 2 columns: t,ADF). Default: %s\n - dt: \t timestep (ps) (USELESS). Default: %1e\n"%(sys.argv[0],intraj,inavg,dt))
-	sys.exit(1)
+#-------------------------------------#
+args = parser.parse_args()
 
-if len(sys.argv) >= 2:
-	intraj = sys.argv[1]
-	if len(sys.argv) >= 3:
-		inavg = sys.argv[2]
-		if len(sys.argv) >= 4:
-			dt=float(sys.argv[3])
-
-Xt = np.loadtxt(intraj, unpack=False)
+Xt = np.loadtxt(args.intraj, unpack=False)
 ntraj = Xt.shape[1]-1
 
-Xa = np.loadtxt(inavg, unpack=False)
+Xa = np.loadtxt(args.inavg, unpack=False)
 r = Xa[:,0]
 y = Xa[:,1]
 
@@ -36,10 +41,10 @@ try:
 	assert not x_isnot_equal.any() # space binning must be the same
 except AssertionError:
 	print("[ ERROR: x values do not match! ]")
-	print(" File",intraj)
+	print(" File",args.intraj)
 	print(Xt[x_isnot_equal, 0])
 	
-	print(" File",inavg)
+	print(" File",args.inavg)
 	print(Xa[x_isnot_equal, 0])
 	sys.exit(1)
 

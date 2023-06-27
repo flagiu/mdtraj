@@ -13,18 +13,19 @@ parser = argparse.ArgumentParser(
                     epilog='End of the summary.'
 )
 parser.add_argument('--intraj', type=argparse.FileType('r'),
-                     default="msd.traj", required=False,
-                     help="Input file with trajectories (columns:t,x1,x2,...)"
+                     default="msd.xxx", required=False,
+                     help="Input file with trajectories (columns:t,x1,x2,...). [default: %(default)s]"
 )
 parser.add_argument('--inavg',  type=argparse.FileType('r'),
                      default="msd.ave", required=False,
-                     help="Input file with average trajectory (columns:t,MSD,MSD error)"
+                     help="Input file with average trajectory (columns:t,MSD,MSD error). [default: %(default)s]"
 )
 parser.add_argument('--dt',  type=float, default=0.002, required=False,
                      help="Integration time step (picoseconds)"
 )
 
 outpng="msd.png"
+outpdf="msd.pdf"
 
 args = parser.parse_args()
 
@@ -49,6 +50,7 @@ ax.plot(t, msd, 'r')
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 fig.savefig(outpng)
-print("Figure saved on %s\n"%(outpng))
+fig.savefig(outpdf)
+print("Figure saved on %s, %s\n"%(outpng,outpdf))
 #plt.show()
 
