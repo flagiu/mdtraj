@@ -38,8 +38,8 @@ public:
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep, period, rdf_nbins, adf_nbins;
-  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf; // for file naming
+  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin; // compute or not
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin; // for file naming
   int l; //angular momentum  for bond orientational parameter
   static const int Nshells=3;
   ntype cutoff[Nshells]; // cutoff radii
@@ -92,6 +92,7 @@ public:
     cout << " c_msd = \t " << c_msd << endl;
     cout << " c_rdf = \t " << c_rdf << endl;
     cout << " c_adf = \t " << c_adf << endl;
+    cout << " c_rmin = \t " << c_rmin << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
     cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
@@ -120,6 +121,7 @@ public:
     c_msd = false;
     c_rdf = false;
     c_adf = false;
+    c_rmin = false;
     print_out_xyz = false;
     filetype=FileType::XYZ;
     s_ndens="ndens";
@@ -132,6 +134,7 @@ public:
     s_ngp="ngp";
     s_rdf="rdf";
     s_adf="adf";
+    s_rmin="rmin";
     tag="";
     s_out="traj";
     period = -1; // default: don't average over t0 for MSD
@@ -157,19 +160,19 @@ public:
     p1 = 2*p1half;
     p2 = 2*p2half;
     if(c_bondorient)             maxshell=Nshells; // init all neigh shells
-    else if(c_coordnum || c_adf) maxshell=1;       // init only first neigh shell
+    else if(c_coordnum || c_adf || c_rmin) maxshell=1;       // init only first neigh shell
     else                         maxshell=0;       // do not init any
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
     if(l==0) cout << "[WARNING: bond orientation order parameter with l=0 is always equal to 1.0]\n";
   }
-  
+
   void set_box_from_L() {
     box.set_diag(L);
     boxInv = box.inverse();
     compute_volume();
   }
-  
+
   void set_L_from_box() { // here L[] is the length of each box vector
     L[0] = box.T()[0].norm();
     L[1] = box.T()[1].norm();
@@ -180,16 +183,16 @@ public:
     //V = L.prod(); // valid only for orthorombic box
     V = fabs(box.det());
   }
-  
+
   void read_frame(fstream &i, bool resetN);
   void read_contcar_frame(fstream &i, bool resetN);
   void read_xdatcar_frame(fstream &i, bool resetN, bool constantBox);
   void read_xyz_frame(fstream &i, bool resetN);
   void read_alphanes_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
-  
+
   //------- COMPUTE things ---------------//
-  
+
   void run()
   {
     PrintProgress printProgress;
@@ -197,7 +200,7 @@ public:
     nlines = getLineCount(s_in);
     if(debug) cout << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
     fin.open(s_in, ios::in);
-    
+
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES) {
       timestep=-1; dtframe = 1;
     } // set manual time for CONTCAR, ALPHANES file format
@@ -205,14 +208,14 @@ public:
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << ", t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << " (assuming N is constant).\n";
-    
+
     read_frame(fin, false);
     if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES) dtframe = timestep - t0frame;
     if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
     init_computations();
     if(debug) cout << "Initialized arrays for computations.\n";
     fin.close();
-    
+
     // Restart reading
     fin.open(s_in, ios::in);
     printProgress.init( nframes );
@@ -237,6 +240,7 @@ public:
       if(c_msd) compute_msd(i);
       if(c_rdf) compute_rdf(i);
       if(c_adf) compute_adf(i);
+      if(c_rmin) compute_rmin();
       printProgress.update( i+1 );
     }
     printProgress.end();
@@ -259,6 +263,7 @@ public:
     if(c_msd) init_msd();
     if(c_rdf) init_rdf();
     if(c_adf) init_adf();
+    if(c_rmin) init_rmin();
   }
 
   void init_density() {
@@ -311,10 +316,12 @@ public:
   void compute_rdf(int frameidx);
   void init_adf();
   void compute_adf(int frameidx);
+  void init_rmin();
+  void compute_rmin();
   void init_msd();
   void compute_msd(int frameidx);
   void print_msd();
-  
+
   ntype fcut(ntype x, int pow1, int pow2) {
     ntype x1=1.0, x2=1.0;
     for(auto i=0; i<pow2; i++) {

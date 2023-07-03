@@ -5,18 +5,20 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "Usage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz] [-outxyz] [-adf] [-bo] [-cn] [-general_box] [-l] [-L] [-msd] [-period] [-p1half] [-rcut1] [-rcut2] [-rcut3] [-rdf] [-tag]\n", argv0);
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz] [-outxyz] [-adf] [-bo] [-cn] [-general_box] [-l] [-L] [-msd] [-period] [-p1half] [-rcut1] [-rcut2] [-rcut3] [-rdf] [-tag]\n", argv0);
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_summary()
   {
-  fprintf(stderr, "\nComputes some statistical quantities over the MD trajectory of a mono-species system.\n");
+  fprintf(stderr, "\n#--------------------------------------------------------------------------------------#.\n");
+  fprintf(stderr, "Computes some statistical quantities over the MD trajectory of a mono-species system.\n");
+  fprintf(stderr, "#--------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "\n -h/--help \t Print this summary.");
   fprintf(stderr, "\n -d/--debug \t Open in debug mode.");
   fprintf(stderr, "\n -v/--verbose \t Print a lot of outputs during execution.");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n Only one of the following types of input files must be selected, followed by the file name:");
+  fprintf(stderr, "\n INPUT FILES (only one of the following must be selected, followed by the file name):");
   fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file (one row for each timestep; 6 columns for box + 3N columns for coordinates).");
   fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
   fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat).");
@@ -24,28 +26,32 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
   fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -L.");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n An output trajectory in .xyz format can be created:");
+  fprintf(stderr, "\n AN OUTPUT TRAJECTORY IN .xyz FORMAT CAN BE CREATED:");
   fprintf(stderr, "\n -outxyz \t Print an output traj.xyz file. [default don't]");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the radial cutoff rcut1, using the given number of bins.");
-  fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.");
-  fprintf(stderr, "\n -cn \t Compute the coordination number.");
+  fprintf(stderr, "\n STATISTICAL ANALYSIS:");
+  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell, using the given number of bins. OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
+  fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
+  fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
+  fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement and Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
+  fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function using the given number of bins. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
+  fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
+  fprintf(stderr, "\n OTHER PARAMETERS:");
+  fprintf(stderr, "\n");
   fprintf(stderr, "\n -general_box \t Keep all 9 box elements, instead of rotating the box to upper-diagonalize it.");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
   fprintf(stderr, "\n -L \t Lx,Ly,Lz sizes of the orthorombic box [default %.2f %.2f %.2f].",L[0],L[1],L[2]);
-  fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement.");
   fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].", period);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].", cutoff[0]);
   fprintf(stderr, "\n -rcut2 \t Cutoff radius for cutoff functions in 2nd shell [default %.2f].", cutoff[1]);
   fprintf(stderr, "\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].", cutoff[2]);
-  fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function using the given number of bins. OUTPUT: %s.traj, %s.ave .", s_rdf.c_str(), s_rdf.c_str());
   fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
-  fprintf(stderr, "\n\n Tips:");
+  fprintf(stderr, "\n\n TIPS:");
   fprintf(stderr, "\n - Convert a .traj file to a column file with mdtraj/shell/traj2nxy.sh; then plot it with mdtraj/python/{rdf,msd,...}.traj.py");
   fprintf(stderr, "\n\n");
   }
-  
+
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::args(int argc, char** argv)
 {
@@ -144,6 +150,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      rdf_nbins = atoi(argv[i]);
 	      if(rdf_nbins < 2){ fprintf(stderr, "ERROR: too few bins for RDF!\n"); exit(1); }
 	    }
+    else if ( !strcmp(argv[i], "-rmin") )
+       c_rmin = true;
 	  else if ( !strcmp(argv[i], "-tag") )
 	    {
 	      i++;

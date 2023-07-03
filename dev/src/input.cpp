@@ -69,8 +69,8 @@ read_frame(fstream &i, bool resetN)
     boxInv = box.inverse();
     set_L_from_box();
     if(debug) cout << "  Read frame at timestep " << timestep << " DONE.\n";
-    
-    
+
+
   }
 
 //-----------------------------------------------------------------------
@@ -95,7 +95,7 @@ read_xyz_frame(fstream &i, bool resetN)
     }
     for(auto &p: ps) p.read_xyz(i); // N particle lines
   }
-  
+
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_contcar_frame(fstream &i, bool resetN)
@@ -103,15 +103,15 @@ read_contcar_frame(fstream &i, bool resetN)
     string line, a,b,c,d;
     ntype s;
     int format;
-    
+
     getline(i,line); // line 1
     if(debug) cout << "\n  Line 1: " << line << endl;
-    
+
     getline(i,line); // line 2
     istringstream(line) >> a;
     s=stof(a);
     if(debug) cout << "  Line 2: scaling factor = " << s << endl;
-    
+
     getline(i,line); // line 3
     istringstream(line) >> a >> b >> c;
     box[0] << s*stof(a), s*stof(b), s*stof(c);
@@ -125,10 +125,10 @@ read_contcar_frame(fstream &i, bool resetN)
     if(debug) cout << "  Line 3-5: lattice vectors\n";
     if(debug) box.show();
     if(debug) boxInv.show();
-    
+
     getline(i,line); // line 6
     if(debug) cout << "  Line 6: species = " << line << endl;
-    
+
     getline(i,line); // line 7
     istringstream(line) >> a >> b; // MULTI-SPECIES TO BE IMPLEMENTED
     N = stoi(a);
@@ -139,7 +139,7 @@ read_contcar_frame(fstream &i, bool resetN)
     if(line=="Direct" || line=="direct") format=0; // lattice units
     else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
     else { cout << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
-    
+
     if(resetN) {
       ps.resize(N);
       invN = 1.0/N;
@@ -165,12 +165,12 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
     if(resetN || !constantBox) {
 	    getline(i,line); // line 1
 	    if(debug) cout << "\n  Line 1: " << line << endl;
-	    
+
 	    getline(i,line); // line 2
 	    istringstream(line) >> a;
 	    s=stof(a);
 	    if(debug) cout << "  Line 2: scaling factor = " << s << endl;
-	    
+
 	    getline(i,line); // line 3
 	    istringstream(line) >> a >> b >> c;
 	    box[0] << s*stof(a), s*stof(b), s*stof(c);
@@ -182,10 +182,10 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
 	    box[2] << s*stof(a), s*stof(b), s*stof(c);
 	    box = box.T(); // box = (a|b|c) where a,b,c = lattice vectors as columns !!!!!!!!!!!
 	    if(debug) cout << "  Line 3-5: lattice vectors\n";
-	    
+
 	    getline(i,line); // line 6
 	    if(debug) cout << "  Line 6: species = " << line << endl;
-	    
+
 	    getline(i,line); // line 7
 	    istringstream(line) >> a >> b; // MULTI-SPECIES TO BE IMPLEMENTED
 	    N = stoi(a);
@@ -198,7 +198,7 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
     if(a=="Direct" || a=="direct") format=0; // lattice units
     else if(a=="Cartesian" || a=="cartesian") format=1; // cartesian units
     else { cout << "[ERROR: coordinates format not recognized: " << a << "]\n"; exit(1); }
-    
+
     if(resetN) {
       ps.resize(N);
       invN = 1.0/N;
@@ -222,10 +222,10 @@ read_alphanes_frame(fstream &i, bool resetN)
     stringstream ss;
     ntype x;
     int ncols=0, natom, nxyz;
-    
+
     getline(i,line); // all frame (box+positions) is contained in one line
     if(debug) cout << "\n  Line: " << line << endl;
-    
+
     ss << line;
     while( ss >> x )
     {
@@ -244,8 +244,8 @@ read_alphanes_frame(fstream &i, bool resetN)
     }
     box[1][0]=box[2][0]=box[2][1] = 0.0; //  ay=az=bz=0.0
     natom=int((ncols-6)/3);
-    N = natom+1;
-    
+    N = natom;
+
     if(resetN) {
       ps.resize(N);
       invN = 1.0/N;
@@ -260,10 +260,10 @@ read_jmd_frame(fstream &i, bool resetN)
     string line, x;
     stringstream ss;
     int ncols=0;
-    
+
     getline(i,line);
     if(debug) cout << "\n  Line 1: " << line << endl;
-    
+
     ss << line;
     while( ss >> x )
     {
@@ -275,7 +275,7 @@ read_jmd_frame(fstream &i, bool resetN)
       ncols++;
     }
     box[0][1]=box[0][2]=box[1][0]=box[1][2]=box[2][0]=box[2][1] = 0.0; // orthorombic
-    
+
     if(resetN) {
       ps.resize(N);
       invN = 1.0/N;
