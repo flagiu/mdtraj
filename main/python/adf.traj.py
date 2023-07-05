@@ -9,20 +9,20 @@ plt.rcParams['axes.labelsize'] = 'large'
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
-                    description = 'Plots the "trajectory" of radial distribution functions g(r;t0) and their average g(r).',
+                    description = 'Plots the "trajectory" of angular distribution functions ADF(cosine(angle);t0) and their average ADF(cosine(angle)).',
                     epilog='End of the summary.'
 )
 parser.add_argument('--intraj', type=argparse.FileType('r'),
-                     default="rdf.xxx", required=False,
+                     default="adf.xxx", required=False,
                      help="Input file with trajectories (columns:t,x1,x2,...). [default: %(default)s]"
 )
 parser.add_argument('--inavg',  type=argparse.FileType('r'),
-                     default="rdf.ave", required=False,
+                     default="adf.ave", required=False,
                      help="Input file with average trajectory (columns:t,RDF,RDF error). [default: %(default)s]"
 )
 
-outpng="rdf.png"
-outpdf="rdf.pdf"
+outpng="adf.png"
+outpdf="adf.pdf"
 x_tolerance=1e-5
 
 #-------------------------------------#
@@ -36,27 +36,27 @@ r = Xa[:,0]
 y = Xa[:,1]
 
 assert Xt.shape[0]==Xa.shape[0] # space binning must have same length
-x_isnot_equal = abs(Xt[:,0]-Xa[:,0])>x_tolerance
+x_isnot_equal = abs( (Xt[:,0]-Xa[:,0])/Xa[:,0] )>=x_tolerance
 try:
 	assert not x_isnot_equal.any() # space binning must be the same
 except AssertionError:
 	print("[ ERROR: x values do not match! ]")
-	print(" File",args.intraj.name)
+	print(" File",args.intraj)
 	print(Xt[x_isnot_equal, 0])
 	
-	print(" File",args.inavg.name)
+	print(" File",args.inavg)
 	print(Xa[x_isnot_equal, 0])
 	sys.exit(1)
 
 assert Xa.shape[1]>=2 # must have at least x,y
 
 fig, ax = plt.subplots(dpi=300)
-ax.set_xlabel(r"$r$ / $\AA$")
-ax.set_ylabel(r"$g(r)$")
-for i in range(ntraj):
-	ax.plot( r, Xt[:,i+1], 'k', alpha=0.1 )
-ax.plot(r, y, 'r')
+ax.set_xlabel(r"$\cos\theta$")
+ax.set_ylabel(r"ADF")
 ax.tick_params(which='both', direction='in')
+for i in range(ntraj):
+	ax.plot( r, Xt[:,i+1], 'k', alpha=0.01)
+ax.plot(r, y, 'r')
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 fig.savefig(outpng)

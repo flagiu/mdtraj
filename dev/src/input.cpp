@@ -267,7 +267,7 @@ read_jmd_frame(fstream &i, bool resetN)
     ss << line;
     while( ss >> x )
     {
-      if(ncols==0)      timestep = stoi(x);
+      if     (ncols==0) timestep = stoi(x);
       else if(ncols==1) N = stoi(x);
       else if(ncols==2) box[0][0] = stof(x); // Lx
       else if(ncols==3) box[1][1] = stof(x); // Ly
@@ -275,7 +275,8 @@ read_jmd_frame(fstream &i, bool resetN)
       ncols++;
     }
     box[0][1]=box[0][2]=box[1][0]=box[1][2]=box[2][0]=box[2][1] = 0.0; // orthorombic
-
+    set_L_from_box();
+    
     if(resetN) {
       ps.resize(N);
       invN = 1.0/N;

@@ -173,14 +173,13 @@ public:
     compute_volume();
   }
 
-  void set_L_from_box() { // here L[] is the length of each box vector
+  void set_L_from_box() { // in general L[] is the length of each box vector. Is it useful? idk
     L[0] = box.T()[0].norm();
     L[1] = box.T()[1].norm();
     L[2] = box.T()[2].norm();
   }
 
   void compute_volume() {
-    //V = L.prod(); // valid only for orthorombic box
     V = fabs(box.det());
   }
 

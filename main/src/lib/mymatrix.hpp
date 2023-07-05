@@ -210,7 +210,13 @@ public:
     for (auto i=0;i<rows();i++)
       M[i].ranf();
   }
-  
+  void set_zero()
+  {
+    for (auto i=0;i<rows();i++)
+      for (auto j=0;j<rows();j++)
+        set(i,j, 0.0);
+    return;
+  }
   void set_identity()
   {
     if (rows()!=cols()) { cout << "Error: identity is defined only for square matrices."<<endl; exit(1);}
@@ -338,7 +344,39 @@ myvec<ntype,N> mic(mymatrix<ntype,N,N>& box, myvec<ntype,N>& vec)
   return mic(box, box.inverse(), vec);
 }
 
+template<class ntype, int N>
+mymatrix<ntype,N,N> outer_product( myvec<ntype,N> vec1, myvec<ntype,N> vec2 )
+{
+  mymatrix<ntype,N,N> mat;
+  for(auto i=0;i<N;i++)
+    for(auto j=0;j<N;j++)
+      mat[i][j] = vec1[i]*vec2[j];
+  return mat;
+}
+template<class ntype, int N>
+mymatrix<ntype,N,N> cross_product_matrix(myvec<ntype,N> vec)
+{
+  mymatrix<ntype,N,N> mat;
+  myvec<ntype,N> e;
+  mat.set_zero();
+  e.set_zero();
+  for(auto i=0;i<N;i++)
+  {
+      e[i] = 1.0;
+      mat += outer_product(vec.cross(e), e);
+      e[i] = 0.0;
+  }
+  return mat;
+}
 
+template<class ntype, int N>
+mymatrix<ntype,N,N> rotation_matrix_axis_cossin( myvec<ntype,N> u, ntype c, ntype s )
+{
+  u.normalize();
+  mymatrix<ntype,N,N> eye;
+  eye.set_identity();
+  return (eye*=c) + (cross_product_matrix(u)*=s) + (outer_product(u,u)*=(1.0-c));
+}
 using matrix3d=mymatrix<double,3,3>;
 
 //-----------------------------------------------------------------//

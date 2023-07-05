@@ -36,13 +36,13 @@ build_neigh() {
         for(u=0;u<maxshell;u++){
           if(rijSq <= cutoffSq[u]){
             bond_list[u].push_back( ij2int(i,j,N) );
-            
+
             ps[i].neigh_list[u].push_back(j);
             ps[j].neigh_list[u].push_back(i);
-            
+
             ps[i].rij_list[u].push_back(   rij);
             ps[j].rij_list[u].push_back(-1*rij);
-            
+
             ps[i].rijSq_list[u].push_back(rijSq);
             ps[j].rijSq_list[u].push_back(rijSq);
           }
@@ -65,7 +65,7 @@ init_coordnum()
       for(auto  i=0;i<Nshells;i++) fout << cutoff[i]<<", ";
       fout << endl;
       fout.close();
-      
+
       ss.str(std::string()); ss << s_coordnum << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, average coordination number, fluctuations. # cutoffs = ";
       for(auto  i=0;i<Nshells;i++) fout << cutoff[i]<<", ";
@@ -219,7 +219,8 @@ compute_bondorient() {
       for(a=0;a<l_deg; a++) {
          Cl_ij[k] += ( real(qlm[a][i])*real(qlm[a][j]) + imag(qlm[a][i])*imag(qlm[a][j]) );
       }
-      Cl_ij[k] /= (ql[i]*ql[j]); // Cl_ij[k] done
+      if( ql[i]==0.0 || ql[j]==0.0) Cl_ij[k]=0.0; // safety condition (NOT JUSTIFIED!)
+      else Cl_ij[k] /= (ql[i]*ql[j]); // Cl_ij[k] done
       a = indexOf<int>( ps[i].neigh_list[1], j ); // find index of j in i's neighbour list
       rijSq = ps[i].rijSq_list[1][a]; // and use it to recover the radius
       fval = fcut( rijSq/cutoffSq[1], p1half, p2half );
@@ -432,3 +433,34 @@ compute_adf(int frameidx)
     return;
 }
 
+//------------ Minimum atomic distance ----------------//
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+init_rmin()
+{
+  ss.str(std::string()); ss << s_rmin << tag << ".dat"; fout.open(ss.str(), ios::out);
+  fout << "# Minimum atomic distance. # cutoff1 = " << cutoff[0]<< endl;
+  fout.close();
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+compute_rmin()
+{
+  ntype rSq, rminSq = cutoffSq[0];
+  int i,j, k;
+  if(debug) cout << "*** RMIN computation for timestep " << timestep << " STARTED ***\n";
+  for(i=0;i<N;i++){
+    for(k=0;k<ps[i].neigh_list[0].size();k++){
+      j = ps[i].neigh_list[0][k];
+      if(j>i) continue; // avoid double counting!
+      rSq = ps[i].rijSq_list[0][k];
+      if(rSq<rminSq) rminSq=rSq;
+    }
+  }
+  ss.str(std::string()); ss << s_rmin << tag << ".dat"; fout.open(ss.str(), ios::app);
+  fout << sqrt(rminSq) << endl;
+  fout.close();
+  if(debug) cout << "*** RMIN computation for timestep " << timestep << " ENDED ***\n";
+  return;
+}

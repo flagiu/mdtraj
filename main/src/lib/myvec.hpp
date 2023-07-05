@@ -180,8 +180,14 @@ public:
 	vv[2] = v[0]*other[1]-v[1]*other[0];
       }
     else
-      cout << "Error: vector product is valid only in 3D!\nReturning null vector.\n";
+      cout << "[Error: vector product is valid only in 3D! Returning null vector.]\n";
     return vv;
+  }
+  
+  void set_zero()
+  {
+    for (int i=0;i<length();i++)
+      set(i, 0);
   }
 
   void ranf()
