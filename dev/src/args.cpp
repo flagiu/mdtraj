@@ -5,7 +5,7 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz] [-outxyz] [-adf] [-bo] [-cn] [-general_box] [-l] [-L] [-msd] [-period] [-p1half] [-rcut1] [-rcut2] [-rcut3] [-rdf] [-tag]\n", argv0);
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz] [-box1 -box3 .box6 -box9 -general_box] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-period -p1half -rcut1 -rcut2 -rcut3 -tag]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -42,6 +42,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement and Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function using the given number of bins. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
+  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: [nbins rmin maxangle]. Uses the given number of bins for each dimension, with tmin <= bond length <= rcut1 and |180°-bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n");
   fprintf(stderr, "\n OTHER PARAMETERS:");
@@ -57,7 +58,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n TIPS:");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n - Convert a .traj file to a column file with mdtraj/shell/traj2nxy.sh; then plot it with mdtraj/python/{rdf,msd,...}.traj.py");
+  fprintf(stderr, "\n - Convert a .traj file to a column file with mdtraj/shell/traj2nxy.sh; then plot it with mdtraj/*/python/{rdf,msd,...}.traj.py");
+  fprintf(stderr, "\n - Plot the ALTBC with mdtraj/*/python/plot.altbc.py");
   fprintf(stderr, "\n\n");
   }
 
@@ -213,6 +215,21 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    }
     else if ( !strcmp(argv[i], "-rmin") )
        c_rmin = true;
+	  else if ( !strcmp(argv[i], "-altbc") )
+	    {
+	      c_altbc = true;
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
+	      altbc_nbins = atoi(argv[i]);
+	      if(altbc_nbins < 2){ fprintf(stderr, "ERROR: too few bins for ALTBC!\n"); exit(1); }
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
+	      altbc_rmin = atof(argv[i]);
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
+	      altbc_angle = atof(argv[i]);
+	      if(altbc_angle<0.0 || altbc_angle>180.0){ fprintf(stderr, "ERROR: ALTBC angular limit must be within 0° and 180°!\n"); exit(1); }
+	    }
 	  else if ( !strcmp(argv[i], "-tag") )
 	    {
 	      i++;

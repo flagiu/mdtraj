@@ -37,18 +37,18 @@ public:
   bool remove_rot_dof; // remove the 3 rotational degrees of freedom from the box?
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
-  int nframes, timestep, period, rdf_nbins, adf_nbins;
-  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin; // for file naming
-  int l; //angular momentum  for bond orientational parameter
+  int nframes, timestep, period, l, rdf_nbins, adf_nbins, altbc_nbins;
+  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc; // compute or not
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc; // for file naming
   static const int Nshells=3;
-  ntype cutoff[Nshells]; // cutoff radii
+  ntype cutoff[Nshells], altbc_rmin, altbc_angle;
   vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
   vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
   vector<int> bond_list[Nshells]; // records all bonds encoded into an integer through ij2int()
   vecflex<ntype> r2,r4, r2CM; // for MSD
   vecflex<ntype> rdf_bins, rdf_norm, rdf, rdf_ave, rdf2_ave; // for RDF
   vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
+  vecflex<ntype> altbc_bins, altbc, altbc_ave, altbc2_ave; // for ALTBC
   vector<vec> rs;
   bool msdAverageOverTime0, print_out_xyz;
   bool debug, verbose;
@@ -59,7 +59,7 @@ private:
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
   fstream fin, fout;
   stringstream ss;
-  ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw;
+  ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw, altbc_binw, altbc_cos;
   FileType filetype;
 
   int ij2int(int i, int j, int N){
@@ -93,6 +93,7 @@ public:
     cout << " c_rdf = \t " << c_rdf << endl;
     cout << " c_adf = \t " << c_adf << endl;
     cout << " c_rmin = \t " << c_rmin << endl;
+    cout << " c_altbc = \t " << c_altbc << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
     cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
@@ -106,6 +107,9 @@ public:
     cout << " print_out_xyz = \t " << print_out_xyz << endl;
     cout << " rdf_nbins = \t " << rdf_nbins << endl;
     cout << " adf_nbins = \t " << adf_nbins << endl;
+    cout << " altbc_nbins = \t " << altbc_nbins << endl;
+    cout << " altbc_rmin = \t " << altbc_rmin << endl;
+    cout << " altbc_angle = \t " << altbc_angle << endl;
     cout << " tag = \t " << tag << endl;
     for(auto  i=0;i<Nshells;i++) cout << " rcut" << i << " = \t " << cutoff[i] << endl;
     cout << " s_in = \t " << s_in << endl;
@@ -122,6 +126,7 @@ public:
     c_rdf = false;
     c_adf = false;
     c_rmin = false;
+    c_altbc = false;
     print_out_xyz = false;
     filetype=FileType::XYZ;
     s_ndens="ndens";
@@ -135,6 +140,7 @@ public:
     s_rdf="rdf";
     s_adf="adf";
     s_rmin="rmin";
+    s_altbc="altbc";
     tag="";
     s_out="traj";
     period = -1; // default: don't average over t0 for MSD
@@ -149,6 +155,9 @@ public:
     qldot_th = 0.65;
     adf_nbins=0;
     rdf_nbins=0;
+    altbc_nbins=0;
+    altbc_rmin=0.0;
+    altbc_angle=-1.0;
     // Update parameters with input arguments:
     args(argc, argv);
     // Compute non-primitive parameters:
@@ -160,7 +169,7 @@ public:
     p1 = 2*p1half;
     p2 = 2*p2half;
     if(c_bondorient)             maxshell=Nshells; // init all neigh shells
-    else if(c_coordnum || c_adf || c_rmin) maxshell=1;       // init only first neigh shell
+    else if(c_coordnum || c_adf || c_rmin || c_altbc) maxshell=1;       // init only first neigh shell
     else                         maxshell=0;       // do not init any
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
@@ -231,7 +240,7 @@ public:
         exit(1);
       }
       print_box();
-      print_out();
+      if(print_out_xyz) print_out();
       compute_density();
       if(maxshell>0) build_neigh();
       if(c_coordnum) compute_coordnum();
@@ -240,6 +249,7 @@ public:
       if(c_rdf) compute_rdf(i);
       if(c_adf) compute_adf(i);
       if(c_rmin) compute_rmin();
+      if(c_altbc) compute_altbc(i);
       printProgress.update( i+1 );
     }
     printProgress.end();
@@ -255,7 +265,7 @@ public:
   void init_computations() {
     init_box();
     init_density();
-    init_out();
+    if(print_out_xyz) init_out();
     if(maxshell>0) init_neigh();
     if(c_coordnum) init_coordnum();
     if(c_bondorient) init_bondorient();
@@ -263,6 +273,7 @@ public:
     if(c_rdf) init_rdf();
     if(c_adf) init_adf();
     if(c_rmin) init_rmin();
+    if(c_altbc) init_altbc();
   }
 
   void init_density() {
@@ -317,6 +328,8 @@ public:
   void compute_adf(int frameidx);
   void init_rmin();
   void compute_rmin();
+  void init_altbc();
+  void compute_altbc(int frameidx);
   void init_msd();
   void compute_msd(int frameidx);
   void print_msd();
