@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument('--inavg',  type=argparse.FileType('r'),
                      default="altbc.ave", required=False,
-                     help="Input file with average trajectory (1st block: radial bins; 2nd block: 2d matrix of ALTBC average; 3rd block: 2d matrix of ALTBC error). [default: %(default)s]"
+                     help="Input file with average trajectory (1st block: radial bins; 2nd block: 2d matrix of ALTBC average). [default: %(default)s]"
 )
 
 outpng="altbc.png"
@@ -59,9 +59,10 @@ ax.set_ylabel(r"$r_2$ [$\AA$]")
 ax.set_title(r"ALTBC @ %.1f°"%angle_th)
 c = ax.pcolormesh(x, y, altbc, cmap='jet', vmin=z_min, vmax=z_max)
 ax.axis([x.min(), x.max(), y.min(), y.max()])
+ax.set_aspect('equal', adjustable='box')
 fig.colorbar(c, ax=ax)
-
 plt.tight_layout()
+
 fig.savefig(outpng)
 fig.savefig(outpdf)
 print("Figure saved on %s, %s\n"%(outpng, outpdf))
