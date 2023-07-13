@@ -23,7 +23,7 @@
 using namespace std;
 
 enum class FileType {
-  XYZ, CONTCAR, XDATCAR, XDATCARV, ALPHANES, JMD
+  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, JMD
 };
 
 template<class ntype, class ptype>
@@ -31,7 +31,8 @@ class Trajectory {
 public:
   using vec=myvec<ntype,3>;
   using mat=mymatrix<ntype,3,3>;
-  int N; // number of particles
+  int N, nTypes; // number of particles, number of types
+  vector<int> Nt; // number of particles for each type
   vec L; // dimensions of an orthorombic simulation box ( ??? centered in 0: -Lx/2 < x < Lx/2 )
   mat box, boxInv; // most general simulation box
   bool remove_rot_dof; // remove the 3 rotational degrees of freedom from the box?
@@ -46,7 +47,8 @@ public:
   vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
   vector<int> bond_list[Nshells]; // records all bonds encoded into an integer through ij2int()
   vecflex<ntype> r2,r4, r2CM; // for MSD
-  vecflex<ntype> rdf_bins, rdf_norm, rdf, rdf_ave, rdf2_ave; // for RDF
+  vecflex<ntype> rdf_bins; // bins for RDF
+  vector< vecflex<ntype> > rdf_norm, rdf, rdf_ave, rdf2_ave; // vector of vectors for RDF
   vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
   vecflex<ntype> altbc_bins, altbc, altbc_ave, altbc2_ave; // for ALTBC
   vector<vec> rs;
@@ -55,7 +57,7 @@ public:
 
 private:
   bool l_is_odd;
-  int nlines, t0frame, dtframe, l_deg, periodIdx, Nperiods, maxshell;
+  int nlines, t0frame, dtframe, l_deg, periodIdx, Nperiods, maxshell, nTypePairs;
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
   fstream fin, fout;
   stringstream ss;
@@ -70,6 +72,11 @@ private:
   }
   int int2j(int x, int N){
     return x%N;
+  }
+  int types2int(int ti, int tj, int nTypes){ // map type pairs to integer index 0,1,...,nTypePairs
+    if (ti>tj) return types2int(tj,ti,nTypes); // map to ti<=tj
+    if(ti==tj) return ti*nTypes - int(ti*(ti-1)/2);
+    else return 1 + types2int(ti,tj-1,nTypes);
   }
 
 public:
@@ -196,6 +203,7 @@ public:
   void read_contcar_frame(fstream &i, bool resetN);
   void read_xdatcar_frame(fstream &i, bool resetN, bool constantBox);
   void read_xyz_frame(fstream &i, bool resetN);
+  void read_xyz_cp2k_frame(fstream &i, bool resetN);
   void read_alphanes_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
 
@@ -216,6 +224,8 @@ public:
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << ", t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << " (assuming N is constant).\n";
+    nTypePairs = nTypes*(nTypes+1)/2;
+    if(debug) cout << " Found nTypes =" << nTypes << ", nTypePairs =" << nTypePairs << endl;
 
     read_frame(fin, false);
     if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES) dtframe = timestep - t0frame;
@@ -225,6 +235,7 @@ public:
     fin.close();
 
     // Restart reading
+    if(debug || verbose) cout << "#--- MAIN LOOP ------#\n";
     fin.open(s_in, ios::in);
     printProgress.init( nframes );
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES) {timestep=-1; } // set manual time

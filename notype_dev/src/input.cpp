@@ -11,6 +11,9 @@ read_frame(fstream &i, bool resetN)
       case FileType::XYZ:
         read_xyz_frame(i, resetN);
         break;
+      case FileType::XYZ_CP2K:
+        read_xyz_cp2k_frame(i, resetN);
+        break;
       case FileType::XDATCAR:
         read_xdatcar_frame(i, resetN, false);
         break;
@@ -95,6 +98,35 @@ read_xyz_frame(fstream &i, bool resetN)
     }
     for(auto &p: ps) p.read_xyz(i); // N particle lines
   }
+
+  template <class ntype, class ptype>
+  void Trajectory<ntype, ptype>::
+  read_xyz_cp2k_frame(fstream &i, bool resetN)
+    {
+      string line, a,b,c,d,e;
+      getline(i,line); // first line
+      istringstream(line) >> a;
+      N = stoi(a);
+      if(debug) cout << "\n  Line 1: " << N << " atoms\n";
+      getline(i,line); // second line
+      istringstream(line) >> b >> c >> d >> e;
+      if(debug) cout << "d="<<d<<endl;
+      timestep = stoi(d);
+      if(debug) cout << "  Line 2: Timestep " << timestep << endl;
+      if(resetN) {
+        ps.resize(N);
+        invN = 1.0/N;
+        nframes = nlines / (N+2);
+      }
+      for(auto &p: ps)
+      {
+        getline(i, line);
+        istringstream(line) >> a >> b >> c >> d;
+        p.r[0] = stof(b);
+        p.r[1] = stof(c);
+        p.r[2] = stof(d);
+      }
+    }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
@@ -276,7 +308,7 @@ read_jmd_frame(fstream &i, bool resetN)
     }
     box[0][1]=box[0][2]=box[1][0]=box[1][2]=box[2][0]=box[2][1] = 0.0; // orthorombic
     set_L_from_box();
-    
+
     if(resetN) {
       ps.resize(N);
       invN = 1.0/N;

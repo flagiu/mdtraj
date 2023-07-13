@@ -5,14 +5,16 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz] [-box1 -box3 .box6 -box9 -general_box] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-period -p1half -rcut1 -rcut2 -rcut3 -tag]\n", argv0);
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k] [-box1 -box3 .box6 -box9 -general_box] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-period -p1half -rcut1 -rcut2 -rcut3 -tag]\n", argv0);
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_summary()
   {
   fprintf(stderr, "\n#---------------------------------------------------------------------------------------#.\n");
-  fprintf(stderr, "  Computes some statistical quantities over the MD trajectory of a mono-species system.\n");
+  fprintf(stderr, "  Computes some statistical quantities over the MD trajectory of a MULTI-species system.\n");
+  fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
+  fprintf(stderr, " !!! WARNING: currently implemented only -xyz and -rdf. !!!\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "\n -h/--help \t Print this summary.");
   fprintf(stderr, "\n -d/--debug \t Open in debug mode.");
@@ -26,6 +28,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
   fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -L.");
+  fprintf(stderr, "\n -xyz_cp2k \t .xyz format. Box size is supplied via -L.");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n BOX (Note: it will be overwritten if present in the input file):");
   fprintf(stderr, "\n");
@@ -135,6 +138,7 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 			  }
 		    }
 			box[1][0]=box[2][0]=box[2][1]=0.0;
+      boxInv=box.inverse();
 			set_L_from_box();
 	    }
 	  else if ( !strcmp(argv[i], "-box9") )
@@ -158,6 +162,7 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 			    case 8: box[2][2] = atof(argv[i]); break;
 			  }
 		    }
+      boxInv=box.inverse();
 			set_L_from_box();
 	    }
 	  else if ( !strcmp(argv[i], "-general_box") )
@@ -300,7 +305,18 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		  fprintf(stderr, "ERROR: '-xyz' must be followed by file name!\n");
 		  exit(-1);
 		}
-              filetype = FileType::XYZ;
+        filetype = FileType::XYZ;
+	      s_in = string(argv[i]);
+	    }
+	  else if ( !strcmp(argv[i], "-xyz_cp2k") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-xyz_cp2k' must be followed by file name!\n");
+		  exit(-1);
+		}
+        filetype = FileType::XYZ_CP2K;
 	      s_in = string(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-outxyz") )
