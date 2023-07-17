@@ -10,8 +10,8 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 build_neigh() {
   int u,i,j;
-  vec rij;
-  ntype rijSq;
+  vec rij, rij_mic;
+  ntype rijSq, rijSq_mic;
   if(debug) cout << "\n*** Neighbours computation STARTED ***\n";
   //---- Reset counters and lists ----//
   for(u=0;u<maxshell;u++) {
@@ -30,9 +30,13 @@ build_neigh() {
     for(i=0;i<N;i++){
       for(j=i+1;j<N;j++){
         rij = ps[j].r - ps[i].r;
-        //rij = ps[i].mic(rij, L); // minimum image convention
-        rij = mic(box, boxInv, rij);
         rijSq = rij.sq();
+        rij_mic = mic(box, boxInv, rij); // first periodic image
+        rijSq_mic = rij_mic.sq();
+        if(rijSq_mic < rijSq){ // if closer, choose first periodic image
+          rijSq = rijSq_mic;
+          rij = rij_mic;
+        }
         for(u=0;u<maxshell;u++){
           if(rijSq <= cutoffSq[u]){
             bond_list[u].push_back( ij2int(i,j,N) );
@@ -76,28 +80,27 @@ init_coordnum()
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 compute_coordnum() {
-    ntype fval;
-    vec rij;
-    for(auto i=0;i<N;i++) neigh[0].set(i,0.0); // start counter
-    for(auto i=0;i<N-1;i++){
-      for(auto j=i+1;j<N;j++){
-        rij = ps[j].r - ps[i].r;
-        //rij = ps[i].mic(rij, L); // minimum image convention
-        rij = mic(box, boxInv, rij);
-        fval = fcut( rij.sq()/cutoffSq[0], p1half, p2half );
-        neigh[0][i] += fval;
-        neigh[0][j] += fval;
-//        if( ps[j].is_inside(ps[i], cutoff[0], L) ){
-//          neigh[0][i]++;
-//        }
-      }
+  int i, j, k;
+  ntype fval, rijSq;
+  vec rij;
+  for(i=0;i<N;i++) neigh[0].set(i,0.0); // start counter
+  for(i=0;i<N;i++){
+    for(k=0;k<ps[i].neigh_list[0].size();k++){ // search in 1st shell neighbour list
+      j = ps[i].neigh_list[0][k];
+      if(j>i) continue; // avoid double counting!
+      rij = ps[i].rij_list[0][k];
+      rijSq = ps[i].rijSq_list[0][k];
+      fval = fcut( rijSq/cutoffSq[0], p1half, p2half );
+      neigh[0][i] += fval;
+      neigh[0][j] += fval;
     }
-    ss.str(std::string()); ss << s_coordnum << tag << ".dat"; fout.open(ss.str(), ios::app);
-    for(auto i=0;i<N;i++) fout << timestep << " " << i << " " << neigh[0][i] << endl;
-    fout.close();
-    ss.str(std::string()); ss << s_coordnum << tag << ".ave"; fout.open(ss.str(), ios::app);
-    fout << timestep << " " << neigh[0].mean() << " " << neigh[0].std()/sqrt(N) << endl;
-    fout.close();
+  }
+  ss.str(std::string()); ss << s_coordnum << tag << ".dat"; fout.open(ss.str(), ios::app);
+  for(i=0;i<N;i++) fout << timestep << " " << i << " " << neigh[0][i] << endl;
+  fout.close();
+  ss.str(std::string()); ss << s_coordnum << tag << ".ave"; fout.open(ss.str(), ios::app);
+  fout << timestep << " " << neigh[0].mean() << " " << neigh[0].std()/sqrt(N) << endl;
+  fout.close();
 }
 
 //---------------------- Bond Orientational parameters: BOO (q_lm) and BOC (q_lm^dot) -------------------------------//
@@ -318,16 +321,16 @@ compute_rdf(int frameidx)
 {
     int i,j, k;
     vec rij;
-    ntype r,r_true,r_mic;
+    ntype r,r_mic;
     for(k=0; k<rdf_nbins; k++) rdf[k] = 0.0;
     if(debug) cout << "*** RDF computation for timestep " << timestep << " STARTED ***\n";
     for(i=0;i<N;i++){
       for(j=i+1;j<N;j++){ // i<j
          rij = ps[j].r - ps[i].r; // real distance
-         r_true = rij.norm();
+         r = rij.norm();
          rij = mic(box, boxInv, rij); // first periodic image
          r_mic = rij.norm();
-         r = ( r_mic < r_true ? r_mic : r_true ); // if closer, choose first periodic image
+         if( r_mic < r) r = r_mic; // if closer, choose first periodic image
          // if(debug) cout << "  PBC for (i,j)=(" <<i<<","<<j<<") : " << r_true << " --> " << r << endl;
          k = int(floor( r/rdf_binw ));
          if(k<rdf_nbins){
