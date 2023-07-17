@@ -318,16 +318,18 @@ compute_rdf(int frameidx)
 {
     int i,j, k;
     vec rij;
-    ntype r;
-    for(k=0; k<rdf_nbins; k++)
-      rdf[k] = 0.0;
+    ntype r,r_true,r_mic;
+    for(k=0; k<rdf_nbins; k++) rdf[k] = 0.0;
     if(debug) cout << "*** RDF computation for timestep " << timestep << " STARTED ***\n";
     for(i=0;i<N;i++){
-      for(j=i+1;j<N;j++){
-         //rij = ( ps[j].r - ps[i].r ).mic(L);
-         rij = mic(box, boxInv, ps[j].r - ps[i].r );
-         r = rij.norm();
-         k = int(floor( r/rdf_binw));
+      for(j=i+1;j<N;j++){ // i<j
+         rij = ps[j].r - ps[i].r; // real distance
+         r_true = rij.norm();
+         rij = mic(box, boxInv, rij); // first periodic image
+         r_mic = rij.norm();
+         r = ( r_mic < r_true ? r_mic : r_true ); // if closer, choose first periodic image
+         // if(debug) cout << "  PBC for (i,j)=(" <<i<<","<<j<<") : " << r_true << " --> " << r << endl;
+         k = int(floor( r/rdf_binw ));
          if(k<rdf_nbins){
            rdf[k] += 1.0;
          }

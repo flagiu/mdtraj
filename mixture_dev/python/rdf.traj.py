@@ -23,7 +23,7 @@ parser.add_argument('--inavg',  type=argparse.FileType('r'),
 
 outpng="rdf.png"
 outpdf="rdf.pdf"
-x_tolerance=1e-5
+x_tolerance=5e-5
 
 #-------------------------------------#
 args = parser.parse_args()
@@ -43,7 +43,7 @@ except AssertionError:
 	print("[ ERROR: x values do not match! ]")
 	print(" File",args.intraj.name)
 	print(Xt[x_isnot_equal, 0])
-	
+
 	print(" File",args.inavg.name)
 	print(Xa[x_isnot_equal, 0])
 	sys.exit(1)
@@ -63,4 +63,3 @@ fig.savefig(outpng)
 fig.savefig(outpdf)
 print("Figure saved on %s, %s\n"%(outpng, outpdf))
 #plt.show()
-

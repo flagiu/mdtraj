@@ -145,8 +145,13 @@ public:
     s_out="traj";
     period = -1; // default: don't average over t0 for MSD
     remove_rot_dof = true;
-    L << 20, 20, 20; // default: orthoromibic box 20,20,20
-    set_box_from_L();
+    // default: nonsense box
+    L << 0.0, 0.0, 0.0;
+    for(auto i=0;i<3;i++) {
+      box[i] << 0.0, 0.0, 0.0;
+      boxInv[i] << 0.0, 0.0, 0.0;
+    }
+    V=0.0;
     cutoff[0] = 3.75; // 3.6 in glass, 3.75-3.89 in xtal
     cutoff[1] = 5.15;
     cutoff[2] = 8.8;
@@ -158,7 +163,7 @@ public:
     altbc_nbins=0;
     altbc_rmin=0.0;
     altbc_angle=-1.0;
-    // Update parameters with input arguments:
+    //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
     // Compute non-primitive parameters:
     compute_volume();
@@ -183,9 +188,11 @@ public:
   }
 
   void set_L_from_box() { // in general L[] is the length of each box vector. Is it useful? idk
+    boxInv=box.inverse();
     L[0] = box.T()[0].norm();
     L[1] = box.T()[1].norm();
     L[2] = box.T()[2].norm();
+    compute_volume();
   }
 
   void compute_volume() {

@@ -104,53 +104,52 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		    fprintf(stderr, "ERROR: '-box1' must be followed by the box size!\n");
 		    exit(-1);
 		  }
-	      for(int j=0;j<3;j++) L[j] = atof(argv[i]);
+	    for(int j=0;j<3;j++) L[j] = atof(argv[i]);
 		  set_box_from_L();
 	    }
 	  else if ( !strcmp(argv[i], "-box3") )
 	    {
-	        for(int j=0;j<3;j++){
+        for(int j=0;j<3;j++){
 		      i++;
 		      if (i == argc){
-			    fprintf(stderr, "ERROR: '-box3' must be followed by the 3 box sizes!\n");
-			    exit(-1);
-			  }
+            fprintf(stderr, "ERROR: '-box3' must be followed by the 3 box sizes!\n");
+            exit(-1);
+          }
 		      L[j] = atof(argv[i]);
 		    }
-		set_box_from_L();
+        set_box_from_L();
 	    }
 	  else if ( !strcmp(argv[i], "-box6") )
 	    {
-	        for(int j=0;j<6;j++){
+        for(int j=0;j<6;j++){
 		      i++;
 		      if (i == argc){
-			    fprintf(stderr, "ERROR: '-box6' must be followed by the 6 box sizes!\n");
-			    exit(-1);
-			  }
-			  switch(j)
-			  {
+            fprintf(stderr, "ERROR: '-box6' must be followed by the 6 box sizes!\n");
+            exit(-1);
+          }
+          switch(j)
+          {
 			    case 0: box[0][0] = atof(argv[i]); break;
 			    case 1: box[0][1] = atof(argv[i]); break;
 			    case 2: box[0][2] = atof(argv[i]); break;
 			    case 3: box[1][1] = atof(argv[i]); break;
 			    case 4: box[1][2] = atof(argv[i]); break;
 			    case 5: box[2][2] = atof(argv[i]); break;
-			  }
+          }
 		    }
-			box[1][0]=box[2][0]=box[2][1]=0.0;
-      boxInv=box.inverse();
-			set_L_from_box();
+        box[1][0]=box[2][0]=box[2][1]=0.0;
+        set_L_from_box();
 	    }
 	  else if ( !strcmp(argv[i], "-box9") )
 	    {
-	        for(int j=0;j<9;j++){
+	      for(int j=0;j<9;j++){
 		      i++;
 		      if (i == argc){
-			    fprintf(stderr, "ERROR: '-box9' must be followed by the 6 box sizes!\n");
-			    exit(-1);
-			  }
-			  switch(j)
-			  {
+			      fprintf(stderr, "ERROR: '-box9' must be followed by the 6 box sizes!\n");
+			      exit(-1);
+			    }
+			    switch(j)
+			    {
 			    case 0: box[0][0] = atof(argv[i]); break;
 			    case 1: box[0][1] = atof(argv[i]); break;
 			    case 2: box[0][2] = atof(argv[i]); break;
@@ -160,10 +159,9 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 			    case 6: box[2][0] = atof(argv[i]); break;
 			    case 7: box[2][1] = atof(argv[i]); break;
 			    case 8: box[2][2] = atof(argv[i]); break;
-			  }
+			    }
 		    }
-      boxInv=box.inverse();
-			set_L_from_box();
+			  set_L_from_box();
 	    }
 	  else if ( !strcmp(argv[i], "-general_box") )
 	      remove_rot_dof = false;
