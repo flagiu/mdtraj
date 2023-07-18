@@ -1,16 +1,6 @@
 #ifndef _MDTRAJ_H_
 #define _MDTRAJ_H_
 
-/*
- TO DO:
-  - Correct non-orthorombic PBC
-  - Add more input file types
-  - Read non-orthorombic frames from xyz or similar
-  - Implement multi-species
- Optimization ideas:
-
-*/
-
 #include<cstdlib>
 #include<cstring>
 #include<complex>

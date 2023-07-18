@@ -9,7 +9,7 @@ plt.rcParams['axes.labelsize'] = 'large'
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
-                    description = 'Computes S(q) from the Fourier transform of g(r), and plots it.',
+                    description = 'NOT WORKING!!! Computes S(q) from the Fourier transform of g(r), and plots it.',
                     epilog='End of the summary.'
 )
 parser.add_argument('--rdf',  type=argparse.FileType('r'),
