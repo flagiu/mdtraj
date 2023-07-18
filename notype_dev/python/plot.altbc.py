@@ -19,11 +19,19 @@ parser.add_argument('--inavg',  type=argparse.FileType('r'),
                      help="Input file with average trajectory (1st block: radial bins; 2nd block: 2d matrix of ALTBC average). [default: %(default)s]"
 )
 
+parser.add_argument('--scale',  type=str,
+                     default="lin", required=False,
+                     help="Intensity scale: 'lin' or 'log'. [default: %(default)s]"
+)
+
 outpng="altbc.png"
 outpdf="altbc.pdf"
 
 #-------------------------------------#
 args = parser.parse_args()
+if args.scale != "lin" and args.scale != "log":
+	print("\n[ Error: argument --scale must be followed by 'lin' or 'log' ]\n")
+	sys.exit(1)
 
 lines = args.inavg.readlines()
 i = 0
@@ -50,14 +58,21 @@ assert altbc.shape[0]==nbins
 assert altbc.shape[1]==nbins
 
 x,y = np.meshgrid(r,r)
-z_min = altbc.min()
-z_max = altbc.max()
+z = altbc
+my_cmap='jet'
+if args.scale=="log":
+	min_nonzero = altbc[altbc>0.0].min()
+	altbc[altbc==0.0]==min_nonzero
+	z = np.log(altbc)
+	my_cmap='Greys'
 
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"$r_1$ [$\AA$]")
 ax.set_ylabel(r"$r_2$ [$\AA$]")
 ax.set_title(r"ALTBC @ %.1f°"%angle_th)
-c = ax.pcolormesh(x, y, altbc, cmap='jet', vmin=z_min, vmax=z_max)
+if args.scale=="log":
+	ax.set_title(r"log ALTBC @ %.1f°"%angle_th)
+c = ax.pcolormesh(x, y, z, cmap=my_cmap, vmin=z.min(), vmax=z.max())
 ax.axis([x.min(), x.max(), y.min(), y.max()])
 ax.set_aspect('equal', adjustable='box')
 fig.colorbar(c, ax=ax)

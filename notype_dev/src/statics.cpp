@@ -538,7 +538,7 @@ compute_altbc(int frameidx)
     for(k0=0; k0<altbc_nbins; k0++){
       for(k1=0; k1<altbc_nbins; k1++){
         k = k0 + altbc_nbins*k1;
-        altbc[k] /= (counts*altbc_binw*altbc_binw); // ci sta la larghezza del bin?
+        if(counts>0) altbc[k] /= (counts*altbc_binw*altbc_binw); // ci sta l'area del bin??
         altbc[k] *= norm_factor;
         fout << altbc[k] << " "; // 2D matrix
         altbc_ave[k] += altbc[k];
