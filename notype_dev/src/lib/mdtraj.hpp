@@ -172,21 +172,26 @@ public:
   }
 
   void set_box_from_L() {
-    box.set_diag(L);
+    box.set_diag(L); // diagonal box
     boxInv = box.inverse();
     compute_volume();
   }
 
-  void set_L_from_box() { // in general L[] is the length of each box vector. Is it useful? idk
+  void set_L_from_box() {
     boxInv=box.inverse();
-    L[0] = box.T()[0].norm();
+    L[0] = box.T()[0].norm(); // in general, L[i] is the length of the i-th box vector. Is it useful? idk
     L[1] = box.T()[1].norm();
     L[2] = box.T()[2].norm();
     compute_volume();
   }
 
   void compute_volume() {
-    V = fabs(box.det());
+    V = box.det(); //determinant
+    if(V<=0) {
+      cout << "[ ERROR: the following box implies volume="<<V<<", not supported. ]\n";
+      box.show();
+      exit(1);
+    }
   }
 
   void read_frame(fstream &i, bool resetN);

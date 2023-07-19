@@ -186,7 +186,12 @@ public:
   }
 
   void compute_volume() {
-    V = fabs(box.det());
+    V = box.det(); //determinant
+    if(V<=0) {
+      cout << "[ ERROR: the following box implies volume="<<V<<", not supported. ]\n";
+      box.show();
+      exit(1);
+    }
   }
 
   void read_frame(fstream &i, bool resetN);
