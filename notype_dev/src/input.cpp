@@ -68,6 +68,7 @@ removeRotDof()
   if(debug) { cout << "  sin1 = "<< s << endl; }
   // build the rotation matrix
   R1 = rotation_matrix_axis_cossin( u, c, s ); // declared in lib/matrix.hpp
+  if(box.det()<0) R1 *= -1.; // invert to go back to right-hand rule
   if(debug) { cout << "Rotation matrix R1 = "; R1.show(); }
   box = R1*box;
   if(debug) { cout << "box (after R1) = "; box.show(); }
