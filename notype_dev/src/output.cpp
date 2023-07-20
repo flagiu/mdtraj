@@ -67,8 +67,10 @@ void Trajectory<ntype, ptype>::
 print_out_alphanes() {
   print_box();
   fout.open("pos.dat", ios::app);
-  for(auto &p : ps) {
-    fout << p.r[0] <<" "<< p.r[1] <<" "<< p.r[2] <<endl;
+  for(auto i=0;i<ps.size();i++) {
+    fout << ps[i].r[0] <<" "<< ps[i].r[1] <<" "<< ps[i].r[2];
+    if(i<ps.size()-1) fout << " ";
+    else fout << endl;
   }
   fout.close();
   /* Forces and energies are not yet implemented!

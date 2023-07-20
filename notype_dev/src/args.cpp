@@ -5,7 +5,7 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k] [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -tag]\n", argv0);
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k] [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -tag]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -21,6 +21,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n INPUT FILES (only one of the following must be selected, followed by the file name):");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file (one row for each timestep; 6 columns for box + 3N columns for coordinates).");
+  fprintf(stderr, "\n -alphanes9 \t like -alphanes but with 9 columns for box.");
   fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
   fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat).");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
@@ -248,7 +249,18 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		  fprintf(stderr, "ERROR: '-alphanes' must be followed by file name!\n");
 		  exit(-1);
 		}
-              filetype = FileType::ALPHANES;
+          filetype = FileType::ALPHANES;
+	      s_in = string(argv[i]);
+	    }
+	  else if ( !strcmp(argv[i], "-alphanes9") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-alphanes9' must be followed by file name!\n");
+		  exit(-1);
+		}
+          filetype = FileType::ALPHANES9;
 	      s_in = string(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-contcar") )

@@ -28,6 +28,10 @@ read_frame(fstream &i, bool resetN)
         read_alphanes_frame(i, resetN);
         timestep+=dtframe; // artificial time
         break;
+      case FileType::ALPHANES9:
+        read_alphanes9_frame(i, resetN);
+        timestep+=dtframe; // artificial time
+        break;
       case FileType::JMD:
         read_jmd_frame(i, resetN);
         break;
@@ -49,24 +53,32 @@ removeRotDof()
   vec u, xdir;
   ntype a_xy_radius, c, s, t, angle;
   if(debug) cout <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
+  if(debug) cout <<"\n[ Remember that box=(a|b|c) ]\n";
   // let a, b, c be the columns of the box matrix.
   // 1) Align a to x-axis
   // u=(0,az,-ay) or (0,-az,ay) is the axis of rotation (to be normalized)
+  if(debug) { cout << "Raw box = "; box.show(); }
+  if(debug) { cout << "Raw volume (with sign)= "<< box.det()<<endl; }
   u << 0.0, box[2][0], -1*box[1][0];
+  if(debug) { cout << "  axis1 = "; u.show(); }
   // c = cos(angle) = ax/|a| ; s = sin(angle)
   c = box[0][0] / sqrt( box[0][0]*box[0][0] + box[1][0]*box[1][0] + box[2][0]*box[2][0] );
-  s = -sqrt( 1.0 - c*c ); // + or - ?? with the choice of u=(0,az,-ay) it should be +?
+  s = sqrt( 1.0 - c*c ); // + or - ? with the choice of u=(0,az,-ay) it should be +
+  if(debug) { cout << "  cos1 = "<< c << endl; }
+  if(debug) { cout << "  sin1 = "<< s << endl; }
   // build the rotation matrix
   R1 = rotation_matrix_axis_cossin( u, c, s ); // declared in lib/matrix.hpp
-  if(debug) { cout << "R1 = "; R1.show(); }
+  if(debug) { cout << "Rotation matrix R1 = "; R1.show(); }
   box = R1*box;
   if(debug) { cout << "box (after R1) = "; box.show(); }
   // 2) Rotate around the x-axis to bring the new b within the x-y plane
   xdir << 1.0, 0.0, 0.0;
-  // tan(angle) = bz / by
+  if(debug) { cout << "  axis2 (x-axis) = "; xdir.show(); }
+  // tan(angle) = -bz / by
   angle = -atan2( box[2][1], box[1][1] );
+  if(debug) { cout << "  angle2 (deg) = "<<angle*180/M_PI<<endl; }
   R2 = rotation_matrix_axis_cossin( xdir, cos(angle), sin(angle) );
-  if(debug) { cout << "R2 = "; R2.show(); }
+  if(debug) { cout << "Rotation matrix R2 = "; R2.show(); }
   box = R2*box;
   if( abs(box[1][1])<1e-15 ) box[1][1]=0.0; // remove rounding errors
   if( abs(box[1][1])<1e-15 ) box[2][1]=0.0;
@@ -279,6 +291,47 @@ read_alphanes_frame(fstream &i, bool resetN)
     }
     box[1][0]=box[2][0]=box[2][1] = 0.0; //  ay=az=bz=0.0
     natom=int((ncols-6)/3);
+    N = natom;
+
+    if(resetN) {
+      ps.resize(N);
+      invN = 1.0/N;
+      nframes = nlines;
+    }
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_alphanes9_frame(fstream &i, bool resetN)
+{
+    string line;
+    stringstream ss;
+    ntype x;
+    int ncols=0, natom, nxyz;
+
+    getline(i,line); // all frame (box+positions) is contained in one line
+    if(debug) cout << "\n  Line: " << line << endl;
+
+    ss << line;
+    while( ss >> x )
+    {
+      if(ncols==0)      box[0][0] = x; // ax
+      else if(ncols==1) box[0][1] = x; // bx
+      else if(ncols==2) box[0][2] = x; // cx
+      else if(ncols==3) box[1][0] = x; // ay
+      else if(ncols==4) box[1][1] = x; // by
+      else if(ncols==5) box[1][2] = x; // cy
+      else if(ncols==6) box[2][0] = x; // az
+      else if(ncols==7) box[2][1] = x; // bz
+      else if(ncols==8) box[2][2] = x; // cz
+      else if(!resetN) { // assign positions only after they are allocated
+        natom=int((ncols-9)/3);
+        nxyz=(ncols-9)%3;
+        ps[natom].r[nxyz] = x;
+      }
+      ncols++;
+    }
+    natom=int((ncols-9)/3);
     N = natom;
 
     if(resetN) {

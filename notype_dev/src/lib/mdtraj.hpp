@@ -13,7 +13,7 @@
 using namespace std;
 
 enum class FileType {
-  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, JMD
+  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD
 };
 
 template<class ntype, class ptype>
@@ -190,9 +190,13 @@ public:
 
   void compute_volume() {
     V = box.det(); //determinant
-    if(V<=0) {
-      cout << "[ ERROR: the following box implies volume="<<V<<", not supported. ]\n";
+    if(V<0.) {
+      cout << "[ Warning: det(box)="<<V<<" follows left-hand rule. ]\n";
+      V=-V;
+    }
+    else if (V==0.) {
       box.show();
+      cout << "[ Error: det(box)=0.0 not supported. ]\n";
       exit(1);
     }
   }
@@ -204,6 +208,7 @@ public:
   void read_xyz_frame(fstream &i, bool resetN);
   void read_xyz_cp2k_frame(fstream &i, bool resetN);
   void read_alphanes_frame(fstream &i, bool resetN);
+  void read_alphanes9_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
 
   //------- COMPUTE things ---------------//
@@ -216,17 +221,17 @@ public:
     if(debug) cout << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
     fin.open(s_in, ios::in);
 
-    if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES) {
+    if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
       timestep=-1; dtframe = 1;
-    } // set manual time for CONTCAR, ALPHANES file format
+    } // set manual time for CONTCAR, ALPHANES, ALPHANES9 file format
     read_frame(fin, true);
     t0frame = timestep;
-    if(debug) cout << "Read first frame. Set N = " << N << ", t0frame = " << t0frame << ".\n";
-    if(debug) cout << "Deduced nframes = " << nframes << " (assuming N is constant for computations).\n";
+    if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
+    if(debug) cout << "Deduced nframes = " << nframes << ".\n";
 
     read_frame(fin, false);
-    if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES) dtframe = timestep - t0frame;
-    if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant for dynamical computations).\n";
+    if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES) dtframe = timestep - t0frame;
+    if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
     init_computations();
     if(debug) cout << "Initialized arrays for computations.\n";
     fin.close();
