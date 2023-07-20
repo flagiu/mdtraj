@@ -51,11 +51,11 @@ removeRotDof()
   if(debug) cout <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
   // let a, b, c be the columns of the box matrix.
   // 1) Align a to x-axis
-  // u=(0,az,ay) is the axis of rotation (to be normalized)
-  u << 0.0, box[2][0], box[1][0];
-  // c = cos(angle) = ax/|a| ; s = sin(angle) A MENO DI UN SEGNO!!
+  // u=(0,az,-ay) or (0,-az,ay) is the axis of rotation (to be normalized)
+  u << 0.0, box[2][0], -1*box[1][0];
+  // c = cos(angle) = ax/|a| ; s = sin(angle)
   c = box[0][0] / sqrt( box[0][0]*box[0][0] + box[1][0]*box[1][0] + box[2][0]*box[2][0] );
-  s = -sqrt( 1.0 - c*c );
+  s = -sqrt( 1.0 - c*c ); // + or - ?? with the choice of u=(0,az,-ay) it should be +?
   // build the rotation matrix
   R1 = rotation_matrix_axis_cossin( u, c, s ); // declared in lib/matrix.hpp
   if(debug) { cout << "R1 = "; R1.show(); }

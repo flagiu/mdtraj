@@ -377,6 +377,7 @@ mymatrix<ntype,N,N> rotation_matrix_axis_cossin( myvec<ntype,N> u, ntype c, ntyp
   eye.set_identity();
   return (eye*=c) + (cross_product_matrix(u)*=s) + (outer_product(u,u)*=(1.0-c));
 }
+
 using matrix3d=mymatrix<double,3,3>;
 
 //-----------------------------------------------------------------//
