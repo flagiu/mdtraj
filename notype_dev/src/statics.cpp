@@ -8,6 +8,15 @@ using namespace std;
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
+init_neigh(){
+  int u;
+  for(u=0;u<maxshell;u++){
+    if(neigh[u].length()!=N) neigh[u].resize(N);
+  }
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
 build_neigh() {
   int u,i,j;
   vec rij, rij_mic;

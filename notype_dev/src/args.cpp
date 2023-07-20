@@ -5,7 +5,7 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k] [-box1 -box3 .box6 -box9 -general_box] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-period -p1half -rcut1 -rcut2 -rcut3 -tag]\n", argv0);
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k] [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -tag]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -30,31 +30,33 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n BOX (Note: it will be overwritten if present in the input file):");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -box1 \t L size of the cubic box [this is the default, with L=%.2f].",L[0]);
-  fprintf(stderr, "\n -box3 \t Lx,Ly,Lz sizes of the orthorombic box");
-  fprintf(stderr, "\n -box6 \t Ax,Bx,Cx,By,Cy,Cz components of an upper-diagonalized box");
-  fprintf(stderr, "\n -box9 \t Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz components of a general box");
-  fprintf(stderr, "\n -general_box \t Keep all 9 box elements, instead of rotating the box to upper-diagonalize it.");
+  fprintf(stderr, "\n -box1 \t INPUT: L. Size of the cubic box [this is the default, with L=%.2f].",L[0]);
+  fprintf(stderr, "\n -box3 \t INPUT: Lx,Ly,Lz. Sizes of the orthorombic box");
+  fprintf(stderr, "\n -box6 \t INPUT: Ax,Bx,Cx,By,Cy,Cz. Components of an upper-diagonalized box");
+  fprintf(stderr, "\n -box9 \t INPUT: Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz. Components of a general box");
+  fprintf(stderr, "\n -remove_rot_dof \t Rotate the positions and the box to upper-diagonalize it. [default don't].");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n STATISTICAL ANALYSIS:");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell. INPUT: nbins. OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
+  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: nbins rmin maxangle. Uses the given number of bins for each dimension, with tmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement and Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function. INPUT: nbins. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
-  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: nbins rmin maxangle. Uses the given number of bins for each dimension, with tmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n OTHER PARAMETERS:");
-  fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
-  fprintf(stderr, "\n -outxyz \t Print an output traj.xyz file. [default don't]");
-  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].", period);
-  fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].", cutoff[0]);
   fprintf(stderr, "\n -rcut2 \t Cutoff radius for cutoff functions in 2nd shell [default %.2f].", cutoff[1]);
   fprintf(stderr, "\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].", cutoff[2]);
+  fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
+  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].", period);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\n OTHER PARAMETERS:");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
+  fprintf(stderr, "\n -out_alphanes \t Produce the following self-explaining files: type.dat, box.dat, pos.dat, [forces.dat, energy.dat]. Box is rotated with -remove_rot_dof. No tag is addded.");
   fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n TIPS:");
@@ -161,8 +163,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		    }
 			set_L_from_box();
 	    }
-	  else if ( !strcmp(argv[i], "-general_box") )
-	      remove_rot_dof = false;
+	  else if ( !strcmp(argv[i], "-remove_rot_dof") )
+	      remove_rot_dof = true;
 	  else if ( !strcmp(argv[i], "-l") )
 	    {
 	      i++;
@@ -315,8 +317,13 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
         filetype = FileType::XYZ_CP2K;
 	      s_in = string(argv[i]);
 	    }
-	  else if ( !strcmp(argv[i], "-outxyz") )
-	    print_out_xyz = true;
+	  else if ( !strcmp(argv[i], "-out_xyz") )
+	    out_xyz = true;
+	  else if ( !strcmp(argv[i], "-out_alphanes") )
+	  {
+	    out_alphanes = true;
+		remove_rot_dof = true; // important!
+	  }
 	  else
 	    {
 	      fprintf(stderr, "ERROR: Invalid argumet!\n");

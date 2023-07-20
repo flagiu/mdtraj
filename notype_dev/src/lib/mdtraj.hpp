@@ -40,7 +40,7 @@ public:
   vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
   vecflex<ntype> altbc_bins, altbc, altbc_ave, altbc2_ave; // for ALTBC
   vector<vec> rs;
-  bool msdAverageOverTime0, print_out_xyz;
+  bool msdAverageOverTime0, out_box, out_xyz, out_alphanes;
   bool debug, verbose;
 
 private:
@@ -86,7 +86,6 @@ public:
     cout << " c_altbc = \t " << c_altbc << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
-    cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
     cout << " box (a|b|c) = \t "; box.show();
     cout << " total volume V = \t " << V << endl;
     cout << " box inverse = \t "; boxInv.show();
@@ -94,12 +93,15 @@ public:
     cout << " p1 = \t " << p1 << endl;
     cout << " p2 = \t " << p2 << endl;
     cout << " MSD period = \t " << period << endl;
-    cout << " print_out_xyz = \t " << print_out_xyz << endl;
     cout << " rdf_nbins = \t " << rdf_nbins << endl;
     cout << " adf_nbins = \t " << adf_nbins << endl;
     cout << " altbc_nbins = \t " << altbc_nbins << endl;
     cout << " altbc_rmin = \t " << altbc_rmin << endl;
     cout << " altbc_angle = \t " << altbc_angle << endl;
+    cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
+    cout << " out_box = \t " << out_box << endl;
+    cout << " out_xyz = \t " << out_xyz << endl;
+    cout << " out_alphanes = \t " << out_alphanes << endl;
     cout << " tag = \t " << tag << endl;
     for(auto  i=0;i<Nshells;i++) cout << " rcut" << i << " = \t " << cutoff[i] << endl;
     cout << " s_in = \t " << s_in << endl;
@@ -117,7 +119,6 @@ public:
     c_adf = false;
     c_rmin = false;
     c_altbc = false;
-    print_out_xyz = false;
     filetype=FileType::XYZ;
     s_ndens="ndens";
     s_box="box";
@@ -134,7 +135,10 @@ public:
     tag="";
     s_out="traj";
     period = -1; // default: don't average over t0 for MSD
-    remove_rot_dof = true;
+    remove_rot_dof = false;
+    out_box = false;
+    out_xyz = false;
+    out_alphanes = false;
     // default: nonsense box
     L << 0.0, 0.0, 0.0;
     for(auto i=0;i<3;i++) {
@@ -195,6 +199,7 @@ public:
   }
 
   void read_frame(fstream &i, bool resetN);
+  void removeRotDof();
   void read_contcar_frame(fstream &i, bool resetN);
   void read_xdatcar_frame(fstream &i, bool resetN, bool constantBox);
   void read_xyz_frame(fstream &i, bool resetN);
@@ -218,11 +223,11 @@ public:
     read_frame(fin, true);
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << ", t0frame = " << t0frame << ".\n";
-    if(debug) cout << "Deduced nframes = " << nframes << " (assuming N is constant).\n";
+    if(debug) cout << "Deduced nframes = " << nframes << " (assuming N is constant for computations).\n";
 
     read_frame(fin, false);
     if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES) dtframe = timestep - t0frame;
-    if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
+    if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant for dynamical computations).\n";
     init_computations();
     if(debug) cout << "Initialized arrays for computations.\n";
     fin.close();
@@ -236,23 +241,13 @@ public:
     for(int i=0; i<nframes; i++)
     {
       read_frame(fin, false);
-      if(N != ps.size()) { cout << "[ERROR: N has changed]\n"; exit(1); }
+      if(N != ps.size()) { cout << "[Warning: N has changed]\n"; exit(1);}
       if( (timestep - t0frame)%dtframe != 0) {
-        cout << "[ERROR: timestep interval has changed]\n";
+        cout << "[Warning: timestep interval has changed]\n";
         cout << "[t0frame = "<<t0frame<<", dtframe = "<<dtframe<<", timestep = "<<timestep<<"]\n";
         exit(1);
       }
-      print_box();
-      if(print_out_xyz) print_out();
-      compute_density();
-      if(maxshell>0) build_neigh();
-      if(c_coordnum) compute_coordnum();
-      if(c_bondorient) compute_bondorient();
-      if(c_msd) compute_msd(i);
-      if(c_rdf) compute_rdf(i);
-      if(c_adf) compute_adf(i);
-      if(c_rmin) compute_rmin();
-      if(c_altbc) compute_altbc(i);
+      do_computations_and_output(i);
       printProgress.update( i+1 );
     }
     printProgress.end();
@@ -262,13 +257,11 @@ public:
     if(debug || verbose) cout << "\nExecution completed.\n\n";
   }
 
-
-  //-------------Trajectory analysis, implemented in ../statics.cpp and ../dynamics.cpp -----------------//
-
   void init_computations() {
-    init_box();
     init_density();
-    if(print_out_xyz) init_out();
+    if(out_box) init_box();
+    if(out_xyz) init_out_xyz();
+    if(out_alphanes) init_out_xyz();
     if(maxshell>0) init_neigh();
     if(c_coordnum) init_coordnum();
     if(c_bondorient) init_bondorient();
@@ -277,6 +270,22 @@ public:
     if(c_adf) init_adf();
     if(c_rmin) init_rmin();
     if(c_altbc) init_altbc();
+  }
+
+  void do_computations_and_output(int i) {
+    compute_density();
+    if(out_box) print_box();
+    if(out_xyz) print_out_xyz();
+    if(out_alphanes) print_out_alphanes();
+
+    if(maxshell>0) build_neigh();
+    if(c_coordnum) compute_coordnum();
+    if(c_bondorient) compute_bondorient();
+    if(c_msd) compute_msd(i);
+    if(c_rdf) compute_rdf(i);
+    if(c_adf) compute_adf(i);
+    if(c_rmin) compute_rmin();
+    if(c_altbc) compute_altbc(i);
   }
 
   void init_density() {
@@ -293,33 +302,17 @@ public:
     fout << timestep << " " << ndens << endl;
     fout.close();
   }
-  void init_box() {
-    ss.str(std::string()); ss << s_box << tag << ".dat"; fout.open(ss.str(), ios::out);
-    fout << "#Ax Bx Cx Ay By Cy Az Bz Cz\n";
-    fout.close();
-  }
-  void print_box() {
-    ss.str(std::string()); ss << s_box << tag << ".dat"; fout.open(ss.str(), ios::app);
-    box.write(fout);
-    fout.close();
-  }
-  void init_out() {
-    ss.str(std::string()); ss << s_out << tag << ".xyz"; fout.open(ss.str(), ios::out);
-    fout.close();
-  }
-  void print_out() {
-    ss.str(std::string()); ss << s_out << tag << ".xyz"; fout.open(ss.str(), ios::app);
-    fout << N << endl;
-    fout << "Atoms. Timestep: " << timestep << endl;
-    for(auto &p : ps) p.write_xyz(fout);
-    fout.close();
-  }
-  void init_neigh(){
-    int u;
-    for(u=0;u<maxshell;u++){
-      if(neigh[u].length()!=N) neigh[u].resize(N);
-    }
-  }
+  
+//-------------Trajectory output, implemented in ../output.cpp -----------------//
+  void init_box();
+  void print_box();
+  void init_out_xyz();
+  void print_out_xyz();
+  void init_out_alphanes();
+  void print_out_alphanes();
+
+  //-------------Trajectory analysis, implemented in ../statics.cpp and ../dynamics.cpp -----------------//
+  void init_neigh();
   void build_neigh();
   void init_coordnum();
   void compute_coordnum();

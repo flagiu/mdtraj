@@ -35,46 +35,49 @@ read_frame(fstream &i, bool resetN)
         cout << "[ERROR: filetype = " << static_cast<int>(filetype) << " not recognized]\n";
         exit(1);
     }
-    if(remove_rot_dof) {
-      mat R1,R2,Rtot;
-      vec u, xdir;
-      ntype a_xy_radius, c, s, t, angle;
-      if(debug) cout <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
-      // let a, b, c be the columns of the box matrix.
-      // 1) Align a to x-axis
-      // u=(0,az,ay) is the axis of rotation (to be normalized)
-      u << 0.0, box[2][0], box[1][0];
-      // c = cos(angle) = ax/|a| ; s = sin(angle) A MENO DI UN SEGNO!!
-      c = box[0][0] / sqrt( box[0][0]*box[0][0] + box[1][0]*box[1][0] + box[2][0]*box[2][0] );
-      s = -sqrt( 1.0 - c*c );
-      // build the rotation matrix
-      R1 = rotation_matrix_axis_cossin( u, c, s );
-      if(debug) { cout << "R1 = "; R1.show(); }
-      box = R1*box;
-      if(debug) { cout << "box (after R1) = "; box.show(); }
-      // 2) Rotate around the x-axis to bring the new b within the x-y plane
-      xdir << 1.0, 0.0, 0.0;
-      // tan(angle) = bz / by
-      angle = -atan2( box[2][1], box[1][1] );
-      R2 = rotation_matrix_axis_cossin( xdir, cos(angle), sin(angle) );
-      if(debug) { cout << "R2 = "; R2.show(); }
-      box = R2*box;
-      if( abs(box[1][1])<1e-15 ) box[1][1]=0.0; // remove rounding errors
-      if( abs(box[1][1])<1e-15 ) box[2][1]=0.0;
-      if( abs(box[2][2])<1e-15 ) box[2][2]=0.0;
-      if(debug) { cout << "box (after R2) = "; box.show(); }
-      // 3) Apply both rotations to each particle
-      Rtot=R2*R1;
-      for(auto &p: ps) p.r = Rtot*p.r;
-      // Final result: A=(Ax,0,0)^T, B=(Bx,By,0)^T, C generic ==> box is upper diagonal
-      if(debug) { cout <<"\n*------------------------------------------------------------*\n"; }
-    }
+    if(remove_rot_dof) removeRotDof();
     boxInv = box.inverse();
     set_L_from_box();
     if(debug) cout << "  Read frame at timestep " << timestep << " DONE.\n";
-
-
   }
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+removeRotDof()
+{
+  mat R1,R2,Rtot;
+  vec u, xdir;
+  ntype a_xy_radius, c, s, t, angle;
+  if(debug) cout <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
+  // let a, b, c be the columns of the box matrix.
+  // 1) Align a to x-axis
+  // u=(0,az,ay) is the axis of rotation (to be normalized)
+  u << 0.0, box[2][0], box[1][0];
+  // c = cos(angle) = ax/|a| ; s = sin(angle) A MENO DI UN SEGNO!!
+  c = box[0][0] / sqrt( box[0][0]*box[0][0] + box[1][0]*box[1][0] + box[2][0]*box[2][0] );
+  s = -sqrt( 1.0 - c*c );
+  // build the rotation matrix
+  R1 = rotation_matrix_axis_cossin( u, c, s ); // declared in lib/matrix.hpp
+  if(debug) { cout << "R1 = "; R1.show(); }
+  box = R1*box;
+  if(debug) { cout << "box (after R1) = "; box.show(); }
+  // 2) Rotate around the x-axis to bring the new b within the x-y plane
+  xdir << 1.0, 0.0, 0.0;
+  // tan(angle) = bz / by
+  angle = -atan2( box[2][1], box[1][1] );
+  R2 = rotation_matrix_axis_cossin( xdir, cos(angle), sin(angle) );
+  if(debug) { cout << "R2 = "; R2.show(); }
+  box = R2*box;
+  if( abs(box[1][1])<1e-15 ) box[1][1]=0.0; // remove rounding errors
+  if( abs(box[1][1])<1e-15 ) box[2][1]=0.0;
+  if( abs(box[2][2])<1e-15 ) box[2][2]=0.0;
+  if(debug) { cout << "box (after R2) = "; box.show(); }
+  // 3) Apply both rotations to each particle
+  Rtot=R2*R1;
+  for(auto &p: ps) p.r = Rtot*p.r;
+  // Final result: A=(Ax,0,0)^T, B=(Bx,By,0)^T, C generic ==> box is upper diagonal
+  if(debug) { cout <<"\n*------------------------------------------------------------*\n"; }
+}
 
 //-----------------------------------------------------------------------
 
