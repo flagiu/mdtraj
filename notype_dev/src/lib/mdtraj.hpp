@@ -160,7 +160,6 @@ public:
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
     // Compute non-primitive parameters:
-    compute_volume();
     for(auto  i=0;i<Nshells;i++) cutoffSq[i] = cutoff[i]*cutoff[i];
     l_is_odd = (l%2!=0);
     l_deg = 2*l+1;
@@ -261,7 +260,7 @@ public:
     init_density();
     if(out_box) init_box();
     if(out_xyz) init_out_xyz();
-    if(out_alphanes) init_out_xyz();
+    if(out_alphanes) init_out_alphanes();
     if(maxshell>0) init_neigh();
     if(c_coordnum) init_coordnum();
     if(c_bondorient) init_bondorient();

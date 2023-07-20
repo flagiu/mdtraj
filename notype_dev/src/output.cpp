@@ -45,7 +45,6 @@ print_out_xyz() {
 }
 
 
-
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_out_alphanes() {
