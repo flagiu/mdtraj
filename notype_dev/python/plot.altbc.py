@@ -59,7 +59,7 @@ assert altbc.shape[1]==nbins
 
 x,y = np.meshgrid(r,r)
 z = altbc
-my_cmap='jet'
+my_cmap='magma'
 if args.scale=="log":
 	min_nonzero = altbc[altbc>0.0].min()
 	altbc[altbc==0.0]==min_nonzero
