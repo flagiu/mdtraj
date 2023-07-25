@@ -5,7 +5,9 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k] [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -tag]\n", argv0);
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k]"
+  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin]"
+				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -fskip -tag]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -58,6 +60,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
   fprintf(stderr, "\n -out_alphanes \t Produce the following self-explaining files: type.dat, box.dat, pos.dat, [forces.dat, energy.dat]. Box is rotated with -remove_rot_dof. No tag is addded.");
+  fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end. INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
   fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n TIPS:");
@@ -233,6 +236,17 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
 	      altbc_angle = atof(argv[i]);
 	      if(altbc_angle<0.0 || altbc_angle>180.0){ fprintf(stderr, "ERROR: ALTBC angular limit must be within 0° and 180°!\n"); exit(1); }
+	    }
+	  else if ( !strcmp(argv[i], "-fskip") )
+	    {
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
+	      fskip0 = atof(argv[i]);
+	      if (fskip0<0.0 || fskip0>=1.0) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
+	      fskip1 = atof(argv[i]);
+	      if (fskip1<0.0 || fskip1>=1.0) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
 	    }
 	  else if ( !strcmp(argv[i], "-tag") )
 	    {

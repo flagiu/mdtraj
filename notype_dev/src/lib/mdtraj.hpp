@@ -45,8 +45,9 @@ public:
 
 private:
   bool l_is_odd;
-  int nlines, t0frame, dtframe, l_deg, periodIdx, Nperiods, maxshell;
+  int nlines, t0frame, dtframe, l_deg, periodIdx, Nperiods, maxshell, nskip0, nskip1, nframes_original;
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
+  float fskip0, fskip1;
   fstream fin, fout;
   stringstream ss;
   ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw, altbc_binw, altbc_cos;
@@ -102,6 +103,8 @@ public:
     cout << " out_box = \t " << out_box << endl;
     cout << " out_xyz = \t " << out_xyz << endl;
     cout << " out_alphanes = \t " << out_alphanes << endl;
+    cout << " fskip_from_beginning = \t " << fskip0 << endl;
+    cout << " fskip_from_end = \t " << fskip1 << endl;
     cout << " tag = \t " << tag << endl;
     for(auto  i=0;i<Nshells;i++) cout << " rcut" << i << " = \t " << cutoff[i] << endl;
     cout << " s_in = \t " << s_in << endl;
@@ -157,6 +160,7 @@ public:
     altbc_nbins=0;
     altbc_rmin=0.0;
     altbc_angle=-1.0;
+    fskip0=fskip1=0.0;
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
     // Compute non-primitive parameters:
@@ -229,8 +233,14 @@ public:
     if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << ".\n";
 
+    nskip0=int(fskip0*nframes);
+    nskip1=int(fskip1*nframes);
+    nframes_original = nframes;
+    nframes = nframes - nskip0 - nskip1;
+    if(nframes<2) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
+
     read_frame(fin, false);
-    if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES) dtframe = timestep - t0frame;
+    if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
     if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
     init_computations();
     if(debug) cout << "Initialized arrays for computations.\n";
@@ -239,10 +249,10 @@ public:
     // Restart reading
     fin.open(s_in, ios::in);
     printProgress.init( nframes );
-    if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES) {timestep=-1; } // set manual time
+    if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {timestep=-1; } // set manual time
     string junk_line;
     if(filetype==FileType::XDATCARV) { for(int i=0;i<7;i++) getline(fin, junk_line); } // skip first 7 lines (so that you can use resetN=false)
-    for(int i=0; i<nframes; i++)
+    for(int i=0; i<nframes_original; i++)
     {
       read_frame(fin, false);
       if(N != ps.size()) { cout << "[Warning: N has changed]\n"; exit(1);}
@@ -251,8 +261,8 @@ public:
         cout << "[t0frame = "<<t0frame<<", dtframe = "<<dtframe<<", timestep = "<<timestep<<"]\n";
         exit(1);
       }
-      do_computations_and_output(i);
-      printProgress.update( i+1 );
+      if(i+1>nskip0 && i<nframes_original-nskip1) do_computations_and_output(i-nskip0);
+      printProgress.update( i+1-nskip0 );
     }
     printProgress.end();
     fin.close();
