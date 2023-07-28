@@ -298,12 +298,13 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_rdf()
 {
+      rdf_nbins = int(floor( 0.5*L.abs().min() / rdf_binw ));
+      //rdf_binw = 0.5*(L.abs().min()) / (rdf_nbins-1) ;
       rdf_norm.resize(rdf_nbins);
       rdf_bins.resize(rdf_nbins);
       rdf.resize(rdf_nbins);
       rdf_ave.resize(rdf_nbins);
       rdf2_ave.resize(rdf_nbins);
-      rdf_binw = 0.5*(L.abs().min()) / (rdf_nbins-1) ;
       ntype r, shell1, shell2, normalization = (N-1)/V * 4.0*M_PI/3.0 * N/2.0;
       shell1 = 0.0;
       ss.str(std::string()); ss << s_rdf << tag << ".traj"; fout.open(ss.str(), ios::out);

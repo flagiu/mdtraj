@@ -46,7 +46,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement and Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
-  fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function. INPUT: nbins. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
+  fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function. INPUT: bin_width. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
@@ -216,9 +216,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      c_rdf = true;
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-rdf' must be followed by number of bins!\n"); exit(-1); }
-	      rdf_nbins = atoi(argv[i]);
-	      if(rdf_nbins < 2){ fprintf(stderr, "ERROR: too few bins for RDF!\n"); exit(1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-rdf' must be followed by bin width!\n"); exit(-1); }
+	      rdf_binw = atof(argv[i]);
 	    }
     else if ( !strcmp(argv[i], "-rmin") )
        c_rmin = true;

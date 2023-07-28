@@ -94,7 +94,7 @@ public:
     cout << " p1 = \t " << p1 << endl;
     cout << " p2 = \t " << p2 << endl;
     cout << " MSD period = \t " << period << endl;
-    cout << " rdf_nbins = \t " << rdf_nbins << endl;
+    cout << " rdf_binw = \t " << rdf_binw << endl;
     cout << " adf_nbins = \t " << adf_nbins << endl;
     cout << " altbc_nbins = \t " << altbc_nbins << endl;
     cout << " altbc_rmin = \t " << altbc_rmin << endl;
