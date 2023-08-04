@@ -4,7 +4,7 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 
 - Current limited to: constant number of particles, uniform timestep.
 
-- Under development: multi-species system for .xyz input files.
+- Under development: multi-species system for CP2K .xyz input files.
 
 - Bugs to be corrected: q_l order parameters seems to be offset by ~sqrt(2).
 
@@ -20,19 +20,27 @@ gh repo clone flagiu/this-repo
 cd this-repo/version
 make
 ```
-where version can be 'notype' (monospecies), 'mixture' (multi-species), with or without the suffix '_dev' (stable/developement version).
+where 'version' can be:
+- 'notype', 'notype_dev' (mono-species);
+- 'mixture', 'mixture_dev' (multi-species);
+the versions '_dev' are under developement.
 
-## Usage
+## Usage and examples
 
 Run helper message for instructions:
 ```bash
 path-to/this-repo/version/bin/mdtraj -h
 ```
 
-The subfolders python/ and shell/ contains some utility scripts, to be used externally.
+The subfolders python/ and shell/ contain some utility scripts, to be used before/after the main program.
+
+The subfolder examples/ contains some example of application to real or toy systems:
+- LJ particles in different 3d cell shapes: cubic, orthorombic, triclinic.
+- Toy particles displaced along a 3d cubic lattice with small random gaussian noise.
 
 ## Future development
 
 - Add computation of structure factor, ISF.
 - Add logarithmic timestep.
 - Add more input formats: GROMACS, ...?
+- Add marginals around the ALTBC plot.
