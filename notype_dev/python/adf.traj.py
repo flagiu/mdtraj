@@ -49,12 +49,13 @@ except AssertionError:
 	sys.exit(1)
 
 assert Xa.shape[1]>=2 # must have at least x,y
-#----------- Convert from cos(angle) to angle ---------------------------#
+#----------- Convert from cos(angle) to angle ----------------#
 jacob = np.sqrt(1-x*x)
 x = np.arccos( x ) * 180/np.pi # (degrees)
 y *= jacob
 for i in range(ntraj):
     Xt[:,i+1] *= jacob
+#-------------------------------------------------------------#
 
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"Angle [degrees]")

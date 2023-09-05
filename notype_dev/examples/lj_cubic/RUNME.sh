@@ -12,3 +12,7 @@ echo "Test liquid RDF:"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -rdf 0.02
 printf "Exit $? \n\n"
 printf " *** Does the liquid g(r) converge to 1 at large r? *** \n\n"
+
+echo "Test liquid S(q):"
+${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -sq 2 100 1
+printf "Exit $? \n\n"

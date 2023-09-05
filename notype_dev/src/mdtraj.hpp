@@ -12,6 +12,9 @@
 #include "lib/Ycomplex.hpp"
 using namespace std;
 
+const string root_path="/home/flavio/programmi/mdtraj/notype_dev";
+const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
+
 enum class FileType {
   XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD
 };
@@ -28,9 +31,9 @@ public:
   bool pbc_out; // print output with PBC?
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
-  int nframes, timestep, period, l, rdf_nbins, adf_nbins, altbc_nbins;
-  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc; // for file naming
+  int nframes, timestep, period, l, rdf_nbins, adf_nbins, altbc_nbins, sq_nbins, qmodmin,qmodmax,qmodstep;
+  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq; // compute or not
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq; // for file naming
   static const int Nshells=3;
   ntype cutoff[Nshells], altbc_rmin, altbc_angle;
   vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
@@ -40,6 +43,7 @@ public:
   vecflex<ntype> rdf_bins, rdf_norm, rdf, rdf_ave, rdf2_ave; // for RDF
   vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
   vecflex<ntype> altbc_bins, altbc, altbc_ave, altbc2_ave; // for ALTBC
+  vecflex<ntype> sq_bins, sq_norm, sq, sq2, sq_ave, sq2_ave; // for Sq
   vector<vec> rs;
   bool msdAverageOverTime0, out_box, out_xyz, out_alphanes;
   bool debug, verbose;
@@ -51,7 +55,7 @@ private:
   float fskip0, fskip1;
   fstream fin, fout;
   stringstream ss;
-  ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw, altbc_binw, altbc_cos;
+  ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw, altbc_binw, altbc_cos, sq_binw;
   FileType filetype;
 
   int ij2int(int i, int j, int N){
@@ -85,6 +89,7 @@ public:
     cout << " c_adf = \t " << c_adf << endl;
     cout << " c_rmin = \t " << c_rmin << endl;
     cout << " c_altbc = \t " << c_altbc << endl;
+    cout << " c_sq = \t " << c_sq << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
     cout << " box (a|b|c) = \t "; box.show();
@@ -99,6 +104,7 @@ public:
     cout << " altbc_nbins = \t " << altbc_nbins << endl;
     cout << " altbc_rmin = \t " << altbc_rmin << endl;
     cout << " altbc_angle = \t " << altbc_angle << endl;
+    cout << " q_mod_min,q_modmax,q_mod_step = \t " << qmodmin << ", " << qmodmax << ", "<< qmodstep << endl;
     cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
     cout << " out_box = \t " << out_box << endl;
     cout << " out_xyz = \t " << out_xyz << endl;
@@ -123,6 +129,7 @@ public:
     c_adf = false;
     c_rmin = false;
     c_altbc = false;
+    c_sq = false;
     filetype=FileType::XYZ;
     s_ndens="ndens";
     s_box="box";
@@ -136,6 +143,7 @@ public:
     s_adf="adf";
     s_rmin="rmin";
     s_altbc="altbc";
+    s_sq="sq";
     tag="";
     s_out="traj";
     period = -1; // default: don't average over t0 for MSD
@@ -162,6 +170,9 @@ public:
     altbc_nbins=0;
     altbc_rmin=0.0;
     altbc_angle=-1.0;
+    qmodmin=2;
+    qmodmax=200;
+    qmodstep=1;
     fskip0=fskip1=0.0;
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
@@ -286,6 +297,7 @@ public:
     if(c_adf) init_adf();
     if(c_rmin) init_rmin();
     if(c_altbc) init_altbc();
+    if(c_sq) init_sq();
   }
 
   void do_computations_and_output(int i) {
@@ -302,6 +314,7 @@ public:
     if(c_adf) compute_adf(i);
     if(c_rmin) compute_rmin();
     if(c_altbc) compute_altbc(i);
+    if(c_sq) compute_sq(i);
   }
 
   void init_density() {
@@ -342,6 +355,8 @@ public:
   void compute_rmin();
   void init_altbc();
   void compute_altbc(int frameidx);
+  void init_sq();
+  void compute_sq(int frameidx);
   void init_msd();
   void compute_msd(int frameidx);
   void print_msd();
