@@ -15,11 +15,11 @@ ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz test.xyz -box3 $LLL -rcut1 $RC -cn
 printf "Exit $? \n\n"
 
 echo "Test RDF"
-${PATH_TO_MDTRAJ}/bin/mdtraj -xyz test.xyz -box3 $LLL -rdf 200
+${PATH_TO_MDTRAJ}/bin/mdtraj -xyz test.xyz -box3 $LLL -rdf 0.02
 printf "Exit $? \n\n"
 
 echo "Test ADF"
-${PATH_TO_MDTRAJ}/bin/mdtraj -xyz test.xyz -box3 $LLL -rcut1 $RC -adf 200
+${PATH_TO_MDTRAJ}/bin/mdtraj -xyz test.xyz -box3 $LLL -rcut1 $RC -adf 0.02
 printf "Exit $? \n\n"
 
 for l in 4 5 6

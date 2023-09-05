@@ -48,7 +48,7 @@ while block==0:
 		if words[0]=='':
 			block=1 # separation empty line
 		else:
-			r.append(float(words[0]))			
+			r.append(float(words[0]))
 	i+=1
 r = np.array(r)
 nbins=len(r)
@@ -59,7 +59,7 @@ assert altbc.shape[1]==nbins
 
 x,y = np.meshgrid(r,r)
 z = altbc
-my_cmap='magma'
+my_cmap='jet' #'rainbow' #'magma'
 if args.scale=="log":
 	min_nonzero = altbc[altbc>0.0].min()
 	altbc[altbc==0.0]==min_nonzero

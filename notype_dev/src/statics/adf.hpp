@@ -5,12 +5,11 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_adf()
 {
+      adf_nbins = int(floor( 2.0 / adf_binw )); // -1 < cos(angle) < 1
       adf_bins.resize(adf_nbins);
       adf.resize(adf_nbins);
       adf_ave.resize(adf_nbins);
       adf2_ave.resize(adf_nbins);
-      adf_binw = 2.0 / (adf_nbins) ; // -1 < cos(angle) < 1
-      ntype angle;
       ss.str(std::string()); ss << s_adf << tag << ".traj"; fout.open(ss.str(), ios::out);
       fout << "# First block: cos(angle); other blocks: ADF for each frame )\n";
       for( auto i=0; i<adf_nbins; i++){

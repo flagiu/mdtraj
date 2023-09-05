@@ -40,8 +40,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n STATISTICAL ANALYSIS:");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell. INPUT: nbins. OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
-  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: nbins rmin maxangle. Uses the given number of bins for each dimension, with tmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
+  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell. INPUT: bin_width (in terms of the cosine). OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
+  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension, with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement and Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
@@ -58,7 +58,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
-  fprintf(stderr, "\n -out_alphanes \t Produce the following self-explaining files: type.dat, box.dat, pos.dat, [forces.dat, energy.dat]. Box is rotated with -remove_rot_dof. No tag is addded.");
+  fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining files: type.dat, box.dat, pos.dat. Box is rotated if -remove_rot_dof is activated. No tag is addded.");
+  fprintf(stderr, "\n -pbc_out \t Apply PBC to the output trajectory files. [default don't].");
   fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end. INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
   fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
   fprintf(stderr, "\n");
@@ -92,9 +93,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      c_adf = true;
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-adf' must be followed by number of bins!\n"); exit(-1); }
-	      adf_nbins = atoi(argv[i]);
-	      if(adf_nbins < 2){ fprintf(stderr, "ERROR: too few bins for ADF!\n"); exit(1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-adf' must be followed by bin width!\n"); exit(-1); }
+	      adf_binw = atof(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-bo") )
 	      c_bondorient = true;
@@ -224,14 +224,13 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      c_altbc = true;
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
-	      altbc_nbins = atoi(argv[i]);
-	      if(altbc_nbins < 2){ fprintf(stderr, "ERROR: too few bins for ALTBC!\n"); exit(1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [bin_width rmin maxangle]!\n"); exit(-1); }
+	      altbc_binw = atof(argv[i]);
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [bin_width rmin maxangle]!\n"); exit(-1); }
 	      altbc_rmin = atof(argv[i]);
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [bin_width rmin maxangle]!\n"); exit(-1); }
 	      altbc_angle = atof(argv[i]);
 	      if(altbc_angle<0.0 || altbc_angle>180.0){ fprintf(stderr, "ERROR: ALTBC angular limit must be within 0° and 180°!\n"); exit(1); }
 	    }
@@ -348,6 +347,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    out_alphanes = true;
 		remove_rot_dof = true; // important!
 	  }
+  else if ( !strcmp(argv[i], "-pbc_out") )
+    pbc_out = true;
 	  else
 	    {
 	      fprintf(stderr, "ERROR: Invalid argumet!\n");

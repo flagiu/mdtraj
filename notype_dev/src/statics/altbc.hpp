@@ -5,12 +5,12 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_altbc()
 {
+      altbc_nbins = int(floor( (cutoff[0]-altbc_rmin)/altbc_binw ));
       altbc_bins.resize(altbc_nbins);
       altbc.resize(altbc_nbins*altbc_nbins);
       altbc_ave.resize(altbc_nbins*altbc_nbins);
       altbc2_ave.resize(altbc_nbins*altbc_nbins);
-      altbc_binw = (cutoff[0]-altbc_rmin) / (altbc_nbins-1);
-      altbc_cos = cos( altbc_angle/180. * M_PI ); // should be close to 1.0
+      altbc_cos = cos( altbc_angle/180. * M_PI ); // should be close to 1.0 for 'collinear bonds'
       if(debug) cout << "ALTBC cos threshold = " << altbc_cos<<endl;
       ss.str(std::string()); ss << s_altbc << tag << ".traj"; fout.open(ss.str(), ios::out);
       fout << "# 1st block: radial distance; other blocks: ALTBC 2D matrix for each frame; # deviation >= " << altbc_angle << " degrees\n";

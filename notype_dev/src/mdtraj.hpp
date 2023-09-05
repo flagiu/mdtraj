@@ -25,6 +25,7 @@ public:
   vec L; // dimensions of an orthorombic simulation box ( ??? centered in 0: -Lx/2 < x < Lx/2 )
   mat box, boxInv; // most general simulation box
   bool remove_rot_dof; // remove the 3 rotational degrees of freedom from the box?
+  bool pbc_out; // print output with PBC?
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep, period, l, rdf_nbins, adf_nbins, altbc_nbins;
@@ -102,6 +103,7 @@ public:
     cout << " out_box = \t " << out_box << endl;
     cout << " out_xyz = \t " << out_xyz << endl;
     cout << " out_alphanes = \t " << out_alphanes << endl;
+    cout << " pbc_out = \t " << pbc_out << endl;
     cout << " fskip_from_beginning = \t " << fskip0 << endl;
     cout << " fskip_from_end = \t " << fskip1 << endl;
     cout << " tag = \t " << tag << endl;
@@ -141,6 +143,7 @@ public:
     out_box = false;
     out_xyz = false;
     out_alphanes = false;
+    pbc_out = false;
     // default: nonsense box
     L << 0.0, 0.0, 0.0;
     for(auto i=0;i<3;i++) {

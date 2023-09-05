@@ -39,7 +39,11 @@ print_out_xyz() {
   ss.str(std::string()); ss << s_out << tag << ".xyz"; fout.open(ss.str(), ios::app);
   fout << N << endl;
   fout << "Atoms. Timestep: " << timestep << endl;
-  for(auto &p : ps) p.write_xyz(fout);
+  for(auto &p : ps)
+  {
+    if(pbc_out) p.r = mic(box, boxInv, p.r); // apply PBC to the position
+    p.write_xyz(fout);
+  }
   fout.close();
 }
 
