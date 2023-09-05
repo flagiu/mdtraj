@@ -1,4 +1,3 @@
-#include "lib/mdtraj.hpp"
 using namespace std;
 //------------ Reading input files of various formats --------------------//
 

@@ -5,11 +5,11 @@
 #include<cstring>
 #include<complex>
 #include<cmath>
-#include "utility.hpp"
-#include "vecflex.hpp"
-#include "particle.hpp"
-#include "mymatrix.hpp"
-#include "Ycomplex.hpp"
+#include "lib/utility.hpp"
+#include "lib/vecflex.hpp"
+#include "lib/particle.hpp"
+#include "lib/mymatrix.hpp"
+#include "lib/Ycomplex.hpp"
 using namespace std;
 
 enum class FileType {
@@ -68,7 +68,6 @@ public:
   ~Trajectory(){}
 
 //------------ Input reading and interaction --------------------//
-// implemented in other ../args.cpp
 
   void print_usage(char argv0[]);
   void print_summary();
@@ -316,7 +315,7 @@ public:
     fout << timestep << " " << ndens << endl;
     fout.close();
   }
-  
+
 //-------------Trajectory output, implemented in ../output.cpp -----------------//
   void init_box();
   void print_box();

@@ -1,4 +1,3 @@
-#include "lib/mdtraj.hpp"
 using namespace std;
 //------------ Input reading and interaction --------------------//
 

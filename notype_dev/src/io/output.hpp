@@ -1,4 +1,3 @@
-#include "lib/mdtraj.hpp"
 using namespace std;
 //------------ Priting output trajectories of various formats --------------------//
 
@@ -53,7 +52,7 @@ init_out_alphanes() {
   fout.open("pos.dat", ios::out);
   fout.close();
   /*
-  
+
   fout.open("force.dat", ios::out);
   fout.close();
 

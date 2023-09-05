@@ -1,9 +1,4 @@
-#include "lib/mdtraj.hpp"
-#include "args.cpp"
-#include "input.cpp"
-#include "output.cpp"
-#include "statics.cpp"
-#include "dynamics.cpp"
+#include "all_headers.hpp"
 using namespace std;
 using ntype=double;
 using ptype=particle<ntype>;

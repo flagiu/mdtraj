@@ -2,11 +2,16 @@
 
 This program computes statistical quantities over a Molecular Dynamics TRAJectory.
 
-- Current limited to: constant number of particles, uniform timestep.
+- Current limited to:
+	- constant number of particles
+	- uniform timestep.
 
-- Under development: multi-species system for CP2K .xyz input files.
+- Under development:
+	- multi-species system for CP2K .xyz input files.
 
-- Bugs to be corrected: q_l order parameters seems to be offset by ~sqrt(2).
+- Bugs to be corrected:
+	- q_l order parameters seems to be offset by ~sqrt(2).
+	- g(r) is <1 for large r in triclinic boxes.
 
 ## Requirements
 
@@ -40,7 +45,7 @@ The subfolder examples/ contains some example of application to real or toy syst
 
 ## Future development
 
-- Add computation of structure factor, ISF.
+- Add computation of: structure factor, ISF, ... .
 - Add logarithmic timestep.
 - Add more input formats: GROMACS, ...?
 - Add marginals around the ALTBC plot.
