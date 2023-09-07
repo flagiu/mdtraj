@@ -1,11 +1,12 @@
-#include "lib/mdtraj.hpp"
 using namespace std;
 //------------ Input reading and interaction --------------------//
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -contcar -jmd -xdatcar -xdatcarV -xyz] [-box1 -box3 .box6 -box9 -general_box] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin] [-period -p1half -rcut1 -rcut2 -rcut3 -tag]\n", argv0);
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k]"
+  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq]"
+				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -21,40 +22,48 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n INPUT FILES (only one of the following must be selected, followed by the file name):");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file (one row for each timestep; 6 columns for box + 3N columns for coordinates).");
+  fprintf(stderr, "\n -alphanes9 \t like -alphanes but with 9 columns for box.");
   fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
   fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat).");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
-  fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -L.");
+  fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -box.");
+  fprintf(stderr, "\n -xyz_cp2k \t .xyz format from CP2K. Box size is supplied via -box.");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n BOX (Note: it will be overwritten if present in the input file):");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -box1 \t L size of the cubic box [this is the default, with L=%.2f].",L[0]);
-  fprintf(stderr, "\n -box3 \t Lx,Ly,Lz sizes of the orthorombic box");
-  fprintf(stderr, "\n -box6 \t Ax,Bx,Cx,By,Cy,Cz components of an upper-diagonalized box");
-  fprintf(stderr, "\n -box9 \t Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz components of a general box");
-  fprintf(stderr, "\n -general_box \t Keep all 9 box elements, instead of rotating the box to upper-diagonalize it.");
+  fprintf(stderr, "\n -box1 \t INPUT: L. Size of the cubic box [this is the default, with L=%.2f].",L[0]);
+  fprintf(stderr, "\n -box3 \t INPUT: Lx,Ly,Lz. Sizes of the orthorombic box");
+  fprintf(stderr, "\n -box6 \t INPUT: Ax,Bx,Cx,By,Cy,Cz. Components of an upper-diagonalized box");
+  fprintf(stderr, "\n -box9 \t INPUT: Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz. Components of a general box");
+  fprintf(stderr, "\n -remove_rot_dof \t Rotate the positions and the box to upper-diagonalize it. [default don't].");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n STATISTICAL ANALYSIS:");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell. INPUT: nbins. OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
+  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell. INPUT: bin_width (in terms of the cosine). OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
+  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension, with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
-  fprintf(stderr, "\n -msd \t Compute Mean Squared Displacement and Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
-  fprintf(stderr, "\n -rdf \t Compute Radial Distribution Function. INPUT: nbins. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
-  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: nbins rmin maxangle. Uses the given number of bins for each dimension, with tmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
+  fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
+  fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n OTHER PARAMETERS:");
-  fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
-  fprintf(stderr, "\n -outxyz \t Print an output traj.xyz file. [default don't]");
-  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].", period);
-  fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].", cutoff[0]);
   fprintf(stderr, "\n -rcut2 \t Cutoff radius for cutoff functions in 2nd shell [default %.2f].", cutoff[1]);
   fprintf(stderr, "\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].", cutoff[2]);
+  fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
+  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].", period);
+  fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\n OTHER PARAMETERS:");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
+  fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining files: type.dat, box.dat, pos.dat. Box is rotated if -remove_rot_dof is activated. No tag is addded.");
+  fprintf(stderr, "\n -pbc_out \t Apply PBC to the output trajectory files. [default don't].");
+  fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end. INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
   fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
+  fprintf(stderr, "\n -timings \t Measure time for computation of S(q) into the log file: %s[default don't].", s_log.c_str());
   fprintf(stderr, "\n");
   fprintf(stderr, "\n TIPS:");
   fprintf(stderr, "\n");
@@ -86,9 +95,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      c_adf = true;
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-adf' must be followed by number of bins!\n"); exit(-1); }
-	      adf_nbins = atoi(argv[i]);
-	      if(adf_nbins < 2){ fprintf(stderr, "ERROR: too few bins for ADF!\n"); exit(1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-adf' must be followed by bin width!\n"); exit(-1); }
+	      adf_binw = atof(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-bo") )
 	      c_bondorient = true;
@@ -160,8 +168,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		    }
 			set_L_from_box();
 	    }
-	  else if ( !strcmp(argv[i], "-general_box") )
-	      remove_rot_dof = false;
+	  else if ( !strcmp(argv[i], "-remove_rot_dof") )
+	      remove_rot_dof = true;
 	  else if ( !strcmp(argv[i], "-l") )
 	    {
 	      i++;
@@ -209,26 +217,51 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      c_rdf = true;
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-rdf' must be followed by number of bins!\n"); exit(-1); }
-	      rdf_nbins = atoi(argv[i]);
-	      if(rdf_nbins < 2){ fprintf(stderr, "ERROR: too few bins for RDF!\n"); exit(1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-rdf' must be followed by bin width!\n"); exit(-1); }
+	      rdf_binw = atof(argv[i]);
 	    }
     else if ( !strcmp(argv[i], "-rmin") )
        c_rmin = true;
+ 	  else if ( !strcmp(argv[i], "-sq") )
+ 	    {
+        c_sq = true;
+ 	      i++;
+ 	      if (i == argc) { fprintf(stderr, "ERROR: '-sq' must be followed by 3 integer values!\n"); exit(-1); }
+ 	      qmodmin = atoi(argv[i]);
+ 	      if (qmodmin<2) { fprintf(stderr, "ERROR: q_mod_min must be >=2 !\n"); exit(-1); }
+ 	      i++;
+ 	      if (i == argc) { fprintf(stderr, "ERROR: '-sq' must be followed by 3 integer values!\n"); exit(-1); }
+ 	      qmodmax = atoi(argv[i]);
+ 	      if (qmodmax<qmodmin || qmodmax>500) { fprintf(stderr, "ERROR: q_mod_max must be > q_mod_min and <=500 !\n"); exit(-1); }
+ 	      i++;
+ 	      if (i == argc) { fprintf(stderr, "ERROR: '-sq' must be followed by 3 integer values!\n"); exit(-1); }
+ 	      qmodstep = atoi(argv[i]);
+ 	      if (qmodstep<1) { fprintf(stderr, "ERROR: q_mod_step must be >=1 !\n"); exit(-1); }
+ 	    }
 	  else if ( !strcmp(argv[i], "-altbc") )
 	    {
 	      c_altbc = true;
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
-	      altbc_nbins = atoi(argv[i]);
-	      if(altbc_nbins < 2){ fprintf(stderr, "ERROR: too few bins for ALTBC!\n"); exit(1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [bin_width rmin maxangle]!\n"); exit(-1); }
+	      altbc_binw = atof(argv[i]);
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [bin_width rmin maxangle]!\n"); exit(-1); }
 	      altbc_rmin = atof(argv[i]);
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [nbins rmin maxangle]!\n"); exit(-1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [bin_width rmin maxangle]!\n"); exit(-1); }
 	      altbc_angle = atof(argv[i]);
 	      if(altbc_angle<0.0 || altbc_angle>180.0){ fprintf(stderr, "ERROR: ALTBC angular limit must be within 0° and 180°!\n"); exit(1); }
+	    }
+	  else if ( !strcmp(argv[i], "-fskip") )
+	    {
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
+	      fskip0 = atof(argv[i]);
+	      if (fskip0<0.0 || fskip0>=1.0) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
+	      fskip1 = atof(argv[i]);
+	      if (fskip1<0.0 || fskip1>=1.0) { fprintf(stderr, "ERROR: '-fskip' must be followed by 2 values in [0.0,1.0) !\n"); exit(-1); }
 	    }
 	  else if ( !strcmp(argv[i], "-tag") )
 	    {
@@ -245,7 +278,18 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		  fprintf(stderr, "ERROR: '-alphanes' must be followed by file name!\n");
 		  exit(-1);
 		}
-              filetype = FileType::ALPHANES;
+          filetype = FileType::ALPHANES;
+	      s_in = string(argv[i]);
+	    }
+	  else if ( !strcmp(argv[i], "-alphanes9") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-alphanes9' must be followed by file name!\n");
+		  exit(-1);
+		}
+          filetype = FileType::ALPHANES9;
 	      s_in = string(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-contcar") )
@@ -303,8 +347,28 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
               filetype = FileType::XYZ;
 	      s_in = string(argv[i]);
 	    }
-	  else if ( !strcmp(argv[i], "-outxyz") )
-	    print_out_xyz = true;
+	  else if ( !strcmp(argv[i], "-xyz_cp2k") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-xyz_cp2k' must be followed by file name!\n");
+		  exit(-1);
+		}
+        filetype = FileType::XYZ_CP2K;
+	      s_in = string(argv[i]);
+	    }
+	  else if ( !strcmp(argv[i], "-out_xyz") )
+	    out_xyz = true;
+	  else if ( !strcmp(argv[i], "-out_alphanes") )
+	  {
+	    out_alphanes = true;
+		remove_rot_dof = true; // important!
+	  }
+  	else if ( !strcmp(argv[i], "-pbc_out") )
+    	pbc_out = true;
+  	else if ( !strcmp(argv[i], "-timings") )
+    	timings = true;
 	  else
 	    {
 	      fprintf(stderr, "ERROR: Invalid argumet!\n");

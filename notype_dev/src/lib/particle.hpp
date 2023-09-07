@@ -33,7 +33,7 @@ class particle
 {
 public:
   using vec3d=myvec<ntype,3>;
-  vec3d r;
+  vec3d r, s; // r: cartesian coordinate; s: fractional coordinate
   vec3d rold, last_dr;
   int last_move; // -1: none; -2 box-move; 0: translation; 1: rotation;
   ntype sigma, sigmaSq, rcut; // for LJ particles
@@ -51,6 +51,7 @@ public:
   particle()
   {
     r << 0,0,0;
+    s << 0,0,0;
     last_dr << 0,0,0;
     last_move=-1;
     sigma=0;
@@ -71,6 +72,7 @@ public:
   particle<ntype>& operator=(const particle<ntype>& p1)
     {
       r=p1.r;
+      s=p1.s;
       sigma=p1.sigma;
       rcut=p1.rcut;
       sigmaSq=p1.sigmaSq;

@@ -41,6 +41,10 @@ read_frame(fstream &i, bool resetN)
     if(remove_rot_dof) removeRotDof();
     boxInv = box.inverse();
     set_L_from_box();
+    if(c_sq)
+    {
+      for(auto &p: ps) p.s = boxInv * p.r; // pre-compute fractional coordinates
+    }
     if(debug) cout << "  Read frame at timestep " << timestep << " DONE.\n";
   }
 

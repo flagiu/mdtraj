@@ -5,6 +5,7 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 - Current limited to:
 	- constant number of particles
 	- uniform timestep.
+	- S(q) for cubic boxes only.
 
 - Under development:
 	- multi-species system for CP2K .xyz input files.
@@ -45,7 +46,9 @@ The subfolder examples/ contains some example of application to real or toy syst
 
 ## Future development
 
-- Add computation of: structure factor, ISF, ... .
-- Add logarithmic timestep.
-- Add more input formats: GROMACS, ...?
-- Add marginals around the ALTBC plot.
+- Multi-species for more input formats.
+- S(q) with non-cubic boxes?
+- Add example with antimony?
+- Add computation of ISF.
+- Add logarithmic timestep?
+- Add more input formats? GROMACS, ...

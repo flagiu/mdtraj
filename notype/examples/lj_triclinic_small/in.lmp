@@ -1,0 +1,59 @@
+####################################
+### PART A - ENERGY MINIMIZATION ###
+####################################
+
+# 1) Initialization
+units lj			# use adimensional LJ units
+dimension 3			# set a 3D system
+atom_style atomic		# atomic: point masses
+pair_style lj/cut 2.5		# pairwise interaction is LJ with cutoff radius 2.5
+boundary p p p			# periodic (p) boundary conditions along x,y,z (z is required although 2D!)
+
+# 2) System definition
+region myreg prism 0.0 8.8 0.0 7.4 0.0 10.0 -1.7 1.0 0.6   # defines a triclinic region named 'myreg' centered at 0,0,0 with specified size along xx,yy,zz, xy,xz,yz
+create_box 1 myreg					# creates the simulation box within the given region; the box contains 2 atom types
+create_atoms 1 random 666 341341 myreg
+
+# 3) Simulation settings
+mass 1 1			# assigns mass to atom type 1
+pair_coeff 1 1 1.0 1.0		# assigns epsilon, sigma to 1<->1 interaction
+#1<->2 interaction by default follows the geometric average rule...
+#pair_coeff 1 2 0.7 1.7		# ... or it can be set manually
+neigh_modify every 1 delay 5 check yes
+
+# 4) Visualization
+thermo 10			# print thermodynamic info every tot steps
+#dump mydmp all atom 10 dump.min.lammpstrj
+
+# 5) Run
+minimize 1.0e-4 1.0e-6 1000 10000
+# perform energy minimization with the given stopping criteria:
+# min_delta_energy OR
+# min_delta_force OR
+# max_num_iter OR
+# max_num_force_or_energy_evaluation
+write_data minimized_coordinate.data	# print the state of the simulation
+
+####################################
+### PART B - MOLECULAR DYNAMICS ###
+####################################
+
+# 4) Visualization
+thermo 100				# print thermodynamic info every tot timesteps
+variable kinetic_energy equal ke	# set some variable names for clarity
+variable potential_energy equal pe
+variable pressure equal press
+# print the values of ke, pe, press of all atoms to the given file 'energy.dat'
+fix myat1 all ave/time 10 1 10 v_kinetic_energy v_potential_energy v_pressure file energy.dat
+
+dump mydmp all atom 1000 dump.lammpstrj
+dump XYZ all xyz 1000 traj.xyz
+
+# 5) Run
+# Boltzmann distribution with T=1, zero momentum, zero ang.momentum
+velocity all create 1.0 4928459 mom yes rot yes dist gaussian
+fix mynve all nve				# update pos,vel of all atoms
+fix mylgv all langevin 1.0 1.0 0.1 1530917 zero yes	# apply Langevin thermostat to all (temperature=1, damping=0.1, seed=1530917, total random force is always zero)
+timestep 0.005					# set the timestep (ps)
+run 100000					# run for tot timesteps
+write_data final.data

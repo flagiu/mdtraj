@@ -1,4 +1,3 @@
-#include "lib/mdtraj.hpp"
 using namespace std;
 
 //---- "init" functions: prepare arrays, averages and headers for output files

@@ -1,10 +1,8 @@
-This is part of a test for:
- - PBC with NON-CUBIC BOXES.
- - S(q).
+This is a test for PBC with NON-CUBIC BOXES.
 
-666 LJ atoms at temperature T=1, density=1.0219, within the following cubic box:
+666 LJ atoms at temperature T=1, density=1.0227, within the following orthorombic box:
 	xx xy xz yy yz zz
-	8.67 0.0 0.0 8.67 0.0 8.67
+	6.0 0.0 0.0 6.0 0.0 18.1
 (Input LAMMPS file: in.lmp)
 
 traj.xyz.save : contains a XYZ trajectory in the liquid phase
@@ -12,4 +10,3 @@ traj.xyz.save : contains a XYZ trajectory in the liquid phase
 It can be visualized with VMD: vmd -xyz traj.xyz.save -e script.vmd
 
 Does the liquid g(r) converge to 1 at large r?
- No... idk the error
