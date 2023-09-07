@@ -60,4 +60,33 @@ public:
   }
 };
 
+int intsign(int x)
+{
+  if (x > 0) return 1;
+  if (x < 0) return -1;
+  return 0;
+}
+int floatsign(float x)
+{
+  if (x > 0) return 1;
+  if (x < 0) return -1;
+  return 0;
+}
+
+class Timer
+{
+private:
+  clock_t start, end;
+public:
+  void go()
+  {
+    start = clock();
+  }
+  float stop()
+  {
+    end = clock();
+    return (float) (end-start) / CLOCKS_PER_SEC * 1000.0;
+  }
+};
+
 #endif

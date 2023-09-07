@@ -30,9 +30,28 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 compute_sq(int frameidx)
 {
-  int i,k,qmod, qx,qy,qz, qcount;
+  int i,k,qmod, qx,qy,qz, qcount, j,idx;
   ntype arg, rho_real, rho_imag, sq_oriented;
   string line,a,b,c;
+  const int num_k_values = 1 + qmodmax/2; // 1/2 is the mesh spacing!
+  const int exp_storage_size = num_k_values * N * 3 * 2; // wavenumber, particle, cartesian, real/imag
+  const ntype dk = 2.*M_PI/L[0];
+  ntype x0,x1, y0,y1, z0,z1;
+  vecflex<ntype> exps;
+  exps.resize(exp_storage_size);
+
+  for(k=0;k<num_k_values;k++) // wavenumber
+  {
+    for(i=0;i<N;i++) // particle
+    {
+      for(j=0;j<3;j++) // x,y,z
+      {
+        idx = 2*3*N*k + 2*3*i + 2*j;
+        exps[ idx     ] = cos( dk*k*ps[i].r[j] );
+        exps[ idx + 1 ] = sin( dk*k*ps[i].r[j] );
+      }
+    }
+  }
   if(debug) cout << "*** Sq computation for timestep " << timestep << " STARTED ***\n";
   for(k=0; k<sq_nbins; k++)
   {
@@ -52,9 +71,23 @@ compute_sq(int frameidx)
       rho_real=rho_imag=0.0;
       for(i=0;i<N;i++)
       {
-        arg = 2. * M_PI / L[0] * (qx*ps[i].r[0] + qy*ps[i].r[1] + qz*ps[i].r[2]);
+        /* // Brute force method
+        arg = dk * (qx*ps[i].r[0] + qy*ps[i].r[1] + qz*ps[i].r[2]);
         rho_real += cos(arg);
         rho_imag += sin(arg);
+        */
+        // Pre-computation method
+        x0 = exps[ 2*3*N*abs(qx) + 2*3*i + 2*0     ]; // cos( kx * rx )
+        x1 = exps[ 2*3*N*abs(qx) + 2*3*i + 2*0 + 1 ]; // sin(|kx|* rx )
+        y0 = exps[ 2*3*N*abs(qy) + 2*3*i + 2*1     ]; // cos( ky * ry )
+        y1 = exps[ 2*3*N*abs(qy) + 2*3*i + 2*1 + 1 ]; // sin(|ky|* ry )
+        z0 = exps[ 2*3*N*abs(qz) + 2*3*i + 2*2     ]; // cos( kz * rz )
+        z1 = exps[ 2*3*N*abs(qz) + 2*3*i + 2*2 + 1 ]; // sin(|kz|* rz )
+        if(qx<0) x1 = -x1; // give correct sign to sin() !
+        if(qy<0) y1 = -y1;
+        if(qz<0) z1 = -z1;
+        rho_real += ( x0*y0*z0 - x0*y1*z1 - x1*y0*z1 - x1*y1*z0 ); // cos( k*r )
+        rho_imag += ( x1*y0*z0 + x0*y1*z0 + x0*y0*z1 - x1*y1*z1 ); // sin( k*r )
       }
       sq_oriented = ( rho_real*rho_real + rho_imag*rho_imag ) / N;
       if(debug) cout << "  S(qx,qy,qz) = "<<sq_oriented<<endl;

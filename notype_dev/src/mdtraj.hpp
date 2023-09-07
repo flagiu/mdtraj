@@ -33,7 +33,7 @@ public:
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep, period, l, rdf_nbins, adf_nbins, altbc_nbins, sq_nbins, qmodmin,qmodmax,qmodstep;
   bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq; // for file naming
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_log; // for file naming
   static const int Nshells=3;
   ntype cutoff[Nshells], altbc_rmin, altbc_angle;
   vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
@@ -49,7 +49,7 @@ public:
   bool debug, verbose;
 
 private:
-  bool l_is_odd;
+  bool l_is_odd, timings;
   int nlines, t0frame, dtframe, l_deg, periodIdx, Nperiods, maxshell, nskip0, nskip1, nframes_original;
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
   float fskip0, fskip1;
@@ -57,6 +57,7 @@ private:
   stringstream ss;
   ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw, altbc_binw, altbc_cos, sq_binw;
   FileType filetype;
+  Timer timer;
 
   int ij2int(int i, int j, int N){
     return (i<j ? N*i+j : N*j+i); // i<j = 0,...,N-1
@@ -112,6 +113,7 @@ public:
     cout << " pbc_out = \t " << pbc_out << endl;
     cout << " fskip_from_beginning = \t " << fskip0 << endl;
     cout << " fskip_from_end = \t " << fskip1 << endl;
+    cout << " timings = \t " << timings << endl;
     cout << " tag = \t " << tag << endl;
     for(auto  i=0;i<Nshells;i++) cout << " rcut" << i << " = \t " << cutoff[i] << endl;
     cout << " s_in = \t " << s_in << endl;
@@ -146,12 +148,16 @@ public:
     s_sq="sq";
     tag="";
     s_out="traj";
+    s_log="log";
+    ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::out);
+    fout.close();
     period = -1; // default: don't average over t0 for MSD
     remove_rot_dof = false;
     out_box = false;
     out_xyz = false;
     out_alphanes = false;
     pbc_out = false;
+    timings = false;
     // default: nonsense box
     L << 0.0, 0.0, 0.0;
     for(auto i=0;i<3;i++) {
@@ -159,7 +165,7 @@ public:
       boxInv[i] << 0.0, 0.0, 0.0;
     }
     V=0.0;
-    cutoff[0] = 3.75; // 3.6 in glass, 3.75-3.89 in xtal
+    cutoff[0] = 3.75; // Antimony: 3.6 in glass, 3.75-3.89 in xtal
     cutoff[1] = 5.15;
     cutoff[2] = 8.8;
     l = 4;
@@ -314,7 +320,19 @@ public:
     if(c_adf) compute_adf(i);
     if(c_rmin) compute_rmin();
     if(c_altbc) compute_altbc(i);
-    if(c_sq) compute_sq(i);
+    if(c_sq)
+    {
+      if(timings) timer.go();
+      compute_sq(i);
+      if(timings) timing_log( "sq_timing(ms): ", timer.stop() );
+    }
+  }
+
+  void timing_log(string comment, float time)
+  {
+    ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::app);
+    fout << comment << time <<endl;
+    fout.close();
   }
 
   void init_density() {

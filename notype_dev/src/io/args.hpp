@@ -6,7 +6,7 @@ void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k]"
   				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq]"
-				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag]\n", argv0);
+				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -63,6 +63,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -pbc_out \t Apply PBC to the output trajectory files. [default don't].");
   fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end. INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
   fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
+  fprintf(stderr, "\n -timings \t Measure time for computation of S(q) into the log file: %s[default don't].", s_log.c_str());
   fprintf(stderr, "\n");
   fprintf(stderr, "\n TIPS:");
   fprintf(stderr, "\n");
@@ -364,8 +365,10 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    out_alphanes = true;
 		remove_rot_dof = true; // important!
 	  }
-  else if ( !strcmp(argv[i], "-pbc_out") )
-    pbc_out = true;
+  	else if ( !strcmp(argv[i], "-pbc_out") )
+    	pbc_out = true;
+  	else if ( !strcmp(argv[i], "-timings") )
+    	timings = true;
 	  else
 	    {
 	      fprintf(stderr, "ERROR: Invalid argumet!\n");
