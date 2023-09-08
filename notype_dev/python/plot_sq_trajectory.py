@@ -51,7 +51,7 @@ except AssertionError:
 assert Xa.shape[1]>=2 # must have at least x,y
 
 fig, ax = plt.subplots(dpi=300)
-ax.set_xlabel(r"$q$ / $\AA^{-1}$")
+ax.set_xlabel(r"$q$ $[\AA^{-1}]$")
 ax.set_ylabel(r"$S(q)$")
 for i in range(ntraj):
 	ax.plot( q, Xt[:,i+1], 'k', alpha=0.1 )
