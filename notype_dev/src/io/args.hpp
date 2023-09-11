@@ -4,7 +4,7 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -xdatcar -xdatcarV -xyz -xyz_cp2k]"
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -xdatcar -xdatcarV -xyz -xyz_cp2k]"
   				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq]"
 				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
@@ -25,6 +25,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -alphanes9 \t like -alphanes but with 9 columns for box.");
   fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
   fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat).");
+  fprintf(stderr, "\n -lammpstrj \t LAMMPS format. It expects the output of a 'dump atom' command.");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
   fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -box.");
@@ -43,7 +44,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell. INPUT: bin_width (in terms of the cosine). OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
   fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension, with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
-  fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
+  fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
@@ -307,11 +308,23 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      i++;
 	      if (i == argc)
-		{
-		  fprintf(stderr, "ERROR: '-jmd' must be followed by file name!\n");
-		  exit(-1);
-		}
-              filetype = FileType::JMD;
+    		{
+    		  fprintf(stderr, "ERROR: '-jmd' must be followed by file name!\n");
+    		  exit(-1);
+    		}
+        filetype = FileType::JMD;
+	      s_in = string(argv[i]);
+	    }
+
+	  else if ( !strcmp(argv[i], "-lammpstrj") )
+	    {
+	      i++;
+	      if (i == argc)
+    		{
+    		  fprintf(stderr, "ERROR: '-lammpstrj' must be followed by file name!\n");
+    		  exit(-1);
+    		}
+        filetype = FileType::LAMMPSTRJ;
 	      s_in = string(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-xdatcar") )

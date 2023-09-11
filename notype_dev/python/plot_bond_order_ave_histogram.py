@@ -18,7 +18,7 @@ parser.add_argument('--l', type=int,
 )
 parser.add_argument('--inavg',  type=str,
                      default="NONE", required=False,
-                     help="Input file with average q_l^dot (columns:t,q_l^dot,q_l^dot error). If NONE, it will be set to box.lX.ave with X=l. [default: %(default)s]"
+                     help="Input file with average q_l^dot (columns:t,q_l^dot,q_l^dot error). If NONE, it will be set to boc.lX.ave with X=l. [default: %(default)s]"
 )
 parser.add_argument('--scale', type=str,
                      default='lin', required=False,

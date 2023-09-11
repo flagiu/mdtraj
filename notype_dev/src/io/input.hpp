@@ -34,6 +34,9 @@ read_frame(fstream &i, bool resetN)
       case FileType::JMD:
         read_jmd_frame(i, resetN);
         break;
+      case FileType::LAMMPSTRJ:
+        read_lammpstrj_frame(i, resetN);
+        break;
       default:
         cout << "[ERROR: filetype = " << static_cast<int>(filetype) << " not recognized]\n";
         exit(1);
@@ -375,4 +378,115 @@ read_jmd_frame(fstream &i, bool resetN)
       nframes = nlines / (N+1);
     }
     for(auto &p: ps) p.read_3cols(i); // N particle lines
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_lammpstrj_frame(fstream &i, bool resetN)
+{
+    string line, x, a,b,c;
+    stringstream ss;
+    int ncols=0;
+    ntype xlo,ylo,zlo, xlob,ylob;
+    ntype xhi,yhi,zhi, xhib,yhib;
+    ntype xy,xz,yz;
+
+    getline(i,line); // ITEM: TIMESTEP
+    if(debug) cout << "\n  Line 1: " << line << endl;
+
+    getline(i,line);
+    timestep = stoi(line);
+    if(debug) cout << timestep << endl;
+
+    getline(i,line); // ITEM: NUMBER OF ATOMS
+    if(debug) cout << "\n  Line 3: " << line << endl;
+    getline(i,line);
+    N = stoi(line);
+    if(debug) cout << N << endl;
+
+    // ITEM: BOX BOUNDS ...
+    getline(i,line);
+    ss << line;
+    if(debug) cout << "\n  Line 5: " << line << endl;
+    while( ss >> x )
+    {
+      if(ncols>=3) if(debug) cout << x << endl;
+      ncols++;
+    }
+    ss.str(std::string()); ss.clear(); // clear the string stream!
+
+
+    xy=xz=yz=0.0;
+    switch (ncols) {
+      case 6:
+        getline(i,line); istringstream(line) >> a >> b;
+        xlo = stof(a);
+        xhi = stof(b);
+
+        getline(i,line); istringstream(line) >> a >> b;
+        ylo = stof(a);
+        yhi = stof(b);
+
+        getline(i,line); istringstream(line) >> a >> b;
+        zlo = stof(a);
+        zhi = stof(b);
+        break;
+      case 9:
+        getline(i,line); istringstream(line) >> a >> b >> c;
+        xlob = stof(a);
+        xhib = stof(b);
+        xy = stof(c);
+
+        getline(i,line); istringstream(line) >> a >> b >> c;
+        ylob = stof(a);
+        yhib = stof(b);
+        xz = stof(c);
+
+        getline(i,line); istringstream(line) >> a >> b >> c;
+        zlo = stof(a);
+        zhi = stof(b);
+        yz = stof(c);
+
+        xlo = xlob - min(min(0.0,xy), min(xz,xy+xz) );
+        xhi = xhib - max( max(0.0,xy), max(xz,xy+xz) );
+        ylo = ylob - min(0.0,yz);
+        yhi = yhib - max(0.0,yz);
+        break;
+      default:
+        cout << "[ Error: box format not recognized with "<<ncols<<" columns in ITEM]\n\n";
+        exit(1);
+    }
+
+    box[0][0] = xhi - xlo;
+    box[1][1] = yhi - ylo;
+    box[2][2] = zhi - zlo;
+    box[0][1] = xy;
+    box[0][2] = xz;
+    box[1][2] = yz;
+    box[1][0] = box[2][0] = box[2][1] = 0.0;
+    set_L_from_box();
+
+    if(resetN) {
+      ps.resize(N);
+      invN = 1.0/N;
+      nframes = nlines / (N+9);
+    }
+
+    getline(i,line); // ITEM: ATOMS id type xs ys zs
+    for(auto &p: ps)
+    {
+      getline(i,line);
+      ss << line;
+      ss >> x; // atom number
+      ss >> x; // atom type
+      ss >> x; p.s[0] = stof(x); // x scaled
+      ss >> x; p.s[1] = stof(x); // y scaled
+      ss >> x; p.s[2] = stof(x); // z scaled
+      p.r = box * p.s; // real coordinates
+      p.r[0] -= xlo; // CORRETTO???
+      p.r[1] -= ylo;
+      p.r[2] -= zlo;
+      if(debug) p.show();
+      ss.str(std::string()); ss.clear(); // clear the string stream!
+    }
 }

@@ -16,7 +16,7 @@ const string root_path="/home/flavio/programmi/mdtraj/notype_dev";
 const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
 
 enum class FileType {
-  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD
+  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ
 };
 
 template<class ntype, class ptype>
@@ -233,6 +233,7 @@ public:
   void read_alphanes_frame(fstream &i, bool resetN);
   void read_alphanes9_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
+  void read_lammpstrj_frame(fstream &i, bool resetN);
 
   //------- COMPUTE things ---------------//
 
