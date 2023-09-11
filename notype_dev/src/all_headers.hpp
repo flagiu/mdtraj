@@ -8,8 +8,8 @@
 #include "statics/altbc.hpp"
 #include "statics/bond_parameters.hpp"
 #include "statics/neighbour_and_bond_list.hpp"
-#include "statics/r_min.hpp"
 #include "statics/rdf.hpp"
+#include "statics/r_min.hpp"
 #include "statics/sq.hpp"
 #include "dynamics/msd_and_ngp.hpp"
 #endif
