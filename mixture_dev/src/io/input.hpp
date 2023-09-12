@@ -106,6 +106,7 @@ void Trajectory<ntype, ptype>::
 read_xyz_frame(fstream &i, bool resetN)
   {
     string line, a,b,c,d;
+    int Nt_array[MAX_N_TYPES];
     getline(i,line); // first line
     istringstream(line) >> a;
     N = stoi(a);
@@ -118,8 +119,34 @@ read_xyz_frame(fstream &i, bool resetN)
       ps.resize(N);
       invN = 1.0/N;
       nframes = nlines / (N+2);
+      nTypes=0;
+      for(int j=0;j<MAX_N_TYPES;j++) Nt_array[j]=0;
     }
-    for(auto &p: ps) p.read_xyz(i); // N particle lines
+    for(auto &p: ps)
+    {
+      getline(i, line);
+      istringstream(line) >> a >> b >> c >> d;
+      //if(debug) cout << "Read particle: " << a << " @ " << b << " @ " << c << " @ " << d << endl;
+      p.label = stoi(a);
+      p.r[0] = stof(b);
+      p.r[1] = stof(c);
+      p.r[2] = stof(d);
+      if(resetN)
+      {
+        nTypes = max(nTypes,p.label+1);
+        Nt_array[p.label]++;
+      }
+    }
+    if(debug) cout << " Found " <<nTypes << " types"<< endl;
+    
+    if(resetN)
+    {
+      Nt.resize(nTypes);
+      for(int j=0;j<nTypes;j++) {
+        Nt[j]=Nt_array[j];
+        if(debug) cout << "   n. atoms of type " << j << " = " << Nt[j] << endl;
+      }
+    }
   }
 
 template <class ntype, class ptype>

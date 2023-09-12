@@ -1,8 +1,9 @@
 This is part of a test for:
  - g(r) of a binary mixture
 
-8000 + 330 LJ atoms at temperature T=?, density=?, in a cubic box:
+1000 + 150 LJ atoms at temperature T=1, density=?, in a cubic box:
 
+in.lmp : input script for LAMMPS to be run first.
 dump.lammpstrj : contains a LAMMPS trajectory in the mixed liquid phase
 
 It can be visualized with VMD.

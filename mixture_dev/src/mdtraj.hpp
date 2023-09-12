@@ -72,10 +72,22 @@ private:
   int int2j(int x, int N){
     return x%N;
   }
-  int types2int(int ti, int tj, int nTypes){ // map type pairs to integer index 0,1,...,nTypePairs
+  int types2int(int ti, int tj, int nTypes){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
     if (ti>tj) return types2int(tj,ti,nTypes); // map to ti<=tj
     if(ti==tj) return ti*nTypes - int(ti*(ti-1)/2);
-    else return 1 + types2int(ti,tj-1,nTypes);
+    else return 1 + types2int(ti,tj-1,nTypes);                
+  }
+  void int2types(int t, int nTypes, int *t1, int *t2){
+    int x,low,high;
+    for(x=0; x<nTypes; x++){
+      low = x * nTypes - x*(x-1)/2;
+      high = (x+1) * nTypes - x*(x-1)/2 - 1;
+      if(t>=low && t<=high){
+        *t1 = x;
+        *t2 = t-low;
+      }
+    }
+    return;
   }
 
 public:

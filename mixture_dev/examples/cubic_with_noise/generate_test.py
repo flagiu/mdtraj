@@ -19,7 +19,7 @@ with open("test.xyz", "w") as f:
 		for i in range(Nx):
 			for j in range(Nx):
 				for k in range(Nx):
-					type = np.random.randint(1)
+					type = np.random.randint(3)
 					x = i*a + np.random.randint(100)/100 *eps
 					y = j*a + np.random.randint(100)/100 *eps
 					z = k*a + np.random.randint(100)/100 *eps
