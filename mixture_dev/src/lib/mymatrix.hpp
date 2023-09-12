@@ -262,6 +262,30 @@ public:
        m[1][1] =  M[0][0]/d;
     }
     else if (rows()==3 && cols()==3) {
+      /* // hard-coded minors
+      ntype A,B,C,D,E,F,G,H,I;
+      A = (M[1][1]*M[2][2]-M[1][2]*M[2][1]);
+      B =-(M[1][0]*M[2][2]-M[1][2]*M[2][0]);
+      C = (M[1][0]*M[2][1]-M[1][1]*M[2][0]);
+      D =-(M[0][1]*M[2][2]-M[0][2]*M[2][1]);
+      E = (M[0][0]*M[2][2]-M[0][2]*M[2][0]);
+      F =-(M[0][0]*M[2][1]-M[0][1]*M[2][0]);
+      G = (M[0][1]*M[1][2]-M[0][2]*M[1][1]);
+      H =-(M[0][0]*M[1][2]-M[0][2]*M[1][0]);
+      I = (M[0][0]*M[1][1]-M[0][1]*M[1][0]);
+      d = M[0][0]*A + M[0][1]*B + M[0][2]*C;
+      if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+      m[0][0]=A/d;
+      m[0][1]=B/d;
+      m[0][2]=C/d;
+      m[1][0]=D/d;
+      m[1][1]=E/d;
+      m[1][2]=F/d;
+      m[2][0]=G/d;
+      m[2][1]=H/d;
+      m[2][2]=I/d;
+      */
+      // Cayley method
        d = det();
        if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
        ntype trace, traceSq;
@@ -377,6 +401,7 @@ mymatrix<ntype,N,N> rotation_matrix_axis_cossin( myvec<ntype,N> u, ntype c, ntyp
   eye.set_identity();
   return (eye*=c) + (cross_product_matrix(u)*=s) + (outer_product(u,u)*=(1.0-c));
 }
+
 using matrix3d=mymatrix<double,3,3>;
 
 //-----------------------------------------------------------------//

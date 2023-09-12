@@ -41,7 +41,7 @@ compute_altbc(int frameidx)
     for(i=0;i<N;i++){
       for(a=1;a<ps[i].neigh_list[0].size();a++){
           j = ps[i].neigh_list[0][a];
-          if(j>i) continue; // avoid double counting!
+          //if(j>i) continue; // avoid double counting! WRONG
           rij = ps[i].rij_list[0][a];
           rijSq = ps[i].rijSq_list[0][a];
           rijNorm = sqrt(rijSq);

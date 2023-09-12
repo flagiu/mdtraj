@@ -60,12 +60,12 @@ for i in range(ntraj):
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"Angle [degrees]")
 ax.set_ylabel(r"ADF")
-ax.set_xlim((0.0, 180.0))
 ax.xaxis.set_ticks(np.arange(0.0, 180.0, 15.0))
 ax.tick_params(which='both', direction='in')
 for i in range(ntraj):
 	ax.plot( x, Xt[:,i+1], 'k', alpha=0.01)
 ax.plot(x, y, 'r.-')
+ax.set_xlim((0.0, 180.0))
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 fig.savefig(outpng)

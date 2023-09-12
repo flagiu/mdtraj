@@ -5,7 +5,7 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 - Current limited to:
 	- constant number of particles
 	- uniform timestep.
-	- S(q) for cubic boxes only.
+	- S(q) for cubic boxes only (?).
 
 - Under development:
 	- multi-species system for CP2K .xyz input files.
@@ -13,6 +13,7 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 - Bugs to be corrected:
 	- q_l order parameters seems to be offset by ~sqrt(2).
 	- g(r) is <1 for large r in triclinic boxes.
+	- Check again the MSD.
 
 ## Requirements
 

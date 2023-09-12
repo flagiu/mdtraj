@@ -11,7 +11,7 @@ class params_pt: public Params<ntype>
 public:
   using par=Params<ntype>;
   using par::addParam, par::getParam;
-  int label; // integer >=0
+  int label;
   ntype m=1,sigma=1,rcut=1,v; //v=particle volume
 
   params_pt()
@@ -33,7 +33,7 @@ class particle
 {
 public:
   using vec3d=myvec<ntype,3>;
-  vec3d r;
+  vec3d r, s; // r: cartesian coordinate; s: fractional coordinate
   vec3d rold, last_dr;
   int last_move; // -1: none; -2 box-move; 0: translation; 1: rotation;
   ntype sigma, sigmaSq, rcut; // for LJ particles
@@ -42,15 +42,16 @@ public:
   ntype Uold,U; // internal energy
   ntype infty = std::numeric_limits<ntype>::infinity();
   using pt=particle<ntype>;
-  int label; // integer >=0
+  int label; // for LAMMPS
   static const int Nshells=3;
-  vector<int> neigh_list[Nshells]; // list of neighbours' index
+  vector<int> neigh_list[Nshells]; // list of neighbours' index 
   vector<vec3d> rij_list[Nshells]; // list of neighbours' distance vector
   vector<ntype> rijSq_list[Nshells]; // list of neighbours' |rij|^2
 
   particle()
   {
     r << 0,0,0;
+    s << 0,0,0;
     last_dr << 0,0,0;
     last_move=-1;
     sigma=0;
@@ -71,6 +72,7 @@ public:
   particle<ntype>& operator=(const particle<ntype>& p1)
     {
       r=p1.r;
+      s=p1.s;
       sigma=p1.sigma;
       rcut=p1.rcut;
       sigmaSq=p1.sigmaSq;
@@ -82,12 +84,12 @@ public:
   {
     return randnum.ranf();
   }
-
+  
   void show() const
   {
     r.show("r");
   }
-
+  
   virtual vec3d& get_r()
   {
     return r;
@@ -216,7 +218,7 @@ public:
   {
     o << setprecision(20) << r[0] << " " << r[1] << " " << r[2] << " @ " << sigma << endl;
   }
-
+  
   virtual void read_xyz(fstream& i) // .xyz format
   {
     string line, lab, a[3];
@@ -229,7 +231,7 @@ public:
   {
     o << setprecision(20) << label << " " << r[0] << " " << r[1] << " " << r[2] << endl;
   }
-
+  
   virtual void read_3cols(fstream& i) // .xyz format
   {
     string line, a[3];
@@ -241,8 +243,8 @@ public:
   {
     o << setprecision(20) << r[0] << " " << r[1] << " " << r[2] << endl;
   }
-
-
+  
+  
   virtual void write_pdb(fstream& o, int myIndex, ntype myVal)
   {
     o << setprecision(10) << "ATOM \t " << myIndex+1 << " X\tXXX X " << label << "\t" << r[0] << " " << r[1] << " " << r[2] << " 1.00 " << myVal << "\t X\n";

@@ -17,6 +17,9 @@ echo "Test liquid S(q):"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -sq 2 100 1
 printf "Exit $? \n\n"
 
+echo "Test direct correlation:"
+python3 ../../python/calc_direct_correlation_from_sq.py --rho 1.02192
+
 exit
 
 echo "Test liquid ALTBC:"
