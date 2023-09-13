@@ -138,7 +138,7 @@ read_xyz_frame(fstream &i, bool resetN)
       }
     }
     if(debug) cout << " Found " <<nTypes << " types"<< endl;
-    
+
     if(resetN)
     {
       Nt.resize(nTypes);
@@ -153,9 +153,10 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_xyz_cp2k_frame(fstream &i, bool resetN)
   {
-    string line, a,b,c,d,e, cur_type_str;
-    int cur_type=0, Ntype[5];
-    for(auto a=0;a<5;a++) Ntype[a]=0;
+    // assumes particles are ordered by type !!
+    string line, a,b,c,d,e, cur_type_str, type_str[MAX_N_TYPES];
+    int cur_type=0, Nt_array[MAX_N_TYPES];
+    for(auto a=0;a<MAX_N_TYPES;a++) Nt_array[a]=0;
     getline(i,line); // first line
     istringstream(line) >> a;
     N = stoi(a);
@@ -174,28 +175,41 @@ read_xyz_cp2k_frame(fstream &i, bool resetN)
       getline(i, line);
       istringstream(line) >> a >> b >> c >> d;
       //if(debug) cout << "Read particle: " << a << " @ " << b << " @ " << c << " @ " << d << endl;
-      if(j==0) cur_type_str=a;
+      if(j==0)
+      {
+        cur_type_str=a;
+        type_str[cur_type]=cur_type_str;
+      }
       else if(a!=cur_type_str)
       {
         if(debug) cout << " Updating " << cur_type_str << "-->" << a << endl;
         cur_type_str=a;
         cur_type++;
+        if(cur_type>=MAX_N_TYPES)
+        {
+          cout << "[ Error: exceeded max number of allowed types: "<<MAX_N_TYPES<<". Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+          exit(1);
+        }
+        type_str[cur_type]=cur_type_str;
       }
       ps[j].label = cur_type;
       ps[j].r[0] = stof(b);
       ps[j].r[1] = stof(c);
       ps[j].r[2] = stof(d);
-      Ntype[cur_type]++;
+      Nt_array[cur_type]++;
     }
     if(debug) cout << " Found " << cur_type+1 << " types"<< endl;
     if(resetN)
     {
       nTypes = cur_type+1;
       Nt.resize(nTypes);
+      ss.str(std::string());  ss << s_atom_label << tag << ".dat"; fout.open(ss.str(), ios::out);
       for(auto a=0;a<nTypes;a++) {
-        Nt[a]=Ntype[a];
+        Nt[a]=Nt_array[a];
         if(debug) cout << "   n. atoms of type " << a << " = " << Nt[a] << endl;
+        fout << type_str[a] <<" "<<Nt_array[a]<<endl;
       }
+      fout.close();
     }
   }
 

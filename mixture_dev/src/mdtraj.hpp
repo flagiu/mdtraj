@@ -34,7 +34,7 @@ public:
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep, period, l, rdf_nbins, adf_nbins, altbc_nbins, sq_nbins, qmodmin,qmodmax,qmodstep;
   bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_log; // for file naming
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_log, s_atom_label; // for file naming
   static const int Nshells=3;
   ntype cutoff[Nshells], altbc_rmin, altbc_angle;
   vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
@@ -75,7 +75,7 @@ private:
   int types2int(int ti, int tj, int nTypes){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
     if (ti>tj) return types2int(tj,ti,nTypes); // map to ti<=tj
     if(ti==tj) return ti*nTypes - int(ti*(ti-1)/2);
-    else return 1 + types2int(ti,tj-1,nTypes);                
+    else return 1 + types2int(ti,tj-1,nTypes);
   }
   void int2types(int t, int nTypes, int *t1, int *t2){
     int x,low,high;
@@ -169,6 +169,7 @@ public:
     tag="";
     s_out="traj";
     s_log="log";
+    s_atom_label="labels";
     ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::out);
     fout.close();
     period = -1; // default: don't average over t0 for MSD
