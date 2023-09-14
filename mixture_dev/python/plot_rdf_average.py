@@ -52,21 +52,17 @@ ntypes = int(np.floor( (2*npairs)**0.5 ))
 
 labels=[]
 Nt=[]
-try:
-    lines = args.inlabels.readlines()
-    assert len(lines)==ntypes
-    for line in lines:
-        lab, nt = line.strip('\n').split()
-        labels.append(lab)
-        Nt.append(int(nt))
-    Nt=np.array(Nt)
-    print(" python: Types:",labels)
-    print(" python: Occurrence:",Nt)
-    print(" python: Fraction:",Nt/np.sum(Nt))
-except:
-    print(" python: I could not find %s, therefore I will not print atom names."%str(args.inlabels))
+lines = args.inlabels.readlines()
+assert len(lines)==ntypes
+for line in lines:
+    lab, nt = line.strip('\n').split()
+    labels.append(lab)
+    Nt.append(int(nt))
+Nt=np.array(Nt)
+print(" plot_rdf_average.py: Atom types:",labels,". Occurrence:",Nt,". Fraction:",Nt/np.sum(Nt))
 ign=np.array(args.ignore)
-print(" python: The following types (0-%d) will be ignored:"%(ntypes-1),ign)
+ign_labels = [ labels[ig] for ig in args.ignore ]
+print(" plot_rdf_average.py: List of types to be ignored:",ign_labels)
 
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"$r$ [$\AA$]")
@@ -75,7 +71,10 @@ for i in range(npairs):
     g = X[:,1+i]
     g_ = X[:,1+i+npairs]
     ti,tj = int2types(i, ntypes)
-    lab = "%s-%s"%( labels[ti],labels[tj] )
+    if len(labels)>0:
+        lab = "%s-%s"%( labels[ti],labels[tj] )
+    else:
+        lab = "%d-%d"%( ti,tj )
     if len(ign)>0 and (ti==ign).any() or (tj==ign).any():
         continue # ignore this g(r)
 
@@ -90,6 +89,6 @@ plt.tight_layout()
 
 fig.savefig(outpng)
 fig.savefig(outpdf)
-print(" python: Figure saved on %s, %s\n"%(outpng, outpdf))
+print(" plot_rdf_average.py: Figure saved on %s, %s\n"%(outpng, outpdf))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)

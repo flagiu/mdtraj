@@ -12,8 +12,9 @@
 #include "lib/Ycomplex.hpp"
 using namespace std;
 
-const string root_path="/home/flavio/programmi/mdtraj/notype_dev";
+const string root_path="/home/flavio/programmi/mdtraj/mixture_dev";
 const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
+#define MAX_N_TYPES 5
 
 enum class FileType {
   XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ
@@ -24,8 +25,8 @@ class Trajectory {
 public:
   using vec=myvec<ntype,3>;
   using mat=mymatrix<ntype,3,3>;
-  int N, nTypes; // number of particles, number of types
-  vector<int> Nt; // number of particles for each type
+  int N, nTypes, Nt[MAX_N_TYPES]; // number of particles, number of types, num of particles for each type
+  string type_names[MAX_N_TYPES]; // name for each type
   vec L; // dimensions of an orthorombic simulation box ( ??? centered in 0: -Lx/2 < x < Lx/2 )
   mat box, boxInv; // most general simulation box
   bool remove_rot_dof; // remove the 3 rotational degrees of freedom from the box?
@@ -37,7 +38,8 @@ public:
   string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_log, s_atom_label; // for file naming
   static const int Nshells=3;
   ntype cutoff[Nshells], altbc_rmin, altbc_angle;
-  vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
+  vector< vecflex<ntype> > neigh[Nshells]; // Nshells X nTypePairs X nNeighbours
+  vecflex<ntype> ql, Cl_ij, ql_dot, Ql_dot;
   vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
   vector<int> bond_list[Nshells]; // records all bonds encoded into an integer through ij2int()
   vecflex<ntype> r2,r4, r2CM; // for MSD
@@ -273,8 +275,7 @@ public:
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << ".\n";
-    nTypePairs = nTypes*(nTypes+1)/2;
-    if(debug) cout << " Found nTypes =" << nTypes << ", nTypePairs =" << nTypePairs << endl;
+    print_types();
 
     nskip0=int(fskip0*nframes);
     nskip1=int(fskip1*nframes);
@@ -313,6 +314,21 @@ public:
     if(debug) cout << "Closed input file.\n";
     if(c_msd) print_msd();
     if(debug || verbose) cout << "\nExecution completed.\n\n";
+  }
+
+  void print_types() {
+    nTypePairs = nTypes*(nTypes+1)/2;
+    if(debug) cout << " Found nTypes =" << nTypes << ", nTypePairs =" << nTypePairs << endl;
+    if(debug)
+     for(int j=0;j<nTypes;j++)
+        cout << "   n. atoms of type " << j << " = " << Nt[j] << endl;
+    
+    ss.str(std::string());  ss << s_atom_label << tag << ".dat"; fout.open(ss.str(), ios::out);
+    for(auto a=0;a<nTypes;a++) {
+      if(filetype==FileType::XYZ_CP2K) fout << type_names[a] <<" "<<Nt[a]<<endl;
+      else                             fout << a <<" "<<Nt[a]<<endl;
+    }
+    fout.close();
   }
 
   void init_computations() {

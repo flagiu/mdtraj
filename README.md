@@ -8,12 +8,13 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 	- S(q) for cubic boxes only (?).
 
 - Under development:
-	- multi-species system for CP2K .xyz input files.
+	- multi-species system for .xyz, CP2K-.xyz, lammpstrj input files.
 
 - Bugs to be corrected:
 	- q_l order parameters seems to be offset by ~sqrt(2).
 	- g(r) is <1 for large r in triclinic boxes.
 	- Check again the MSD.
+	- Check again the definition of Coordination number.
 
 ## Requirements
 

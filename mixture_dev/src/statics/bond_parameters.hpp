@@ -4,7 +4,12 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_bondorient()
     {
-      for(auto i=0;i<Nshells;i++) { if(neigh[i].length()!=N) neigh[i].resize(N); }
+      /* // Useless: already done in init_neigh
+      for(auto i=0;i<Nshells;i++){
+        if(neigh[i].size()!=nTypePairs) neigh[i].resize(nTypePairs);
+        for(auto t=0;t<nTypePairs;t++)
+          if(neigh[i][t].length()!=N) neigh[i][t].resize(N);
+      } */
       qlm.resize(l_deg);
       for(auto a=0;a<l_deg;a++) qlm[a].resize(N);
       ql.resize(N);
@@ -47,10 +52,10 @@ init_bondorient()
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 compute_bondorient() {
-    ntype fval, rijSq, Q,Q2, ql_factor = sqrt(4*M_PI/l_deg), re,im;
+    ntype fval, rijSq, Q,Q2, ql_factor = sqrt(4*M_PI/l_deg), re,im, tot_neigh;
     complex<ntype> Yval;
     vec rij;
-    int i,j,k,a,m,u;
+    int i,j,k,a,m,u, t;
     if(debug) cout << "\n*** BOO,BOC computation STARTED ***\n";
     //---- Reset counters ----//
     for(i=0;i<N;i++){
@@ -58,6 +63,9 @@ compute_bondorient() {
         ql_dot.set(i, 0.0);
         Ql_dot.set(i, 0.0);
         for(a=0;a<l_deg; a++) qlm[a].set(i, 0.0);
+        for(u=0;u<Nshells;u++)
+          for(t=0;t<nTypePairs;t++)
+            neigh[u][t][i] = 0.;
     }
     if(debug) cout << " * Reset counters DONE\n";
     //---- Compute Y_lm's and neighs ----//
@@ -69,13 +77,15 @@ compute_bondorient() {
           rij = ps[i].rij_list[u][k];
           rijSq = ps[i].rijSq_list[u][k];
 //          fval = fcut( rijSq/cutoffSq[u], p1half, p2half );
-          if(u==0){ //Ider uses a step function for u==0?
+          if(u==0){ //Ider uses a step function for u==0 ?
             fval = ( rijSq <= cutoffSq[u] ? 1.0 : 0.0 );
           } else {
             fval = fcut( rijSq/cutoffSq[u], p1half, p2half );
           }
-          neigh[u][i] += fval;
-          neigh[u][j] += fval;
+          t = types2int(ps[i].label, ps[j].label, nTypes);
+          neigh[u][t][i] += fval;
+          t = types2int(ps[j].label, ps[i].label, nTypes);
+          neigh[u][t][j] += fval;
           if(u!=0) continue; // Y(l,m) are computed on first shell neighbours only
           for(a=0;a<l_deg; a++){
               m=a-l; // -l <= m <= l
@@ -93,16 +103,18 @@ compute_bondorient() {
     Q2 = 0.0; // <ql^2>
     ss.str(std::string()); ss << s_bondorient << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
     for(i=0;i<N;i++){
-        for(a=0;a<l_deg; a++) {
-           if(neigh[0][i]>0) qlm[a][i] /= neigh[0][i]; // qlm(i) = <Ylm>(i) completed
-           re=real(qlm[a][i]);
-           im=imag(qlm[a][i]);
-           ql[i] += re*re + im*im;
-        }
-        ql[i] = ql_factor * sqrt(ql[i]);
-        fout << timestep << " " << i << " " << ql[i] << endl;
-        Q += ql[i] / N;
-        Q2 += ql[i]*ql[i] / N;
+      tot_neigh = 0.0;
+      for(t=0;t<nTypePairs;t++) tot_neigh += neigh[0][t][i];
+      for(a=0;a<l_deg; a++) {
+        if(tot_neigh>0) qlm[a][i] /= tot_neigh; // qlm(i) = <Ylm>(i) completed
+        re=real(qlm[a][i]);
+        im=imag(qlm[a][i]);
+        ql[i] += re*re + im*im;
+      }
+      ql[i] = ql_factor * sqrt(ql[i]);
+      fout << timestep << " " << i << " " << ql[i] << endl;
+      Q += ql[i] / N;
+      Q2 += ql[i]*ql[i] / N;
     }
     fout.close();
     ss.str(std::string()); ss << s_bondorient << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
@@ -123,8 +135,12 @@ compute_bondorient() {
       a = indexOf<int>( ps[i].neigh_list[1], j ); // find index of j in i's neighbour list
       rijSq = ps[i].rijSq_list[1][a]; // and use it to recover the radius
       fval = fcut( rijSq/cutoffSq[1], p1half, p2half );
-      ql_dot[i] += fval*Cl_ij[k] / neigh[1][i];
-      ql_dot[j] += fval*Cl_ij[k] / neigh[1][j];
+      tot_neigh = 0.0;
+      for(t=0;t<nTypePairs;t++) tot_neigh += neigh[1][t][i];
+      ql_dot[i] += fval*Cl_ij[k] / tot_neigh;
+      tot_neigh = 0.0;
+      for(t=0;t<nTypePairs;t++) tot_neigh += neigh[1][t][j];
+      ql_dot[j] += fval*Cl_ij[k] / tot_neigh;
     }
     if(debug) cout << " * Compute C_l(i,j) and ql_dot(i) (BOC) DONE\n";
     //---- Compute global average of ql_dot(i) ----//
@@ -154,7 +170,9 @@ compute_bondorient() {
         j = ps[i].neigh_list[2][k];
         rijSq = ps[i].rijSq_list[2][k];
         fval = fcut( rijSq/cutoffSq[2], p1half, p2half );
-        Ql_dot[i] += fval*ql_dot[j] / neigh[2][i];
+        tot_neigh = 0.0;
+        for(t=0;t<nTypePairs;t++) tot_neigh += neigh[2][t][i];
+        Ql_dot[i] += fval*ql_dot[j] / tot_neigh;
       }
       fout << timestep << " " << i << " " << Ql_dot[i] << endl;
     }

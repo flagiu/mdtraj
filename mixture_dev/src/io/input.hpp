@@ -1,11 +1,14 @@
 using namespace std;
 //------------ Reading input files of various formats --------------------//
-#define MAX_N_TYPES 5
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_frame(fstream &i, bool resetN)
   {
+    if(resetN){
+      nTypes=0;
+      for(auto a=0;a<MAX_N_TYPES;a++) Nt[a]=0;
+    }
     switch(filetype)
     {
       case FileType::XYZ:
@@ -105,8 +108,8 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_xyz_frame(fstream &i, bool resetN)
   {
+    // assumes labels are 0,1,..,nType-1
     string line, a,b,c,d;
-    int Nt_array[MAX_N_TYPES];
     getline(i,line); // first line
     istringstream(line) >> a;
     N = stoi(a);
@@ -119,8 +122,6 @@ read_xyz_frame(fstream &i, bool resetN)
       ps.resize(N);
       invN = 1.0/N;
       nframes = nlines / (N+2);
-      nTypes=0;
-      for(int j=0;j<MAX_N_TYPES;j++) Nt_array[j]=0;
     }
     for(auto &p: ps)
     {
@@ -131,20 +132,15 @@ read_xyz_frame(fstream &i, bool resetN)
       p.r[0] = stof(b);
       p.r[1] = stof(c);
       p.r[2] = stof(d);
+      
       if(resetN)
       {
         nTypes = max(nTypes,p.label+1);
-        Nt_array[p.label]++;
-      }
-    }
-    if(debug) cout << " Found " <<nTypes << " types"<< endl;
-
-    if(resetN)
-    {
-      Nt.resize(nTypes);
-      for(int j=0;j<nTypes;j++) {
-        Nt[j]=Nt_array[j];
-        if(debug) cout << "   n. atoms of type " << j << " = " << Nt[j] << endl;
+        if(nTypes>MAX_N_TYPES) {
+          cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+          exit(1);
+        }
+        Nt[p.label]++;
       }
     }
   }
@@ -154,9 +150,8 @@ void Trajectory<ntype, ptype>::
 read_xyz_cp2k_frame(fstream &i, bool resetN)
   {
     // assumes particles are ordered by type !!
-    string line, a,b,c,d,e, cur_type_str, type_str[MAX_N_TYPES];
-    int cur_type=0, Nt_array[MAX_N_TYPES];
-    for(auto a=0;a<MAX_N_TYPES;a++) Nt_array[a]=0;
+    string line, a,b,c,d,e, cur_type_str;
+    int cur_type=0;
     getline(i,line); // first line
     istringstream(line) >> a;
     N = stoi(a);
@@ -178,39 +173,26 @@ read_xyz_cp2k_frame(fstream &i, bool resetN)
       if(j==0)
       {
         cur_type_str=a;
-        type_str[cur_type]=cur_type_str;
+        type_names[cur_type]=cur_type_str;
       }
       else if(a!=cur_type_str)
       {
         if(debug) cout << " Updating " << cur_type_str << "-->" << a << endl;
         cur_type_str=a;
         cur_type++;
-        if(cur_type>=MAX_N_TYPES)
-        {
-          cout << "[ Error: exceeded max number of allowed types: "<<MAX_N_TYPES<<". Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+        if(cur_type>=MAX_N_TYPES) {
+          cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
           exit(1);
         }
-        type_str[cur_type]=cur_type_str;
+        type_names[cur_type]=cur_type_str;
       }
       ps[j].label = cur_type;
       ps[j].r[0] = stof(b);
       ps[j].r[1] = stof(c);
       ps[j].r[2] = stof(d);
-      Nt_array[cur_type]++;
+      Nt[cur_type]++;
     }
-    if(debug) cout << " Found " << cur_type+1 << " types"<< endl;
-    if(resetN)
-    {
-      nTypes = cur_type+1;
-      Nt.resize(nTypes);
-      ss.str(std::string());  ss << s_atom_label << tag << ".dat"; fout.open(ss.str(), ios::out);
-      for(auto a=0;a<nTypes;a++) {
-        Nt[a]=Nt_array[a];
-        if(debug) cout << "   n. atoms of type " << a << " = " << Nt[a] << endl;
-        fout << type_str[a] <<" "<<Nt_array[a]<<endl;
-      }
-      fout.close();
-    }
+    if(resetN) nTypes = cur_type+1;
   }
 
 template <class ntype, class ptype>
@@ -451,15 +433,10 @@ read_lammpstrj_frame(fstream &i, bool resetN)
   // This must be mapped to our convention: 0,1,...,ntypes-1
     string line, x, a,b,c;
     stringstream ss;
-    int ncols=0, Nt_array[MAX_N_TYPES];;
+    int ncols=0;
     ntype xlo,ylo,zlo, xlob,ylob;
     ntype xhi,yhi,zhi, xhib,yhib;
     ntype xy,xz,yz;
-    if(resetN)
-    {
-      for(int j=0;j<MAX_N_TYPES;j++) Nt_array[j]=0;
-      nTypes=0;
-    }
 
     getline(i,line); // ITEM: TIMESTEP
     if(debug) cout << "\n  Line 1: " << line << endl;
@@ -561,16 +538,11 @@ read_lammpstrj_frame(fstream &i, bool resetN)
       if(resetN)
       {
         nTypes = max(nTypes,p.label+1);
-        Nt_array[p.label]++;
-      }
-    }
-    if(debug) cout << " Found " << nTypes << " types"<< endl;
-    if(resetN)
-    {
-      Nt.resize(nTypes);
-      for(int j=0;j<nTypes;j++) {
-        Nt[j]=Nt_array[j];
-        if(debug) cout << "   n. atoms of type " << j+1 << " = " << Nt[j] << endl;
+        if(nTypes>MAX_N_TYPES) {
+          cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+          exit(1);
+        }
+        Nt[p.label]++;
       }
     }
 }

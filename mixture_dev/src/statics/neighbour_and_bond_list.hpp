@@ -8,16 +8,19 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_neigh(){
-  int u;
+  int u,j;
   for(u=0;u<maxshell;u++){
-    if(neigh[u].length()!=N) neigh[u].resize(N);
+    if(neigh[u].size()!=nTypePairs) neigh[u].resize(nTypePairs);
+    for(j=0;j<nTypePairs;j++){
+      if(neigh[u][j].length()!=N) neigh[u][j].resize(N);
+    }
   }
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 build_neigh() {
-  int u,i,j;
+  int u,i,j,t;
   vec rij, rij_mic;
   ntype rijSq, rijSq_mic;
   if(debug) cout << "\n*** Neighbours computation STARTED ***\n";
@@ -30,7 +33,7 @@ build_neigh() {
         ps[i].neigh_list[u].clear();
         ps[i].rij_list[u].clear();
         ps[i].rijSq_list[u].clear();
-        neigh[u].set(i, 0.0);
+        for(t=0;t<nTypePairs;t++) neigh[u][t][i] = 0.;
       }
   }
   if(debug) cout << " * Reset counters and lists DONE\n";
@@ -71,15 +74,19 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_coordnum()
 {
-      if(neigh[0].length()!=N) neigh[0].resize(N);
+      const int u=0;
+      if(neigh[u].size()!=nTypePairs) neigh[u].resize(nTypePairs);
+      for(int j=0;j<nTypePairs;j++){
+        if(neigh[u][j].length()!=N) neigh[u][j].resize(N);
+      }
       ss.str(std::string()); ss << s_coordnum << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, Particle index, Coordination number. # cutoffs = ";
+      fout << "#Timestep | Particle idx | Coordination number for each type pair: 00 | 01 | 02 ... . # cutoffs = ";
       for(auto  i=0;i<Nshells;i++) fout << cutoff[i]<<", ";
       fout << endl;
       fout.close();
 
       ss.str(std::string()); ss << s_coordnum << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, average coordination number, fluctuations. # cutoffs = ";
+      fout << "#Timestep | <coordination number> for each type pair | Fluctuations for each. # cutoffs = ";
       for(auto  i=0;i<Nshells;i++) fout << cutoff[i]<<", ";
       fout << endl;
       fout.close();
@@ -88,25 +95,37 @@ init_coordnum()
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 compute_coordnum() {
-  int i, j, k;
+  int i, j, k, t;
   ntype fval, rijSq;
   vec rij;
-  for(i=0;i<N;i++) neigh[0].set(i,0.0); // start counter
+  for(t=0;t<nTypePairs;t++)
+    for(i=0;i<N;i++)
+      neigh[0][t][i] = 0.; // start counters
   for(i=0;i<N;i++){
     for(k=0;k<ps[i].neigh_list[0].size();k++){ // search in 1st shell neighbour list
       j = ps[i].neigh_list[0][k];
       if(j>i) continue; // avoid double counting!
       rij = ps[i].rij_list[0][k];
       rijSq = ps[i].rijSq_list[0][k];
-      fval = fcut( rijSq/cutoffSq[0], p1half, p2half );
-      neigh[0][i] += fval;
-      neigh[0][j] += fval;
+      // fval = fcut( rijSq/cutoffSq[0], p1half, p2half );   // smooth
+      fval = ( rijSq <= cutoffSq[0] ? 1.0 : 0.0 );         // sharp
+      t = types2int(ps[i].label, ps[j].label, nTypes);
+      neigh[0][t][i] += fval;
+      t = types2int(ps[j].label, ps[i].label, nTypes);
+      neigh[0][t][j] += fval;
     }
   }
   ss.str(std::string()); ss << s_coordnum << tag << ".dat"; fout.open(ss.str(), ios::app);
-  for(i=0;i<N;i++) fout << timestep << " " << i << " " << neigh[0][i] << endl;
+  for(i=0;i<N;i++) {
+    fout << timestep << " " << i;
+    for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t][i];
+    fout << endl;
+  }
   fout.close();
   ss.str(std::string()); ss << s_coordnum << tag << ".ave"; fout.open(ss.str(), ios::app);
-  fout << timestep << " " << neigh[0].mean() << " " << neigh[0].std()/sqrt(N) << endl;
+  fout << timestep;
+  for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t].mean();
+  for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t].std()/sqrt(N);
+  fout << endl;
   fout.close();
 }

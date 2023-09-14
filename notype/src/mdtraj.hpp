@@ -12,7 +12,7 @@
 #include "lib/Ycomplex.hpp"
 using namespace std;
 
-const string root_path="/home/flavio/programmi/mdtraj/notype_dev";
+const string root_path="/home/flavio/programmi/mdtraj/notype";
 const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
 
 enum class FileType {
