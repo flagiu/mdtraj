@@ -8,11 +8,13 @@ cd $PATH_TO_MDTRAJ
 make
 cd $back
 
-LLL=$(python3 ${PATH_TO_MDTRAJ}/test/generate_test.py)
+LLL=$(python3 ./generate_test.py)
 
 echo "Test Coordination Number"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz test.xyz -box3 $LLL -rcut1 $RC -cn
 printf "Exit $? \n\n"
+
+exit
 
 echo "Test RDF"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz test.xyz -box3 $LLL -rdf 0.02

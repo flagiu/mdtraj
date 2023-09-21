@@ -24,20 +24,20 @@ Basic C++ compiler and libraries.
 
 Clone or Download this repository and compile with make:
 ```bash
-gh repo clone flagiu/this-repo
-cd this-repo/version
+gh repo clone flagiu/mdtraj
+cd mdtraj/version
 make
 ```
 where 'version' can be:
 - 'notype', 'notype_dev' (mono-species);
 - 'mixture', 'mixture_dev' (multi-species);
-the versions '_dev' are under developement.
+the '_dev' versions are under developement.
 
 ## Usage and examples
 
 Run helper message for instructions:
 ```bash
-path-to/this-repo/version/bin/mdtraj -h
+path-to-this-repo/version/bin/mdtraj -h
 ```
 
 The subfolders python/ and shell/ contain some utility scripts, to be used before/after the main program.

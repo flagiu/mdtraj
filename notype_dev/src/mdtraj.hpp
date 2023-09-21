@@ -40,13 +40,13 @@ public:
   vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
   vector<int> bond_list[Nshells]; // records all bonds encoded into an integer through ij2int()
   vecflex<ntype> r2,r4, r2CM; // for MSD
-  vecflex<ntype> rdf_bins, rdf_norm, rdf, rdf_ave, rdf2_ave; // for RDF
   vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
   vecflex<ntype> altbc_bins, altbc, altbc_ave, altbc2_ave; // for ALTBC
   vecflex<ntype> sq_bins, sq_norm, sq, sq2, sq_ave, sq2_ave; // for Sq
   vector<vec> rs;
   bool msdAverageOverTime0, out_box, out_xyz, out_alphanes;
   bool debug, verbose;
+  RDF_Calculator<ntype,ptype> *rdf_calculator;
 
 private:
   bool l_is_odd, timings;
@@ -57,7 +57,7 @@ private:
   stringstream ss;
   ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw, altbc_binw, altbc_cos, sq_binw;
   FileType filetype;
-  Timer timer;
+  Timer timer, sq_timer;
 
   int ij2int(int i, int j, int N){
     return (i<j ? N*i+j : N*j+i); // i<j = 0,...,N-1
@@ -268,10 +268,11 @@ public:
 
     // Restart reading
     fin.open(s_in, ios::in);
-    printProgress.init( nframes );
+    printProgress.init( nframes, 2000 );
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {timestep=-1; } // set manual time
     string junk_line;
     if(filetype==FileType::XDATCARV) { for(int i=0;i<7;i++) getline(fin, junk_line); } // skip first 7 lines (so that you can use resetN=false)
+    timer.go();
     for(int i=0; i<nframes_original; i++)
     {
       read_frame(fin, false);
@@ -282,7 +283,7 @@ public:
         exit(1);
       }
       if(i+1>nskip0 && i<nframes_original-nskip1) do_computations_and_output(i-nskip0);
-      printProgress.update( i+1-nskip0 );
+      printProgress.update( i+1-nskip0, timer.lap() );
     }
     printProgress.end();
     fin.close();
@@ -300,7 +301,10 @@ public:
     if(c_coordnum) init_coordnum();
     if(c_bondorient) init_bondorient();
     if(c_msd) init_msd();
-    if(c_rdf) init_rdf();
+    if(c_rdf) {
+      rdf_calculator = new RDF_Calculator<ntype,ptype>();
+      rdf_calculator->init(rdf_binw, L, N, V, s_rdf, tag); // init_rdf();
+    }
     if(c_adf) init_adf();
     if(c_rmin) init_rmin();
     if(c_altbc) init_altbc();
@@ -317,15 +321,15 @@ public:
     if(c_coordnum) compute_coordnum();
     if(c_bondorient) compute_bondorient();
     if(c_msd) compute_msd(i);
-    if(c_rdf) compute_rdf(i);
+    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug); // compute_rdf(i);
     if(c_adf) compute_adf(i);
     if(c_rmin) compute_rmin();
     if(c_altbc) compute_altbc(i);
     if(c_sq)
     {
-      if(timings) timer.go();
+      if(timings) sq_timer.go();
       compute_sq(i);
-      if(timings) timing_log( "sq_timing(ms): ", timer.stop() );
+      if(timings) timing_log( "sq_timing(ms): ", sq_timer.lap() );
     }
   }
 

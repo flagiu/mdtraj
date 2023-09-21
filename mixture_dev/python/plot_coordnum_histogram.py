@@ -55,6 +55,9 @@ args = parser.parse_args()
 outpng="coordnum_hist.png"
 outpdf="coordnum_hist.pdf"
 
+header=args.indat.readline()
+rcut1 = float( header.split("# cutoffs =")[1].split(',')[0] )
+
 X = np.loadtxt(args.indat, dtype=int)
 # Apply fskip
 n = len(X)
@@ -108,15 +111,17 @@ for i in range(npairs):
     green = 0.2
 
     ax.hist(data, bins=bins, label=lab, color=(red,green,blue,0.8), ec = "black", rwidth=0.8, density=True)
-    ax.set_ylabel(r"Density")
+    ax.set_ylabel("Density")
     ax.set_yscale("log")
     ax.legend()
     ax.tick_params(axis='y',which='both', direction='in')
     ax.grid(axis='both', which='major')
+    if i==0:
+       ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
 plt.tight_layout()
 
 fig.savefig(outpng)
 fig.savefig(outpdf)
-print(" plot_coordnum_histogram.py: Figure saved on %s, %s\n"%(outpng, outpdf))
+print(" plot_coordnum_histogram.py: Figure saved on %s , %s\n"%(outpng, outpdf))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)

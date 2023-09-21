@@ -55,6 +55,9 @@ args = parser.parse_args()
 outpng="coordnum_ave_hist.png"
 outpdf="coordnum_ave_hist.pdf"
 
+header=args.indat.readline()
+rcut1 = float( header.split("# cutoffs =")[1].split(',')[0] )
+
 X = np.loadtxt(args.inave)
 # Apply fskip
 n = len(X)
@@ -86,6 +89,7 @@ print(" plot_coordnum_average_histogram.py: List of types to be ignored:",ign_la
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"Average Coordination Number")
 ax.set_ylabel(r"Counts")
+ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
 for i in range(npairs):
     c = X[:,1+i]
     ti,tj = int2types(i, ntypes)

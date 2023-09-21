@@ -98,7 +98,8 @@ compute_coordnum() {
       if(j>i) continue; // avoid double counting!
       rij = ps[i].rij_list[0][k];
       rijSq = ps[i].rijSq_list[0][k];
-      fval = fcut( rijSq/cutoffSq[0], p1half, p2half );
+      // fval = fcut( rijSq/cutoffSq[0], p1half, p2half );    // smooth
+      fval = ( rijSq <= cutoffSq[0] ? 1.0 : 0.0 );         // sharp
       neigh[0][i] += fval;
       neigh[0][j] += fval;
     }

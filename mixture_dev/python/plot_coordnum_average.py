@@ -45,6 +45,9 @@ args = parser.parse_args()
 outpng="coordnum_ave.png"
 outpdf="coordnum_ave.pdf"
 
+header=args.indat.readline()
+rcut1 = float( header.split("# cutoffs =")[1].split(',')[0] )
+
 X = np.loadtxt(args.inavg)
 timesteps = X[:,0]
 npairs = int( (X.shape[1]-1)/2 )
@@ -69,6 +72,7 @@ print(" plot_coordnum_average.py: List of types to be ignored:",ign_labels)
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"Timestep")
 ax.set_ylabel(r"Average Coordination Number")
+ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
 for i in range(npairs):
     c = X[:,1+i]
     c_ = X[:,1+i+npairs]
