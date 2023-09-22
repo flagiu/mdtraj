@@ -41,7 +41,7 @@ print_out_xyz() {
   fout << "Atoms. Timestep: " << timestep << endl;
   for(auto &p : ps)
   {
-    if(pbc_out) p.r = mic(box, boxInv, p.r); // apply PBC to the position
+    if(pbc_out) p.r = p.r - box*round(boxInv*p.r); // apply PBC to the position
     p.write_xyz(fout);
   }
   fout.close();

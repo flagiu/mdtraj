@@ -21,12 +21,12 @@ class RDF_Calculator
     }
     virtual ~RDF_Calculator(){}
 
-    void init(ntype binw_, vec length_box_vectors, int N, ntype V, string string_out_, string tag_)
+    void init(ntype binw_, vec box_diagonal, int N, ntype V, string string_out_, string tag_)
     {
       string_out = string_out_;
       tag = tag_;
       binw = binw_;
-      nbins = int(floor( 0.5*length_box_vectors.abs().min() / binw ));
+      nbins = int(floor( 0.5*box_diagonal.abs().min() / binw ));
       bins.resize(nbins);
       norm.resize(nbins);
       value.resize(nbins);
@@ -64,8 +64,7 @@ class RDF_Calculator
         for(j=i+1;j<N;j++){ // i<j
           rij = ps[j].r - ps[i].r; // real distance
           r = rij.norm();
-          rij = mic(box, boxInv, rij); // first periodic image
-          r_mic = rij.norm();
+          r_mic = (rij - box*round(boxInv*rij)).norm(); // first periodic image
           if( r_mic < r) r = r_mic; // if closer, choose first periodic image
           // if(debug) cout << "  PBC for (i,j)=(" <<i<<","<<j<<") : " << r_true << " --> " << r << endl;
           k = int(floor( r/binw ));

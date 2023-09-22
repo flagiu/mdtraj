@@ -205,8 +205,8 @@ read_contcar_frame(fstream &i, bool resetN)
       else if(format==1) p.r*=s;
     }
 
-    for(auto j=0;j<9+N;j++) getline(i,line); // velocities
-    for(auto j=0;j<4+3*N;j++) getline(i,line); // predictor-corrector
+    for(auto j=0;j<9+N;j++) getline(i,line); // skip velocities
+    for(auto j=0;j<4+3*N;j++) getline(i,line); // skip predictor-corrector
 }
 
 template <class ntype, class ptype>
@@ -283,7 +283,7 @@ read_alphanes_frame(fstream &i, bool resetN)
     ss << line;
     while( ss >> x )
     {
-      if(ncols==0) box[0][0] = x; // ax
+      if(ncols==0)      box[0][0] = x; // ax
       else if(ncols==1) box[0][1] = x; // bx
       else if(ncols==2) box[0][2] = x; // cx
       else if(ncols==3) box[1][1] = x; // by

@@ -66,11 +66,11 @@ compute_msd(int frameidx)
         idx_old = idx - (N+1);       // previous frame
         dr = ps[i].r - rs[idx_old];  // displacement since previous frame
         //dr = dr.mic(L);              // correct for periodic boundary conditions
-        dr = mic(box, boxInv, dr);
+        dr = dr - box*round(boxInv*dr);
         rs[idx] = rs[idx_old] + dr;  // add correction
 //        if(i==0) cout << timestep << " " << rs[idx][0]-rs[(N+1)*0+i][0] << endl;
         rs[ (N+1)*dframe + N ] += ( rs[idx] * invN ); // compute center of mass
-        
+
         idx_old = (N+1)*0 + i;       // t0 for this sample trajectory
         dr = rs[idx] - rs[idx_old];  // displacement r(t)-r(t0)
         dr2 = dr.sq();

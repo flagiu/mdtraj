@@ -39,7 +39,7 @@ build_neigh() {
       for(j=i+1;j<N;j++){
         rij = ps[j].r - ps[i].r;
         rijSq = rij.sq();
-        rij_mic = mic(box, boxInv, rij); // first periodic image
+        rij_mic = rij - box*round(boxInv*rij); // first periodic image
         rijSq_mic = rij_mic.sq();
         if(rijSq_mic < rijSq){ // if closer, choose first periodic image
           rijSq = rijSq_mic;

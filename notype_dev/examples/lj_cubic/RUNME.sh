@@ -30,6 +30,6 @@ printf "Exit $? \n\n"
 python3 ../../python/plot_coordnum_histogram.py
 
 echo "Test liquid ALTBC:"
-${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -altbc 0.01 0.85 15 -rcut1 2.25
+${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -altbc 0.01 0.85 15 -rcut1 2.40
 printf "Exit $? \n\n"
 python3 ../../python/plot_altbc.py

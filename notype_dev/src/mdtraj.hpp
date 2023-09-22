@@ -205,9 +205,10 @@ public:
 
   void set_L_from_box() {
     boxInv=box.inverse();
-    L[0] = box.T()[0].norm(); // in general, L[i] is the length of the i-th box vector. Is it useful? idk
-    L[1] = box.T()[1].norm();
-    L[2] = box.T()[2].norm();
+    //L[0] = box.T()[0].norm(); // in general, L[i] is the length of the i-th box vector. Is it useful? idk
+    //L[1] = box.T()[1].norm();
+    //L[2] = box.T()[2].norm();
+    for(int i=0;i<3;i++) L[i] = box[i][i]; // in general, L[i] is the length of the i-th box vector. Is it useful? idk
     compute_volume();
   }
 
@@ -391,6 +392,12 @@ public:
       if(i==pow1-1) x1=x2;
     }
     return (1.0-x1) / (1.0-x2); // x1 = x^p1, x2 = x^p2
+  }
+
+// apply MIC for general periodic boxes
+  vec mic(vec& r)
+  {
+    return r - box * round(boxInv*r);
   }
 
 };
