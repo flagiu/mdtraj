@@ -384,109 +384,172 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_lammpstrj_frame(fstream &i, bool resetN)
 {
-    string line, x, a,b,c;
-    stringstream ss;
-    int ncols=0;
-    ntype xlo,ylo,zlo, xlob,ylob;
-    ntype xhi,yhi,zhi, xhib,yhib;
-    ntype xy,xz,yz;
+  enum class LAMMPS_ATOM_ENTRIES {
+    ID, TYPE, X,Y,Z, XS,YS,ZS, IX,IY,IZ, VX,VY,VZ
+  };
+  string line, x, a,b,c;
+  LAMMPS_ATOM_ENTRIES entries[15];
+  stringstream ss;
+  int ncols, num_atomic_entries, x_count, xs_count, pi_count, v_count;
+  ntype xlo,ylo,zlo, xlob,ylob;
+  ntype xhi,yhi,zhi, xhib,yhib;
+  ntype xy,xz,yz;
 
-    getline(i,line); // ITEM: TIMESTEP
-    if(debug) cout << "\n  Line 1: " << line << endl;
+  getline(i,line); // ITEM: TIMESTEP
+  if(debug) cout << "\n  Line 1: " << line << endl;
 
-    getline(i,line);
-    timestep = stoi(line);
-    if(debug) cout << timestep << endl;
+  getline(i,line);
+  timestep = stoi(line);
+  if(debug) cout << timestep << endl;
 
-    getline(i,line); // ITEM: NUMBER OF ATOMS
-    if(debug) cout << "\n  Line 3: " << line << endl;
-    getline(i,line);
-    N = stoi(line);
-    if(debug) cout << N << endl;
+  getline(i,line); // ITEM: NUMBER OF ATOMS
+  if(debug) cout << "\n  Line 3: " << line << endl;
+  getline(i,line);
+  N = stoi(line);
+  if(debug) cout << N << endl;
 
-    // ITEM: BOX BOUNDS ...
+  // ITEM: BOX BOUNDS ...
+  getline(i,line);
+  ncols=0;
+  if(debug) cout << "\n  Line 5: " << line << endl;
+  ss << line;
+  while( ss >> x )
+  {
+    if(ncols>=3) if(debug) cout << x << endl;
+    ncols++;
+  }
+  ss.str(std::string()); ss.clear(); // clear the string stream!
+
+  xy=xz=yz=0.0;
+  switch (ncols) {
+    case 6:
+      getline(i,line); istringstream(line) >> a >> b;
+      xlo = stof(a);
+      xhi = stof(b);
+
+      getline(i,line); istringstream(line) >> a >> b;
+      ylo = stof(a);
+      yhi = stof(b);
+
+      getline(i,line); istringstream(line) >> a >> b;
+      zlo = stof(a);
+      zhi = stof(b);
+      break;
+    case 9:
+      getline(i,line); istringstream(line) >> a >> b >> c;
+      xlob = stof(a);
+      xhib = stof(b);
+      xy = stof(c);
+
+      getline(i,line); istringstream(line) >> a >> b >> c;
+      ylob = stof(a);
+      yhib = stof(b);
+      xz = stof(c);
+
+      getline(i,line); istringstream(line) >> a >> b >> c;
+      zlo = stof(a);
+      zhi = stof(b);
+      yz = stof(c);
+
+      xlo = xlob - min(min(0.0,xy), min(xz,xy+xz) );
+      xhi = xhib - max( max(0.0,xy), max(xz,xy+xz) );
+      ylo = ylob - min(0.0,yz);
+      yhi = yhib - max(0.0,yz);
+      break;
+    default:
+      cout << "[ Error: box format not recognized with "<<ncols<<" columns in ITEM]\n\n";
+      exit(1);
+  }
+  box[0][0] = xhi - xlo;
+  box[1][1] = yhi - ylo;
+  box[2][2] = zhi - zlo;
+  box[0][1] = xy;
+  box[0][2] = xz;
+  box[1][2] = yz;
+  box[1][0] = box[2][0] = box[2][1] = 0.0;
+  set_L_from_box();
+
+  if(resetN) {
+    ps.resize(N);
+    invN = 1.0/N;
+    nframes = nlines / (N+9);
+  }
+
+  getline(i,line); // ITEM: ATOMS id type xs ys zs
+  ncols=0;
+  x_count=xs_count=pi_count=v_count=0;
+  ss << line;
+  while( ss >> x )
+  {
+    if(ncols==1 && x!="ATOMS")
+    {
+      cout << " [ERROR: I expected to find atoms but I found the following line:]\n"<<line<<endl;
+      exit(1);
+    }
+    if(ncols>=2)
+    {
+      if(debug) cout << x << endl;
+      if      (x=="x") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::X; x_count++; }
+      else if (x=="y") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::Y; x_count++; }
+      else if (x=="z") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::Z; x_count++; }
+
+      else if (x=="xs") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::XS; xs_count++; }
+      else if (x=="ys") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::YS; xs_count++; }
+      else if (x=="zs") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::ZS; xs_count++; }
+
+      else if (x=="ix") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::IX; pi_count++; }
+      else if (x=="iy") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::IY; pi_count++; }
+      else if (x=="iz") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::IZ; pi_count++; }
+
+      else if (x=="vx") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::VX; v_count++; }
+      else if (x=="vy") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::VY; v_count++; }
+      else if (x=="vz") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::VZ; v_count++; }
+
+      else if (x=="id" || x=="type") true;
+      else
+      {
+        cout << " [ERROR: lammps entry '"<<x<<"' for atoms not recognized.]\n";
+        exit(1);
+      }
+    }
+    ncols++;
+  }
+  num_atomic_entries=ncols-2;
+
+  for(auto &p: ps)
+  {
     getline(i,line);
     ss << line;
-    if(debug) cout << "\n  Line 5: " << line << endl;
-    while( ss >> x )
+    for(int j=0;j<num_atomic_entries;j++)
     {
-      if(ncols>=3) if(debug) cout << x << endl;
-      ncols++;
+      ss >> x;
+      switch( entries[j] )
+      {
+        case LAMMPS_ATOM_ENTRIES::ID : break; // atom number
+        case LAMMPS_ATOM_ENTRIES::TYPE : break; // atom type
+        case LAMMPS_ATOM_ENTRIES::X : p.r[0] = stof(x); // x cartesian
+        case LAMMPS_ATOM_ENTRIES::Y : p.r[1] = stof(x); // y cartesian
+        case LAMMPS_ATOM_ENTRIES::Z : p.r[2] = stof(x); // z cartesian
+        case LAMMPS_ATOM_ENTRIES::XS : p.s[0] = stof(x); // x scaled
+        case LAMMPS_ATOM_ENTRIES::YS : p.s[1] = stof(x); // y scaled
+        case LAMMPS_ATOM_ENTRIES::ZS : p.s[2] = stof(x); // z scaled
+        case LAMMPS_ATOM_ENTRIES::IX : p.pi[0] = stof(x); // x periodic image
+        case LAMMPS_ATOM_ENTRIES::IY : p.pi[1] = stof(x); // y periodic image
+        case LAMMPS_ATOM_ENTRIES::IZ : p.pi[2] = stof(x); // z periodic image
+        default:
+          cout << "[ERROR: lammps entry at column '"<<j<<"' not recognized while reading atom.]\n";
+          exit(1);
+      }
+      if(x_count)
+      {
+        p.r[0] -= xlo; // CORRETTO traslare per xl0,ylo,zlo tutto ???
+        p.r[1] -= ylo;
+        p.r[2] -= zlo;
+      }
+      if(x_count && !xs_count) p.s = boxInv * p.r; // compute scaled coordinate from Cartesian
+      if(xs_count && !x_count) p.r = box * p.r; // compute Cartesian coordinate from scaled
     }
+    if(debug) p.show();
     ss.str(std::string()); ss.clear(); // clear the string stream!
-
-
-    xy=xz=yz=0.0;
-    switch (ncols) {
-      case 6:
-        getline(i,line); istringstream(line) >> a >> b;
-        xlo = stof(a);
-        xhi = stof(b);
-
-        getline(i,line); istringstream(line) >> a >> b;
-        ylo = stof(a);
-        yhi = stof(b);
-
-        getline(i,line); istringstream(line) >> a >> b;
-        zlo = stof(a);
-        zhi = stof(b);
-        break;
-      case 9:
-        getline(i,line); istringstream(line) >> a >> b >> c;
-        xlob = stof(a);
-        xhib = stof(b);
-        xy = stof(c);
-
-        getline(i,line); istringstream(line) >> a >> b >> c;
-        ylob = stof(a);
-        yhib = stof(b);
-        xz = stof(c);
-
-        getline(i,line); istringstream(line) >> a >> b >> c;
-        zlo = stof(a);
-        zhi = stof(b);
-        yz = stof(c);
-
-        xlo = xlob - min(min(0.0,xy), min(xz,xy+xz) );
-        xhi = xhib - max( max(0.0,xy), max(xz,xy+xz) );
-        ylo = ylob - min(0.0,yz);
-        yhi = yhib - max(0.0,yz);
-        break;
-      default:
-        cout << "[ Error: box format not recognized with "<<ncols<<" columns in ITEM]\n\n";
-        exit(1);
-    }
-
-    box[0][0] = xhi - xlo;
-    box[1][1] = yhi - ylo;
-    box[2][2] = zhi - zlo;
-    box[0][1] = xy;
-    box[0][2] = xz;
-    box[1][2] = yz;
-    box[1][0] = box[2][0] = box[2][1] = 0.0;
-    set_L_from_box();
-
-    if(resetN) {
-      ps.resize(N);
-      invN = 1.0/N;
-      nframes = nlines / (N+9);
-    }
-
-    getline(i,line); // ITEM: ATOMS id type xs ys zs
-    for(auto &p: ps)
-    {
-      getline(i,line);
-      ss << line;
-      ss >> x; // atom number
-      ss >> x; // atom type
-      ss >> x; p.s[0] = stof(x); // x scaled
-      ss >> x; p.s[1] = stof(x); // y scaled
-      ss >> x; p.s[2] = stof(x); // z scaled
-      p.r = box * p.s; // real coordinates
-      p.r[0] -= xlo; // CORRETTO???
-      p.r[1] -= ylo;
-      p.r[2] -= zlo;
-      if(debug) p.show();
-      ss.str(std::string()); ss.clear(); // clear the string stream!
-    }
+  }
 }

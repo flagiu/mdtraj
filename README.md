@@ -15,6 +15,7 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 	- g(r) is <1 for large r in triclinic boxes.
 	- Check again the MSD.
 	- Check again the definition of Coordination number.
+	- Da ricontrollare input lammps in notype_dev!
 
 ## Requirements
 
