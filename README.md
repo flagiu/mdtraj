@@ -26,7 +26,8 @@ Basic C++ compiler and libraries.
 Clone or Download this repository and compile with make:
 ```bash
 gh repo clone flagiu/mdtraj
-cd mdtraj/version
+cd mdtraj/version/
+bash ./install_path.sh
 make
 ```
 where 'version' can be:

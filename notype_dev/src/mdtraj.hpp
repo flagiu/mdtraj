@@ -15,7 +15,7 @@ using namespace std;
 const string root_path="/home/flavio/programmi/mdtraj/notype_dev";
 
 enum class FileType {
-  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ
+  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
 };
 
 template<class ntype, class ptype>
@@ -230,7 +230,7 @@ public:
     }
   }
 
-  void read_frame(fstream &i, bool resetN);
+  void read_frame(fstream &i, bool resetN, int frameIdx);
   void removeRotDof();
   void read_contcar_frame(fstream &i, bool resetN);
   void read_xdatcar_frame(fstream &i, bool resetN, bool constantBox);
@@ -240,6 +240,7 @@ public:
   void read_alphanes9_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
   void read_lammpstrj_frame(fstream &i, bool resetN);
+  void read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame);
 
   //------- COMPUTE things ---------------//
 
@@ -254,7 +255,7 @@ public:
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
       timestep=-1; dtframe = 1;
     } // set manual time for CONTCAR, ALPHANES, ALPHANES9 file format
-    read_frame(fin, true);
+    read_frame(fin, true, 0);
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << ".\n";
@@ -265,7 +266,7 @@ public:
     nframes = nframes - nskip0 - nskip1;
     if(nframes<2) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
 
-    read_frame(fin, false);
+    read_frame(fin, false, 1);
     if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
     if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
     init_computations();
@@ -281,7 +282,7 @@ public:
     timer.go();
     for(int i=0; i<nframes_original; i++)
     {
-      read_frame(fin, false);
+      read_frame(fin, false, i);
       if(N != ps.size()) { cout << "[Warning: N has changed]\n"; exit(1);}
       if( (timestep - t0frame)%dtframe != 0) {
         cout << "[Warning: timestep interval has changed]\n";

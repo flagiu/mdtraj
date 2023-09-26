@@ -21,6 +21,9 @@ printf "Exit $? \n\n"
 bash ../../shell/traj2nxy.sh sq.traj > sq.xxx
 python3 ../../python/plot_sq_trajectory.py
 
+echo "Test S(q) rom g(r):"
+python3 ../../python/calc_sq_from_rdf.py --rho 1.02192 --Nq 50
+
 echo "Test direct correlation:"
 python3 ../../python/calc_direct_correlation_from_sq.py --rho 1.02192
 
@@ -29,7 +32,7 @@ ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -cn -rcut1 1.5
 printf "Exit $? \n\n"
 python3 ../../python/plot_coordnum_histogram.py
 
-echo "Test liquid ALTBC:"
-${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -altbc 0.01 0.85 15 -rcut1 2.40
-printf "Exit $? \n\n"
-python3 ../../python/plot_altbc.py
+#echo "Test liquid ALTBC:"
+#${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -altbc 0.01 0.85 15 -rcut1 2.40
+#printf "Exit $? \n\n"
+#python3 ../../python/plot_altbc.py

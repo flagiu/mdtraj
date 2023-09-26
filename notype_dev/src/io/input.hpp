@@ -3,7 +3,7 @@ using namespace std;
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
-read_frame(fstream &i, bool resetN)
+read_frame(fstream &i, bool resetN, int frameIdx)
   {
     switch(filetype)
     {
@@ -36,6 +36,9 @@ read_frame(fstream &i, bool resetN)
         break;
       case FileType::LAMMPSTRJ:
         read_lammpstrj_frame(i, resetN);
+        break;
+      case FileType::YUHAN:
+        read_yuhan_frame(i, resetN, frameIdx==0);
         break;
       default:
         cout << "[ERROR: filetype = " << static_cast<int>(filetype) << " not recognized]\n";
@@ -475,7 +478,8 @@ read_lammpstrj_frame(fstream &i, bool resetN)
     nframes = nlines / (N+9);
   }
 
-  getline(i,line); // ITEM: ATOMS id type xs ys zs
+  getline(i,line); // ITEM: ATOMS ...
+  if(debug) cout << "\n  Line 9: " << line << endl;
   ncols=0;
   x_count=xs_count=pi_count=v_count=0;
   ss << line;
@@ -489,7 +493,10 @@ read_lammpstrj_frame(fstream &i, bool resetN)
     if(ncols>=2)
     {
       if(debug) cout << x << endl;
-      if      (x=="x") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::X; x_count++; }
+      if      (x=="id")   { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::ID; }
+      else if (x=="type") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::TYPE; }
+
+      else if (x=="x") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::X; x_count++; }
       else if (x=="y") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::Y; x_count++; }
       else if (x=="z") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::Z; x_count++; }
 
@@ -505,7 +512,6 @@ read_lammpstrj_frame(fstream &i, bool resetN)
       else if (x=="vy") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::VY; v_count++; }
       else if (x=="vz") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::VZ; v_count++; }
 
-      else if (x=="id" || x=="type") true;
       else
       {
         cout << " [ERROR: lammps entry '"<<x<<"' for atoms not recognized.]\n";
@@ -514,42 +520,140 @@ read_lammpstrj_frame(fstream &i, bool resetN)
     }
     ncols++;
   }
+  ss.str(std::string()); ss.clear(); // clear the string stream!
   num_atomic_entries=ncols-2;
 
   for(auto &p: ps)
   {
     getline(i,line);
     ss << line;
+    //if(debug) cout << line << endl;
     for(int j=0;j<num_atomic_entries;j++)
     {
       ss >> x;
+      //if(debug) cout << "j="<<j<<" ; x="<<x << endl;
       switch( entries[j] )
       {
         case LAMMPS_ATOM_ENTRIES::ID : break; // atom number
         case LAMMPS_ATOM_ENTRIES::TYPE : break; // atom type
-        case LAMMPS_ATOM_ENTRIES::X : p.r[0] = stof(x); // x cartesian
-        case LAMMPS_ATOM_ENTRIES::Y : p.r[1] = stof(x); // y cartesian
-        case LAMMPS_ATOM_ENTRIES::Z : p.r[2] = stof(x); // z cartesian
-        case LAMMPS_ATOM_ENTRIES::XS : p.s[0] = stof(x); // x scaled
-        case LAMMPS_ATOM_ENTRIES::YS : p.s[1] = stof(x); // y scaled
-        case LAMMPS_ATOM_ENTRIES::ZS : p.s[2] = stof(x); // z scaled
-        case LAMMPS_ATOM_ENTRIES::IX : p.pi[0] = stof(x); // x periodic image
-        case LAMMPS_ATOM_ENTRIES::IY : p.pi[1] = stof(x); // y periodic image
-        case LAMMPS_ATOM_ENTRIES::IZ : p.pi[2] = stof(x); // z periodic image
+        case LAMMPS_ATOM_ENTRIES::X : p.r[0] = stof(x); break; // x cartesian
+        case LAMMPS_ATOM_ENTRIES::Y : p.r[1] = stof(x); break; // y cartesian
+        case LAMMPS_ATOM_ENTRIES::Z : p.r[2] = stof(x); break; // z cartesian
+        case LAMMPS_ATOM_ENTRIES::XS : p.s[0] = stof(x); break; // x scaled
+        case LAMMPS_ATOM_ENTRIES::YS : p.s[1] = stof(x); break; // y scaled
+        case LAMMPS_ATOM_ENTRIES::ZS : p.s[2] = stof(x); break; // z scaled
+        case LAMMPS_ATOM_ENTRIES::IX : p.pi[0] = stof(x); break; // x periodic image
+        case LAMMPS_ATOM_ENTRIES::IY : p.pi[1] = stof(x); break; // y periodic image
+        case LAMMPS_ATOM_ENTRIES::IZ : p.pi[2] = stof(x); break; // z periodic image
+        case LAMMPS_ATOM_ENTRIES::VX : break;
+        case LAMMPS_ATOM_ENTRIES::VY : break;
+        case LAMMPS_ATOM_ENTRIES::VZ : break;
         default:
           cout << "[ERROR: lammps entry at column '"<<j<<"' not recognized while reading atom.]\n";
           exit(1);
       }
-      if(x_count)
-      {
-        p.r[0] -= xlo; // CORRETTO traslare per xl0,ylo,zlo tutto ???
-        p.r[1] -= ylo;
-        p.r[2] -= zlo;
-      }
-      if(x_count && !xs_count) p.s = boxInv * p.r; // compute scaled coordinate from Cartesian
-      if(xs_count && !x_count) p.r = box * p.r; // compute Cartesian coordinate from scaled
     }
-    if(debug) p.show();
+    if(x_count)
+    {
+      p.r[0] -= xlo; // CORRETTO traslare per xl0,ylo,zlo tutto ???
+      p.r[1] -= ylo;
+      p.r[2] -= zlo;
+    }
+    if(x_count && !xs_count) p.s = boxInv * p.r; // compute scaled coordinate from Cartesian
+    if(xs_count && !x_count) p.r = box * p.r; // compute Cartesian coordinate from scaled
+    //if(debug) p.show();
     ss.str(std::string()); ss.clear(); // clear the string stream!
+  }
+}
+
+//------------------------------------------------------------//
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame)
+{
+  string line, x, a,b,c;
+  stringstream ss;
+  int ncols;
+
+  if(isFirstFrame) // if first frame:
+  {
+    getline(i,line); // CONFIG
+    if(debug) cout << "\n  Line: " << line << endl;
+
+    getline(i,line); // CONFIG details
+    if(debug) cout << "\n  Line: " << line << endl;
+  }
+
+  getline(i,line); // timestep timestep_value N  
+  if(debug) cout << "\n  Line: " << line << endl;
+  ss << line;
+  ncols=0;
+  while( ss >> x )
+  {
+    //if(debug) cout << "x="<<x<< endl;
+    switch(ncols)
+    {
+      case 0:
+        if(x!="timestep") {
+          cout<<"[ERROR: expected 'timestep' at beginning of line; instead: "<<x<<"]\n";
+          exit(1);
+        }
+        break;
+      case 1:
+        timestep = stoi(x);
+        if(debug) cout << "timestep="<<timestep<<endl;
+        break;
+      case 2:
+        N = stoi(x);
+        if(debug) cout << "N="<<N<<endl;
+      case 3: break; // I don't know the meaning
+      case 4: break; // I don't know the meaning
+      case 5: break; // I don't know the meaning
+      case 6: break; // I don't know the meaning
+      default:
+        cout<<"[ERROR: I did not expect more than 7 columns in Line 3]\n";
+        exit(1);
+    }
+    ncols++;
+  }
+  ss.str(std::string()); ss.clear(); // clear the string stream!
+
+  getline(i,line); // lattice vector 'a'
+  istringstream(line) >> a >> b >> c;
+  box[0][0] = stof(a);
+  box[1][0] = stof(b);
+  box[2][0] = stof(c);
+
+  getline(i,line); // lattice vector 'ab
+  istringstream(line) >> a >> b >> c;
+  box[0][1] = stof(a);
+  box[1][1] = stof(b);
+  box[2][1] = stof(c);
+
+  getline(i,line); // lattice vector 'c'
+  istringstream(line) >> a >> b >> c;
+  box[0][2] = stof(a);
+  box[1][2] = stof(b);
+  box[2][2] = stof(c);
+
+  set_L_from_box();
+
+  if(resetN) {
+    ps.resize(N);
+    invN = 1.0/N;
+    nframes = (nlines-2) / (4*N+4);
+  }
+
+  for(auto &p: ps)
+  {
+    getline(i,line); // 1st line: type index ... ... ==> useless for notype
+    getline(i,line); // 2nd line: x y z
+    istringstream(line) >> a >> b >> c;
+    p.r[0] = stof(a);
+    p.r[1] = stof(b);
+    p.r[2] = stof(c);
+
+    getline(i,line); // 3rd line: vx vy vz
+    getline(i,line); // 4th line: fx fy fz
   }
 }
