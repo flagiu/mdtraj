@@ -4,7 +4,7 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -xdatcar -xdatcarV -xyz -xyz_cp2k]"
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
   				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq]"
 				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
@@ -30,6 +30,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
   fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -box.");
   fprintf(stderr, "\n -xyz_cp2k \t .xyz format from CP2K. Box size is supplied via -box.");
+  fprintf(stderr, "\n -yuhan \t Hi Yuhan, this is the format you gave me.");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n BOX (Note: it will be overwritten if present in the input file):");
   fprintf(stderr, "\n");
@@ -369,6 +370,17 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		  exit(-1);
 		}
         filetype = FileType::XYZ_CP2K;
+	      s_in = string(argv[i]);
+	    }
+	  else if ( !strcmp(argv[i], "-yuhan") )
+	    {
+	      i++;
+	      if (i == argc)
+		{
+		  fprintf(stderr, "ERROR: '-yuhan' must be followed by file name!\n");
+		  exit(-1);
+		}
+        filetype = FileType::YUHAN;
 	      s_in = string(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-out_xyz") )

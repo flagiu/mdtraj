@@ -12,11 +12,10 @@
 #include "lib/Ycomplex.hpp"
 using namespace std;
 
-const string root_path="/home/flavio/programmi/mdtraj/notype";
-const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
+const string root_path="/home/flavio/programmi/mdtraj/notype_dev";
 
 enum class FileType {
-  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ
+  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
 };
 
 template<class ntype, class ptype>
@@ -31,7 +30,7 @@ public:
   bool pbc_out; // print output with PBC?
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
-  int nframes, timestep, period, l, rdf_nbins, adf_nbins, altbc_nbins, sq_nbins, qmodmin,qmodmax,qmodstep;
+  int nframes, timestep, l, adf_nbins, altbc_nbins;
   bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq; // compute or not
   string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_log; // for file naming
   static const int Nshells=3;
@@ -39,25 +38,31 @@ public:
   vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
   vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
   vector<int> bond_list[Nshells]; // records all bonds encoded into an integer through ij2int()
-  vecflex<ntype> r2,r4, r2CM; // for MSD
-  vecflex<ntype> rdf_bins, rdf_norm, rdf, rdf_ave, rdf2_ave; // for RDF
   vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
   vecflex<ntype> altbc_bins, altbc, altbc_ave, altbc2_ave; // for ALTBC
-  vecflex<ntype> sq_bins, sq_norm, sq, sq2, sq_ave, sq2_ave; // for Sq
-  vector<vec> rs;
-  bool msdAverageOverTime0, out_box, out_xyz, out_alphanes;
+  bool out_box, out_xyz, out_alphanes;
   bool debug, verbose;
+  //
+  ntype rdf_binw;
+  RDF_Calculator<ntype,ptype> *rdf_calculator;
+  //
+  int qmodmin,qmodmax,qmodstep;
+  SQ_Calculator<ntype,ptype> *sq_calculator;
+  //
+  int period;
+  bool msdAverageOverTime0;
+  MSD_Calculator<ntype,ptype> *msd_calculator;
 
 private:
   bool l_is_odd, timings;
-  int nlines, t0frame, dtframe, l_deg, periodIdx, Nperiods, maxshell, nskip0, nskip1, nframes_original;
+  int nlines, t0frame, dtframe, l_deg, maxshell, nskip0, nskip1, nframes_original;
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
   float fskip0, fskip1;
   fstream fin, fout;
   stringstream ss;
-  ntype cutoffSq[Nshells], invN, qldot_th, rdf_binw, adf_binw, altbc_binw, altbc_cos, sq_binw;
+  ntype cutoffSq[Nshells], invN, qldot_th, adf_binw, altbc_binw, altbc_cos;
   FileType filetype;
-  Timer timer;
+  Timer timer, sq_timer;
 
   int ij2int(int i, int j, int N){
     return (i<j ? N*i+j : N*j+i); // i<j = 0,...,N-1
@@ -171,14 +176,14 @@ public:
     l = 4;
     p1half=6;
     qldot_th = 0.65;
-    adf_nbins=0;
-    rdf_nbins=0;
-    altbc_nbins=0;
-    altbc_rmin=0.0;
-    altbc_angle=-1.0;
+    rdf_binw=0.0;
     qmodmin=2;
     qmodmax=200;
     qmodstep=1;
+    adf_binw=0.0;
+    altbc_nbins=0;
+    altbc_rmin=0.0;
+    altbc_angle=-1.0;
     fskip0=fskip1=0.0;
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
@@ -205,9 +210,10 @@ public:
 
   void set_L_from_box() {
     boxInv=box.inverse();
-    L[0] = box.T()[0].norm(); // in general, L[i] is the length of the i-th box vector. Is it useful? idk
-    L[1] = box.T()[1].norm();
-    L[2] = box.T()[2].norm();
+    //L[0] = box.T()[0].norm(); // in general, L[i] is the length of the i-th box vector. Is it useful? idk
+    //L[1] = box.T()[1].norm();
+    //L[2] = box.T()[2].norm();
+    for(int i=0;i<3;i++) L[i] = box[i][i]; // in general, L[i] is the length of the i-th box vector. Is it useful? idk
     compute_volume();
   }
 
@@ -224,7 +230,7 @@ public:
     }
   }
 
-  void read_frame(fstream &i, bool resetN);
+  void read_frame(fstream &i, bool resetN, int frameIdx);
   void removeRotDof();
   void read_contcar_frame(fstream &i, bool resetN);
   void read_xdatcar_frame(fstream &i, bool resetN, bool constantBox);
@@ -234,6 +240,7 @@ public:
   void read_alphanes9_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
   void read_lammpstrj_frame(fstream &i, bool resetN);
+  void read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame);
 
   //------- COMPUTE things ---------------//
 
@@ -248,7 +255,7 @@ public:
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
       timestep=-1; dtframe = 1;
     } // set manual time for CONTCAR, ALPHANES, ALPHANES9 file format
-    read_frame(fin, true);
+    read_frame(fin, true, 0);
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << ".\n";
@@ -259,7 +266,7 @@ public:
     nframes = nframes - nskip0 - nskip1;
     if(nframes<2) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
 
-    read_frame(fin, false);
+    read_frame(fin, false, 1);
     if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
     if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
     init_computations();
@@ -268,13 +275,14 @@ public:
 
     // Restart reading
     fin.open(s_in, ios::in);
-    printProgress.init( nframes );
+    printProgress.init( nframes, 2000 );
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {timestep=-1; } // set manual time
     string junk_line;
     if(filetype==FileType::XDATCARV) { for(int i=0;i<7;i++) getline(fin, junk_line); } // skip first 7 lines (so that you can use resetN=false)
+    timer.go();
     for(int i=0; i<nframes_original; i++)
     {
-      read_frame(fin, false);
+      read_frame(fin, false, i);
       if(N != ps.size()) { cout << "[Warning: N has changed]\n"; exit(1);}
       if( (timestep - t0frame)%dtframe != 0) {
         cout << "[Warning: timestep interval has changed]\n";
@@ -282,12 +290,12 @@ public:
         exit(1);
       }
       if(i+1>nskip0 && i<nframes_original-nskip1) do_computations_and_output(i-nskip0);
-      printProgress.update( i+1-nskip0 );
+      printProgress.update( i+1-nskip0, timer.lap() );
     }
     printProgress.end();
     fin.close();
     if(debug) cout << "Closed input file.\n";
-    if(c_msd) print_msd();
+    print_final_computations();
     if(debug || verbose) cout << "\nExecution completed.\n\n";
   }
 
@@ -299,12 +307,21 @@ public:
     if(maxshell>0) init_neigh();
     if(c_coordnum) init_coordnum();
     if(c_bondorient) init_bondorient();
-    if(c_msd) init_msd();
-    if(c_rdf) init_rdf();
+    if(c_msd) {
+      msd_calculator = new MSD_Calculator<ntype,ptype>();
+      msd_calculator->init(dtframe,nframes,period, N, s_msd,s_ngp,tag,debug);
+    }
+    if(c_rdf) {
+      rdf_calculator = new RDF_Calculator<ntype,ptype>();
+      rdf_calculator->init(rdf_binw, L, N, V, s_rdf, tag); // init_rdf();
+    }
     if(c_adf) init_adf();
     if(c_rmin) init_rmin();
     if(c_altbc) init_altbc();
-    if(c_sq) init_sq();
+    if(c_sq) {
+      sq_calculator = new SQ_Calculator<ntype,ptype>();
+      sq_calculator->init(qmodmin, qmodmax, qmodstep, L, s_sq, tag); // init_rdf();
+    }
   }
 
   void do_computations_and_output(int i) {
@@ -316,17 +333,21 @@ public:
     if(maxshell>0) build_neigh();
     if(c_coordnum) compute_coordnum();
     if(c_bondorient) compute_bondorient();
-    if(c_msd) compute_msd(i);
-    if(c_rdf) compute_rdf(i);
+    if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
+    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug); // compute_rdf(i);
     if(c_adf) compute_adf(i);
     if(c_rmin) compute_rmin();
     if(c_altbc) compute_altbc(i);
     if(c_sq)
     {
-      if(timings) timer.go();
-      compute_sq(i);
-      if(timings) timing_log( "sq_timing(ms): ", timer.stop() );
+      if(timings) sq_timer.go();
+      sq_calculator->compute(i,nframes,timestep,ps,debug);
+      if(timings) timing_log( "sq_timing(ms): ", sq_timer.lap() );
     }
+  }
+
+  void print_final_computations() {
+    if(c_msd) msd_calculator->print(dtframe,N,debug);
   }
 
   void timing_log(string comment, float time)
@@ -387,6 +408,12 @@ public:
       if(i==pow1-1) x1=x2;
     }
     return (1.0-x1) / (1.0-x2); // x1 = x^p1, x2 = x^p2
+  }
+
+// apply MIC for general periodic boxes
+  vec mic(vec& r)
+  {
+    return r - box * round(boxInv*r);
   }
 
 };

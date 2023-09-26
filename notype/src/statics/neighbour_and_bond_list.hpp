@@ -39,7 +39,7 @@ build_neigh() {
       for(j=i+1;j<N;j++){
         rij = ps[j].r - ps[i].r;
         rijSq = rij.sq();
-        rij_mic = mic(box, boxInv, rij); // first periodic image
+        rij_mic = rij - box*round(boxInv*rij); // first periodic image
         rijSq_mic = rij_mic.sq();
         if(rijSq_mic < rijSq){ // if closer, choose first periodic image
           rijSq = rijSq_mic;
@@ -98,7 +98,8 @@ compute_coordnum() {
       if(j>i) continue; // avoid double counting!
       rij = ps[i].rij_list[0][k];
       rijSq = ps[i].rijSq_list[0][k];
-      fval = fcut( rijSq/cutoffSq[0], p1half, p2half );
+      // fval = fcut( rijSq/cutoffSq[0], p1half, p2half );    // smooth
+      fval = ( rijSq <= cutoffSq[0] ? 1.0 : 0.0 );         // sharp
       neigh[0][i] += fval;
       neigh[0][j] += fval;
     }

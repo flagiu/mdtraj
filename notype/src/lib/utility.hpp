@@ -33,23 +33,22 @@ int indexOf(vector<T>& vec, T element)
 class PrintProgress
 {
 private:
-  int perc; // in percentage units
-  int total_steps, nblocks, block_size, current_block;
+  int perc; // 'perc' is in percentage units
+  int total_steps, print_every_ms, current_block;
 public:
-  void init(int tot)
+  void init(int tot_steps, int print_every_ms_)
   {
-    total_steps = tot;
-    nblocks = 10;
-    if(total_steps<nblocks) nblocks=total_steps;
-    block_size = total_steps/nblocks;
-    current_block=0;
+    total_steps = tot_steps;
+    print_every_ms = print_every_ms_;
     perc=0;
+    current_block=0;
   }
-  void update(int step)
+  void update(int step, float run_time_ms)
   {
-    if( step-current_block*block_size >= block_size)
+    int block = ((int)run_time_ms) / print_every_ms;
+    if(block>current_block)
     {
-      current_block++;
+      current_block = block;
       perc = floor( step/(float)total_steps * 100.0);
       cout << "\r[" << setfill(' ') << setw(3) << perc << "%]" << flush;
     }
@@ -82,10 +81,10 @@ public:
   {
     start = clock();
   }
-  float stop()
+  float lap()
   {
     end = clock();
-    return (float) (end-start) / CLOCKS_PER_SEC * 1000.0;
+    return (float) (end-start) / CLOCKS_PER_SEC * 1000.0; // elapsed time (ms)
   }
 };
 
