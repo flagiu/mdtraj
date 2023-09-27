@@ -47,7 +47,7 @@ read_frame(fstream &i, bool resetN, int frameIdx)
     if(remove_rot_dof) removeRotDof();
     boxInv = box.inverse();
     set_L_from_box();
-    if(c_sq)
+    if(c_sq || c_sqt)
     {
       for(auto &p: ps) p.s = boxInv * p.r; // pre-compute fractional coordinates
     }

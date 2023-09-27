@@ -47,9 +47,9 @@ class MSD_Calculator
       //   with 0 <= current_time_index < period_in_dt_units,
       //   with 0 <= particle_index < N.
       CM_rvec.resize(period_in_dt_units);
-      r2.resize(period_in_dt_units-1); // < |r(t) - r(t0)|^2 >
-      r4.resize(period_in_dt_units-1); // < |r(t) - r(t0)|^4 >
-      r2CM.resize(period_in_dt_units-1); // < |rCM(t) - rCM(t0)|^2 >
+      r2.resize(period_in_dt_units-1); // < |r(t0+t) - r(t0)|^2 >
+      r4.resize(period_in_dt_units-1); // < |r(t0+t) - r(t0)|^4 >
+      r2CM.resize(period_in_dt_units-1); // < |rCM(t0+t) - rCM(t0)|^2 >
 
       ss.str(std::string()); ss << string_out_msd << tag << ".traj"; fout.open(ss.str(), ios::out);
       fout << "#Delta timestep, then |r(t)-r(t0)|^2 # block file for different t0\n";
@@ -111,7 +111,7 @@ class MSD_Calculator
           r2[dframe-1] += dr2;         // average over t0 and atoms
           r4[dframe-1] += dr2*dr2;
         }
-        ss.str(std::string()); ss << string_out_msd << tag << ".traj"; fout.open(ss.str(), ios::out);
+        ss.str(std::string()); ss << string_out_msd << tag << ".traj"; fout.open(ss.str(), ios::app);
         fout << r2t0 << endl; // output sample trajectory
         if(dframe == period_in_dt_units-1) fout << endl; // end of the block (sample trajectory)
         fout.close();

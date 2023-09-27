@@ -4,8 +4,9 @@ import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-#plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
+plt.rcParams['figure.dpi'] = 200
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
@@ -43,13 +44,13 @@ assert Xa.shape[1]>=2
 fig, ax = plt.subplots()
 ax.set_xlabel("t [ps]")
 ax.set_ylabel(r"$\langle\, \Delta r^2(t)\, \rangle$ [$\AA^2$]")
-ax.tick_params(which='both', direction='in')
 for i in range(ntraj):
 	ax.plot( t, Xt[:,i+1], 'k', alpha=0.1 )
-ax.plot(t, msd, 'r')
+ax.plot(t, msd, 'r.-')
+ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 fig.savefig(outpng)
 fig.savefig(outpdf)
-print("Figure saved on %s, %s\n"%(outpng,outpdf))
+print("Figure saved on %s , %s\n"%(outpng,outpdf))
 #plt.show()

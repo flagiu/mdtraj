@@ -30,16 +30,15 @@ public:
   bool pbc_out; // print output with PBC?
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
-  int nframes, timestep, l, adf_nbins, altbc_nbins;
-  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_log; // for file naming
+  int nframes, timestep, l, adf_nbins;
+  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq, c_sqt; // compute or not
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log; // for file naming
   static const int Nshells=3;
-  ntype cutoff[Nshells], altbc_rmin, altbc_angle;
+  ntype cutoff[Nshells], cutoffSq[Nshells];
   vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
   vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
   vector<int> bond_list[Nshells]; // records all bonds encoded into an integer through ij2int()
   vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
-  vecflex<ntype> altbc_bins, altbc, altbc_ave, altbc2_ave; // for ALTBC
   bool out_box, out_xyz, out_alphanes;
   bool debug, verbose;
   //
@@ -52,6 +51,11 @@ public:
   int period;
   bool msdAverageOverTime0;
   MSD_Calculator<ntype,ptype> *msd_calculator;
+  //
+  ntype altbc_rmin, altbc_binw, altbc_angle_th;
+  ALTBC_Calculator<ntype,ptype> *altbc_calculator;
+  //
+  SQT_Calculator<ntype,ptype> *sqt_calculator;
 
 private:
   bool l_is_odd, timings;
@@ -60,7 +64,7 @@ private:
   float fskip0, fskip1;
   fstream fin, fout;
   stringstream ss;
-  ntype cutoffSq[Nshells], invN, qldot_th, adf_binw, altbc_binw, altbc_cos;
+  ntype invN, qldot_th, adf_binw;
   FileType filetype;
   Timer timer, sq_timer;
 
@@ -96,6 +100,7 @@ public:
     cout << " c_rmin = \t " << c_rmin << endl;
     cout << " c_altbc = \t " << c_altbc << endl;
     cout << " c_sq = \t " << c_sq << endl;
+    cout << " c_sqt = \t " << c_sqt << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
     cout << " box (a|b|c) = \t "; box.show();
@@ -107,9 +112,6 @@ public:
     cout << " MSD period = \t " << period << endl;
     cout << " rdf_binw = \t " << rdf_binw << endl;
     cout << " adf_nbins = \t " << adf_nbins << endl;
-    cout << " altbc_nbins = \t " << altbc_nbins << endl;
-    cout << " altbc_rmin = \t " << altbc_rmin << endl;
-    cout << " altbc_angle = \t " << altbc_angle << endl;
     cout << " q_mod_min,q_modmax,q_mod_step = \t " << qmodmin << ", " << qmodmax << ", "<< qmodstep << endl;
     cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
     cout << " out_box = \t " << out_box << endl;
@@ -137,6 +139,7 @@ public:
     c_rmin = false;
     c_altbc = false;
     c_sq = false;
+    c_sqt = false;
     filetype=FileType::XYZ;
     s_ndens="ndens";
     s_box="box";
@@ -151,6 +154,7 @@ public:
     s_rmin="rmin";
     s_altbc="altbc";
     s_sq="sq";
+    s_sqt="sqt";
     tag="";
     s_out="traj";
     s_log="log";
@@ -181,9 +185,9 @@ public:
     qmodmax=200;
     qmodstep=1;
     adf_binw=0.0;
-    altbc_nbins=0;
+    altbc_binw=0.0;
     altbc_rmin=0.0;
-    altbc_angle=-1.0;
+    altbc_angle_th=-1.0;
     fskip0=fskip1=0.0;
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
@@ -317,10 +321,17 @@ public:
     }
     if(c_adf) init_adf();
     if(c_rmin) init_rmin();
-    if(c_altbc) init_altbc();
+    if(c_altbc) {
+      altbc_calculator = new ALTBC_Calculator<ntype,ptype>();
+      altbc_calculator->init(altbc_rmin, altbc_binw, cutoff[0], altbc_angle_th, N, V, s_altbc, tag, debug);
+    }
     if(c_sq) {
       sq_calculator = new SQ_Calculator<ntype,ptype>();
       sq_calculator->init(qmodmin, qmodmax, qmodstep, L, s_sq, tag); // init_rdf();
+    }
+    if(c_sqt) {
+      sqt_calculator = new SQT_Calculator<ntype,ptype>();
+      sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe,nframes,period, L, s_sqt, tag, debug); // init_rdf();
     }
   }
 
@@ -337,13 +348,14 @@ public:
     if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug); // compute_rdf(i);
     if(c_adf) compute_adf(i);
     if(c_rmin) compute_rmin();
-    if(c_altbc) compute_altbc(i);
+    if(c_altbc) altbc_calculator->compute(i,nframes,timestep,ps,debug);
     if(c_sq)
     {
       if(timings) sq_timer.go();
       sq_calculator->compute(i,nframes,timestep,ps,debug);
       if(timings) timing_log( "sq_timing(ms): ", sq_timer.lap() );
     }
+    if(c_sqt) sqt_calculator->compute(i,nframes,timestep,ps,debug);
   }
 
   void print_final_computations() {

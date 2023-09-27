@@ -13,17 +13,17 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 - Bugs to be corrected:
 	- q_l order parameters seems to be offset by ~sqrt(2).
 	- g(r) is <1 for large r in triclinic boxes.
-	- Check again the MSD.
-	- Check again the definition of Coordination number.
-	- Da ricontrollare input lammps in notype_dev!
+	- Check again the NGP.
+	- S(q,0) is wrong by some period-dependent factor.
 
 ## Requirements
 
-Basic C++ compiler and libraries.
+- Main code: Basic C++ compiler and libraries.
+- Python utilities: python3 with few libraries: numpy, scipy, matplotlib.
 
 ## Installation (Linux)
 
-Clone or Download this repository and compile with make:
+Clone or Download this repository, install the path and compile with make:
 ```bash
 gh repo clone flagiu/mdtraj
 cd mdtraj/version/
@@ -42,7 +42,7 @@ Run helper message for instructions:
 path-to-this-repo/version/bin/mdtraj -h
 ```
 
-The subfolders python/ and shell/ contain some utility scripts, to be used before/after the main program.
+The subfolders python/ and shell/ contain some utility scripts (to be used before/after the main program) for plotting or extra calculations. Default units are: Angstrom, picoseconds.
 
 The subfolder examples/ contains some example of application to real or toy systems:
 - LJ particles in different 3d cell shapes: cubic, orthorombic, triclinic.

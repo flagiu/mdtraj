@@ -33,7 +33,6 @@ class SQ_Calculator
       nbins = int(floor( (qM-qm)/dq )) + 1;
       binw = M_PI / box_diagonal[0]; // half mesh: it is in units of pi/L
       bins.resize(nbins);
-      norm.resize(nbins);
       value.resize(nbins);
       value2.resize(nbins);
       ave.resize(nbins);
