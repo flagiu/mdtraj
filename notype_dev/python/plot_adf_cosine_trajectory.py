@@ -9,7 +9,7 @@ plt.rcParams['axes.labelsize'] = 'large'
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
-                    description = 'Plots the "trajectory" of angular distribution functions ADF(angle;t0) and their average ADF(angle).',
+                    description = 'Plots the "trajectory" of angular distribution functions ADF(cosine(angle);t0) and their average ADF(cosine(angle)).',
                     epilog='End of the summary.'
 )
 parser.add_argument('--intraj', type=argparse.FileType('r'),
@@ -21,8 +21,8 @@ parser.add_argument('--inavg',  type=argparse.FileType('r'),
                      help="Input file with average trajectory (columns:t,RDF,RDF error). [default: %(default)s]"
 )
 
-outpng="adf.png"
-outpdf="adf.pdf"
+outpng="adf_cosine.png"
+outpdf="adf_cosine.pdf"
 x_tolerance=5e-5
 
 #-------------------------------------#
@@ -49,24 +49,17 @@ except AssertionError:
 	sys.exit(1)
 
 assert Xa.shape[1]>=2 # must have at least x,y
-#----------- Convert from cos(angle) to angle ----------------#
-jacob = np.sqrt(1-x*x)
-x = np.arccos( x ) * 180/np.pi # (degrees)
-y *= jacob
-for i in range(ntraj):
-    Xt[:,i+1] *= jacob
-#-------------------------------------------------------------#
 
 fig, ax = plt.subplots(dpi=300)
-ax.set_xlabel(r"Angle [degrees]")
-ax.set_ylabel(r"ADF")
-ax.xaxis.set_ticks(np.arange(0.0, 180.0, 15.0))
+ax.set_xlabel(r"$\cos(\theta)$")
+ax.set_ylabel(r"Density")
+#ax.xaxis.set_ticks(np.arange(0.0, 180.0, 15.0))
 ax.tick_params(which='both', direction='in')
 for i in range(ntraj):
 	ax.plot( x, Xt[:,i+1], 'k', alpha=0.01)
 ax.plot(x, y, 'r.-')
-ax.set_xlim((0, 180))
-ax.set_xticks(np.arange(0, 180+15, step=15))
+ax.set_xlim((-1, 1))
+#ax.set_xticks(np.arange(0, 180+15, step=15))
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 fig.savefig(outpng)

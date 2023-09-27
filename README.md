@@ -53,6 +53,5 @@ The subfolder examples/ contains some example of application to real or toy syst
 - Multi-species for more input formats.
 - S(q) with non-cubic boxes?
 - Add example with antimony?
-- Add computation of ISF.
 - Add logarithmic timestep?
 - Add more input formats? GROMACS, ...

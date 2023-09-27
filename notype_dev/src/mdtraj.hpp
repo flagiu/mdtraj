@@ -30,23 +30,28 @@ public:
   bool pbc_out; // print output with PBC?
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
-  int nframes, timestep, l, adf_nbins;
+  int nframes, timestep;
   bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq, c_sqt; // compute or not
   string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log; // for file naming
-  static const int Nshells=3;
-  ntype cutoff[Nshells], cutoffSq[Nshells];
-  vecflex<ntype> neigh[Nshells], ql, Cl_ij, ql_dot, Ql_dot;
-  vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
-  vector<int> bond_list[Nshells]; // records all bonds encoded into an integer through ij2int()
-  vecflex<ntype> adf_bins, adf, adf_ave, adf2_ave; // for ADF
   bool out_box, out_xyz, out_alphanes;
   bool debug, verbose;
+  //
+  int maxshell; // <= MAX_NSHELL
+  ntype cutoff[MAX_NSHELL], cutoffSq[MAX_NSHELL];
+  Neigh_and_Bond_list<ntype,ptype> *n_b_list;
+  //
+  int l;
+  ntype qldot_th;
+  Bond_Parameters<ntype,ptype> *bond_parameters;
   //
   ntype rdf_binw;
   RDF_Calculator<ntype,ptype> *rdf_calculator;
   //
   int qmodmin,qmodmax,qmodstep;
   SQ_Calculator<ntype,ptype> *sq_calculator;
+  //
+  ntype adf_binw;
+  ADF_Calculator<ntype,ptype> *adf_calculator;
   //
   int period;
   bool msdAverageOverTime0;
@@ -59,24 +64,14 @@ public:
 
 private:
   bool l_is_odd, timings;
-  int nlines, t0frame, dtframe, l_deg, maxshell, nskip0, nskip1, nframes_original;
+  int nlines, t0frame, dtframe, l_deg, nskip0, nskip1, nframes_original;
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
   float fskip0, fskip1;
   fstream fin, fout;
   stringstream ss;
-  ntype invN, qldot_th, adf_binw;
+  ntype invN;
   FileType filetype;
   Timer timer, sq_timer;
-
-  int ij2int(int i, int j, int N){
-    return (i<j ? N*i+j : N*j+i); // i<j = 0,...,N-1
-  }
-  int int2i(int x, int N){
-    return x/N;
-  }
-  int int2j(int x, int N){
-    return x%N;
-  }
 
 public:
   Trajectory(){}
@@ -111,7 +106,7 @@ public:
     cout << " p2 = \t " << p2 << endl;
     cout << " MSD period = \t " << period << endl;
     cout << " rdf_binw = \t " << rdf_binw << endl;
-    cout << " adf_nbins = \t " << adf_nbins << endl;
+    cout << " adf_binw = \t " << adf_binw << endl;
     cout << " q_mod_min,q_modmax,q_mod_step = \t " << qmodmin << ", " << qmodmax << ", "<< qmodstep << endl;
     cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
     cout << " out_box = \t " << out_box << endl;
@@ -122,7 +117,7 @@ public:
     cout << " fskip_from_end = \t " << fskip1 << endl;
     cout << " timings = \t " << timings << endl;
     cout << " tag = \t " << tag << endl;
-    for(auto  i=0;i<Nshells;i++) cout << " rcut" << i << " = \t " << cutoff[i] << endl;
+    for(auto  i=0;i<maxshell;i++) cout << " rcut" << i << " = \t " << cutoff[i] << endl;
     cout << " s_in = \t " << s_in << endl;
     cout << endl;
   }
@@ -182,7 +177,7 @@ public:
     qldot_th = 0.65;
     rdf_binw=0.0;
     qmodmin=2;
-    qmodmax=200;
+    qmodmax=100;
     qmodstep=1;
     adf_binw=0.0;
     altbc_binw=0.0;
@@ -192,13 +187,11 @@ public:
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
     // Compute non-primitive parameters:
-    for(auto  i=0;i<Nshells;i++) cutoffSq[i] = cutoff[i]*cutoff[i];
-    l_is_odd = (l%2!=0);
-    l_deg = 2*l+1;
+    for(auto  i=0;i<maxshell;i++) cutoffSq[i] = cutoff[i]*cutoff[i];
     p2half = 2*p1half;
     p1 = 2*p1half;
     p2 = 2*p2half;
-    if(c_bondorient)             maxshell=Nshells; // init all neigh shells
+    if(c_bondorient)             maxshell=MAX_NSHELL; // init all neigh shells
     else if(c_coordnum || c_adf || c_rmin || c_altbc) maxshell=1;       // init only first neigh shell
     else                         maxshell=0;       // do not init any
     // Print a recap:
@@ -308,9 +301,20 @@ public:
     if(out_box) init_box();
     if(out_xyz) init_out_xyz();
     if(out_alphanes) init_out_alphanes();
-    if(maxshell>0) init_neigh();
-    if(c_coordnum) init_coordnum();
-    if(c_bondorient) init_bondorient();
+    if(maxshell>0)
+    {
+      n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
+      n_b_list->init(maxshell, cutoff, p1half, N);
+    }
+    if(c_coordnum)
+    {
+      n_b_list->init_coordnum(s_coordnum, tag, debug);
+    }
+    if(c_bondorient)
+    {
+      bond_parameters = new Bond_Parameters<ntype,ptype>();
+      bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr, s_nxtal, tag);
+    }
     if(c_msd) {
       msd_calculator = new MSD_Calculator<ntype,ptype>();
       msd_calculator->init(dtframe,nframes,period, N, s_msd,s_ngp,tag,debug);
@@ -319,7 +323,10 @@ public:
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
       rdf_calculator->init(rdf_binw, L, N, V, s_rdf, tag); // init_rdf();
     }
-    if(c_adf) init_adf();
+    if(c_adf) {
+      adf_calculator = new ADF_Calculator<ntype,ptype>();
+      adf_calculator->init(adf_binw, s_adf, tag);
+    }
     if(c_rmin) init_rmin();
     if(c_altbc) {
       altbc_calculator = new ALTBC_Calculator<ntype,ptype>();
@@ -341,12 +348,12 @@ public:
     if(out_xyz) print_out_xyz();
     if(out_alphanes) print_out_alphanes();
 
-    if(maxshell>0) build_neigh();
-    if(c_coordnum) compute_coordnum();
-    if(c_bondorient) compute_bondorient();
+    if(maxshell>0) n_b_list->build(timestep, ps, box,boxInv, debug);
+    if(c_coordnum) n_b_list->compute_coordnum(timestep, ps, debug);
+    if(c_bondorient) bond_parameters->compute(timestep, ps, debug);
     if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
-    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug); // compute_rdf(i);
-    if(c_adf) compute_adf(i);
+    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug);
+    if(c_adf) adf_calculator->compute(i,nframes,timestep,ps,debug);
     if(c_rmin) compute_rmin();
     if(c_altbc) altbc_calculator->compute(i,nframes,timestep,ps,debug);
     if(c_sq)
@@ -367,6 +374,13 @@ public:
     ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::app);
     fout << comment << time <<endl;
     fout.close();
+  }ntype fcut(ntype x, int pow1, int pow2) {
+    ntype x1=1.0, x2=1.0;
+    for(auto i=0; i<pow2; i++) {
+      x2 *= x;
+      if(i==pow1-1) x1=x2;
+    }
+    return (1.0-x1) / (1.0-x2); // x1 = x^p1, x2 = x^p2
   }
 
   void init_density() {
@@ -399,28 +413,8 @@ public:
   void compute_coordnum();
   void init_bondorient();
   void compute_bondorient();
-  void init_rdf();
-  void compute_rdf(int frameidx);
-  void init_adf();
-  void compute_adf(int frameidx);
   void init_rmin();
   void compute_rmin();
-  void init_altbc();
-  void compute_altbc(int frameidx);
-  void init_sq();
-  void compute_sq(int frameidx);
-  void init_msd();
-  void compute_msd(int frameidx);
-  void print_msd();
-
-  ntype fcut(ntype x, int pow1, int pow2) {
-    ntype x1=1.0, x2=1.0;
-    for(auto i=0; i<pow2; i++) {
-      x2 *= x;
-      if(i==pow1-1) x1=x2;
-    }
-    return (1.0-x1) / (1.0-x2); // x1 = x^p1, x2 = x^p2
-  }
 
 // apply MIC for general periodic boxes
   vec mic(vec& r)

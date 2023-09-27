@@ -9,6 +9,11 @@ make
 echo
 cd $back
 
+echo "Test Bond parameters:"
+${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -bo -l 4 -rcut1 1.5 -rcut2 2.5 -rcut3 4.0
+printf "Exit $? \n\n"
+exit
+
 echo "Test liquid MSD:"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -lammpstrj traj_long.lammpstrj.save -msd -period 10000
 printf "Exit $? \n\n"
@@ -47,3 +52,10 @@ echo "Test liquid ALTBC:"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -altbc 0.01 0.85 15 -rcut1 2.40
 printf "Exit $? \n\n"
 python3 ../../python/plot_altbc.py
+
+echo "Test liquid ADF (angular distribution):"
+${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -adf 0.01 -rcut1 1.5
+printf "Exit $? \n\n"
+bash ../../shell/traj2nxy.sh adf.traj > adf.xxx
+python3 ../../python/plot_adf_trajectory.py
+python3 ../../python/plot_adf_cosine_trajectory.py

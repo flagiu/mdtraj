@@ -15,7 +15,7 @@ cat > $HEADER << EOF
 #include "lib/Ycomplex.hpp"
 EOF
 
-for file in rdf.hpp sq.hpp msd_and_ngp.hpp altbc.hpp sqt.hpp mdtraj.hpp io/*.hpp statics/*.hpp
+for file in neighbour_and_bond_list.hpp bond_parameters.hpp rdf.hpp adf.hpp sq.hpp msd_and_ngp.hpp altbc.hpp sqt.hpp mdtraj.hpp io/*.hpp statics/*.hpp
 do
     echo "#include \"$file\"" >> $HEADER
 done
