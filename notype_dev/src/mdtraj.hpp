@@ -63,13 +63,12 @@ public:
   SQT_Calculator<ntype,ptype> *sqt_calculator;
 
 private:
-  bool l_is_odd, timings;
-  int nlines, t0frame, dtframe, l_deg, nskip0, nskip1, nframes_original;
+  bool timings;
+  int nlines, t0frame, dtframe, nskip0, nskip1, nframes_original;
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
   float fskip0, fskip1;
   fstream fin, fout;
   stringstream ss;
-  ntype invN;
   FileType filetype;
   Timer timer, sq_timer;
 
@@ -272,7 +271,7 @@ public:
 
     // Restart reading
     fin.open(s_in, ios::in);
-    printProgress.init( nframes, 2000 );
+    printProgress.init( nframes, 2000 ); // update % every 2000 ms
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {timestep=-1; } // set manual time
     string junk_line;
     if(filetype==FileType::XDATCARV) { for(int i=0;i<7;i++) getline(fin, junk_line); } // skip first 7 lines (so that you can use resetN=false)
@@ -306,10 +305,8 @@ public:
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
       n_b_list->init(maxshell, cutoff, p1half, N);
     }
-    if(c_coordnum)
-    {
-      n_b_list->init_coordnum(s_coordnum, tag, debug);
-    }
+    if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
+    if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);
     if(c_bondorient)
     {
       bond_parameters = new Bond_Parameters<ntype,ptype>();
@@ -321,20 +318,19 @@ public:
     }
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
-      rdf_calculator->init(rdf_binw, L, N, V, s_rdf, tag); // init_rdf();
+      rdf_calculator->init(rdf_binw, L, N, V, s_rdf, tag);
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();
       adf_calculator->init(adf_binw, s_adf, tag);
     }
-    if(c_rmin) init_rmin();
     if(c_altbc) {
       altbc_calculator = new ALTBC_Calculator<ntype,ptype>();
       altbc_calculator->init(altbc_rmin, altbc_binw, cutoff[0], altbc_angle_th, N, V, s_altbc, tag, debug);
     }
     if(c_sq) {
       sq_calculator = new SQ_Calculator<ntype,ptype>();
-      sq_calculator->init(qmodmin, qmodmax, qmodstep, L, s_sq, tag); // init_rdf();
+      sq_calculator->init(qmodmin, qmodmax, qmodstep, L, s_sq, tag);
     }
     if(c_sqt) {
       sqt_calculator = new SQT_Calculator<ntype,ptype>();
@@ -350,11 +346,11 @@ public:
 
     if(maxshell>0) n_b_list->build(timestep, ps, box,boxInv, debug);
     if(c_coordnum) n_b_list->compute_coordnum(timestep, ps, debug);
+    if(c_rmin) n_b_list->compute_rmin(timestep, ps, debug);
     if(c_bondorient) bond_parameters->compute(timestep, ps, debug);
     if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
     if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug);
     if(c_adf) adf_calculator->compute(i,nframes,timestep,ps,debug);
-    if(c_rmin) compute_rmin();
     if(c_altbc) altbc_calculator->compute(i,nframes,timestep,ps,debug);
     if(c_sq)
     {
@@ -398,23 +394,13 @@ public:
     fout.close();
   }
 
-//-------------Trajectory output, implemented in ../output.cpp -----------------//
+//-------------Trajectory output, implemented in io/output.cpp -----------------//
   void init_box();
   void print_box();
   void init_out_xyz();
   void print_out_xyz();
   void init_out_alphanes();
   void print_out_alphanes();
-
-  //-------------Trajectory analysis, implemented in ../statics.cpp and ../dynamics.cpp -----------------//
-  void init_neigh();
-  void build_neigh();
-  void init_coordnum();
-  void compute_coordnum();
-  void init_bondorient();
-  void compute_bondorient();
-  void init_rmin();
-  void compute_rmin();
 
 // apply MIC for general periodic boxes
   vec mic(vec& r)

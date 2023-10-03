@@ -29,7 +29,7 @@ parser.add_argument('--fskip1', type=float,
 args = parser.parse_args()
 
 header=args.indat.readline()
-rcut1 = float( header.split("# cutoffs =")[1].split(',')[0] )
+rcut1 = float( header.split("# cutoff =")[1].split(',')[0] )
 
 x = np.loadtxt(args.indat)
 n = len(x)

@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq]"
+  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq -sqt]"
 				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -55,8 +55,9 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -rcut2 \t Cutoff radius for cutoff functions in 2nd shell [default %.2f].", cutoff[1]);
   fprintf(stderr, "\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].", cutoff[2]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
-  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD. If negative, don't. [default %d].", period);
+  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD and S(q,t). If negative, don't. [default %d].", period);
   fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
+  fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
@@ -240,6 +241,23 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
  	      qmodstep = atoi(argv[i]);
  	      if (qmodstep<1) { fprintf(stderr, "ERROR: q_mod_step must be >=1 !\n"); exit(-1); }
  	    }
+
+ 	  else if ( !strcmp(argv[i], "-sqt") )
+ 	    {
+        c_sqt = true;
+ 	      i++;
+ 	      if (i == argc) { fprintf(stderr, "ERROR: '-sqt' must be followed by 3 integer values!\n"); exit(-1); }
+ 	      qmodmin = atoi(argv[i]);
+ 	      if (qmodmin<2) { fprintf(stderr, "ERROR: q_mod_min must be >=2 !\n"); exit(-1); }
+ 	      i++;
+ 	      if (i == argc) { fprintf(stderr, "ERROR: '-sqt' must be followed by 3 integer values!\n"); exit(-1); }
+ 	      qmodmax = atoi(argv[i]);
+ 	      if (qmodmax<qmodmin || qmodmax>500) { fprintf(stderr, "ERROR: q_mod_max must be > q_mod_min and <=500 !\n"); exit(-1); }
+ 	      i++;
+ 	      if (i == argc) { fprintf(stderr, "ERROR: '-sqt' must be followed by 3 integer values!\n"); exit(-1); }
+ 	      qmodstep = atoi(argv[i]);
+ 	      if (qmodstep<1) { fprintf(stderr, "ERROR: q_mod_step must be >=1 !\n"); exit(-1); }
+ 	    }
 	  else if ( !strcmp(argv[i], "-altbc") )
 	    {
 	      c_altbc = true;
@@ -251,8 +269,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      altbc_rmin = atof(argv[i]);
 	      i++;
 	      if (i == argc) { fprintf(stderr, "ERROR: '-altbc' must be followed by [bin_width rmin maxangle]!\n"); exit(-1); }
-	      altbc_angle = atof(argv[i]);
-	      if(altbc_angle<0.0 || altbc_angle>180.0){ fprintf(stderr, "ERROR: ALTBC angular limit must be within 0° and 180°!\n"); exit(1); }
+	      altbc_angle_th = atof(argv[i]);
+	      if(altbc_angle_th<0.0 || altbc_angle_th>180.0){ fprintf(stderr, "ERROR: ALTBC angular limit must be within 0° and 180°!\n"); exit(1); }
 	    }
 	  else if ( !strcmp(argv[i], "-fskip") )
 	    {

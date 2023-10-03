@@ -45,8 +45,8 @@ args = parser.parse_args()
 outpng="coordnum_ave.png"
 outpdf="coordnum_ave.pdf"
 
-header=args.indat.readline()
-rcut1 = float( header.split("# cutoffs =")[1].split(',')[0] )
+header=args.inavg.readline()
+rcut1 = float( header.split("# cutoff =")[1].split(',')[0] )
 
 X = np.loadtxt(args.inavg)
 timesteps = X[:,0]

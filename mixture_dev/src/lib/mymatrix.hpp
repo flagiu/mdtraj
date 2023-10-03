@@ -27,7 +27,7 @@ public:
       M[0][0] = val;
       idx=0;
       return (*this);
-    } 
+    }
   inline mv& operator[](const int& i)
   {
     return M[i];
@@ -130,9 +130,9 @@ public:
       M[i] /= sc;
     return *this;
   }
-  
+
   myvec<ntype,Nr> operator*(myvec<ntype,Nc> vec)
-  {//vector multiplication from right
+  {//multiplication with a COLUMN vector from right
     myvec<ntype,Nr> vv;
     for (auto i=0;i<Nr;i++) {
       vv[i] = M[i]*vec;
@@ -169,14 +169,14 @@ public:
       }
     return mat;
   }
-  
+
   mymatrix<ntype,Nr,Nr> square() const
   {
-    
+
     mymatrix<ntype,Nc,Nr> mat = (*this);
     return mat*(this->T());
   }
-  
+
   ntype tr() const
   {
     ntype t=0.0;
@@ -203,7 +203,7 @@ public:
       }
     return d;
   }
-    
+
   //
   void ranf()
   {
@@ -228,7 +228,7 @@ public:
     }
     return;
   }
-  
+
   void set_diag(myvec<ntype,Nr> vec)
   {
     if (rows()!=cols()) { cout << "Error: diagonal is defined only for square matrices."<<endl; exit(1);}
@@ -248,7 +248,7 @@ public:
     for (auto i=0;i<rows();i++) vec[i] = M[i][i];
     return vec;
   }
-  
+
   mymatrix<ntype,Nr,Nc> inverse() const
   {
     mymatrix<ntype,Nr,Nc> m;
@@ -351,21 +351,9 @@ mymatrix<ntype,Nr,Nr>& operator*(const mymatrix<ntype,Nr,Nc>& m1, const mymatrix
 */
 template<class ntype,int Nr,int Nc>
 myvec<ntype,Nc> operator*(myvec<ntype,Nr>& vec, const mymatrix<ntype,Nr,Nc>& mat)
-{//vector multiplication from left
+{// multiplication with a ROW vector from left (multiplication with COLUMN vector from right is implemented inside the class)
   mymatrix<ntype,Nc,Nr> matT=mat.T();
   return matT*vec;
-}
-//vector multiplication from right is implemented inside the class!
-
-template<class ntype, int N>
-myvec<ntype,N> mic(mymatrix<ntype,N,N> box, mymatrix<ntype,N,N>& boxInv, myvec<ntype,N>& vec)
-{ // apply MIC for non-orthorombic boxes (if you already know the inverse)
-  return vec - box * round(boxInv*vec);
-}
-template<class ntype, int N>
-myvec<ntype,N> mic(mymatrix<ntype,N,N>& box, myvec<ntype,N>& vec)
-{ // apply MIC for non-orthorombic boxes
-  return mic(box, box.inverse(), vec);
 }
 
 template<class ntype, int N>

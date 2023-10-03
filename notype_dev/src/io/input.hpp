@@ -118,7 +118,6 @@ read_xyz_frame(fstream &i, bool resetN)
     if(debug) cout << "  Line 2: Timestep " << timestep << endl;
     if(resetN) {
       ps.resize(N);
-      invN = 1.0/N;
       nframes = nlines / (N+2);
     }
     for(auto &p: ps) p.read_xyz(i); // N particle lines
@@ -140,7 +139,6 @@ read_xyz_frame(fstream &i, bool resetN)
       if(debug) cout << "  Line 2: Timestep " << timestep << endl;
       if(resetN) {
         ps.resize(N);
-        invN = 1.0/N;
         nframes = nlines / (N+2);
       }
       for(auto &p: ps)
@@ -199,7 +197,6 @@ read_contcar_frame(fstream &i, bool resetN)
 
     if(resetN) {
       ps.resize(N);
-      invN = 1.0/N;
       nframes = nlines / (8+N+ 9+N+ 4+3*N); // N positions, N velocities, 3*N predictor-corrector
     }
     for(auto &p: ps) {
@@ -258,7 +255,6 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
 
     if(resetN) {
       ps.resize(N);
-      invN = 1.0/N;
       if(constantBox) nframes = (nlines - 7) / (1+N);
       else            nframes = nlines / (8+N); // 8 system info + N position lines
     }
@@ -305,7 +301,6 @@ read_alphanes_frame(fstream &i, bool resetN)
 
     if(resetN) {
       ps.resize(N);
-      invN = 1.0/N;
       nframes = nlines;
     }
 }
@@ -346,7 +341,6 @@ read_alphanes9_frame(fstream &i, bool resetN)
 
     if(resetN) {
       ps.resize(N);
-      invN = 1.0/N;
       nframes = nlines;
     }
 }
@@ -377,7 +371,6 @@ read_jmd_frame(fstream &i, bool resetN)
 
     if(resetN) {
       ps.resize(N);
-      invN = 1.0/N;
       nframes = nlines / (N+1);
     }
     for(auto &p: ps) p.read_3cols(i); // N particle lines
@@ -474,7 +467,6 @@ read_lammpstrj_frame(fstream &i, bool resetN)
 
   if(resetN) {
     ps.resize(N);
-    invN = 1.0/N;
     nframes = nlines / (N+9);
   }
 
@@ -560,7 +552,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
       p.r[2] -= zlo;
     }
     if(x_count && !xs_count) p.s = boxInv * p.r; // compute scaled coordinate from Cartesian
-    if(xs_count && !x_count) p.r = box * p.r; // compute Cartesian coordinate from scaled
+    if(xs_count && !x_count) p.r = box * p.s; // compute Cartesian coordinate from scaled
     //if(debug) p.show();
     ss.str(std::string()); ss.clear(); // clear the string stream!
   }
@@ -584,7 +576,7 @@ read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame)
     if(debug) cout << "\n  Line: " << line << endl;
   }
 
-  getline(i,line); // timestep timestep_value N  
+  getline(i,line); // timestep timestep_value N
   if(debug) cout << "\n  Line: " << line << endl;
   ss << line;
   ncols=0;
@@ -640,7 +632,6 @@ read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame)
 
   if(resetN) {
     ps.resize(N);
-    invN = 1.0/N;
     nframes = (nlines-2) / (4*N+4);
   }
 

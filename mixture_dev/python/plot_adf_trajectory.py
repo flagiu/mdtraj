@@ -4,12 +4,12 @@ import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-#plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
-                    description = 'Plots the "trajectory" of angular distribution functions ADF(cosine(angle);t0) and their average ADF(cosine(angle)).',
+                    description = 'Plots the "trajectory" of angular distribution functions ADF(angle;t0) and their average ADF(angle).',
                     epilog='End of the summary.'
 )
 parser.add_argument('--intraj', type=argparse.FileType('r'),
@@ -65,7 +65,7 @@ ax.tick_params(which='both', direction='in')
 for i in range(ntraj):
 	ax.plot( x, Xt[:,i+1], 'k', alpha=0.01)
 ax.plot(x, y, 'r.-')
-ax.set_xlim((0.0, 180.0))
+ax.set_xlim((0, 180))
 ax.set_xticks(np.arange(0, 180+15, step=15))
 ax.grid(axis='both', which='major')
 plt.tight_layout()

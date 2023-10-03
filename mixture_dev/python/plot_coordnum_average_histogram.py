@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser(
                     description = 'Histogram of the coordination number for all atoms, for all timesteps, divided according to each pair of types.',
                     epilog='End of the summary.'
 )
-parser.add_argument('--inave',  type=argparse.FileType('r'),
+parser.add_argument('--inavg',  type=argparse.FileType('r'),
                      default="coordnum.ave", required=False,
                      help="Input file with the following columns: Timestep | Particle idx | coordination number for each pair 00, 01, 02, ...  [default: %(default)s]"
 )
@@ -55,10 +55,10 @@ args = parser.parse_args()
 outpng="coordnum_ave_hist.png"
 outpdf="coordnum_ave_hist.pdf"
 
-header=args.indat.readline()
-rcut1 = float( header.split("# cutoffs =")[1].split(',')[0] )
+header=args.inavg.readline()
+rcut1 = float( header.split("# cutoff =")[1].split(',')[0] )
 
-X = np.loadtxt(args.inave)
+X = np.loadtxt(args.inavg)
 # Apply fskip
 n = len(X)
 n0 = int(args.fskip0*n)

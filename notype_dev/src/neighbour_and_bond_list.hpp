@@ -16,7 +16,7 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, myName, tag;
+    string string_cn_out, string_rmin_out, myName, tag;
     fstream fout;
     stringstream ss;
 
@@ -165,6 +165,7 @@ class Neigh_and_Bond_list
 
     void compute_coordnum(int timestep, vector<ptype> ps, bool debug)
     {
+      if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " STARTED ***\n";
       int i, j, k;
       ntype fval, rijSq;
       vec rij;
@@ -186,6 +187,38 @@ class Neigh_and_Bond_list
       ss.str(std::string()); ss << string_cn_out << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep << " " << neigh[0].mean() << " " << neigh[0].std()/sqrt(N) << endl;
       fout.close();
+      if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " ENDED ***\n";
+    }
+
+    //---------------------- Minimum atomic distance ---------------------------------//
+    void init_rmin(string string_rmin_out_, string tag_, bool debug)
+    {
+      if(debug) cout<<"*** Initializing RMIN within "<<myName<<"***\n";
+      string_rmin_out = string_rmin_out_;
+      tag = tag_;
+      ss.str(std::string()); ss << string_rmin_out << tag << ".dat"; fout.open(ss.str(), ios::out);
+      fout << "# Minimum atomic distance. # cutoff = " << rcut[0]<< endl;
+      fout.close();
+    }
+
+    void compute_rmin(int timestep, vector<ptype> ps, bool debug)
+    {
+      ntype rSq, rminSq = rcut[0];
+      int i,j, k;
+      if(debug) cout << "*** RMIN computation for timestep " << timestep << " STARTED ***\n";
+      for(i=0;i<N;i++){
+        for(k=0;k<ps[i].neigh_list[0].size();k++){
+          j = ps[i].neigh_list[0][k];
+          if(j>i) continue; // avoid double counting!
+          rSq = ps[i].rijSq_list[0][k];
+          if(rSq<rminSq) rminSq=rSq;
+        }
+      }
+      ss.str(std::string()); ss << string_rmin_out << tag << ".dat"; fout.open(ss.str(), ios::app);
+      fout << sqrt(rminSq) << endl;
+      fout.close();
+      if(debug) cout << "*** RMIN computation for timestep " << timestep << " ENDED ***\n";
+      return;
     }
 };
 #endif

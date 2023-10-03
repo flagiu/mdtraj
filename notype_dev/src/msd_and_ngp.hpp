@@ -76,8 +76,9 @@ class MSD_Calculator
     {
       int i, idx, idx_old, dframe, nperiod;
       const int N = ps.size();
+      const ntype invN=1.0/(ntype)N;
       vec dr;
-      ntype dr2, r2t0, invN=1.0/(ntype)N;
+      ntype dr2, r2t0;
       if(debug) cout << "*** MSD computation for timestep " << timestep << " STARTED ***\n";
       nperiod = frameidx / period_in_dt_units;
       dframe = frameidx % period_in_dt_units;

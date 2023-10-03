@@ -4,12 +4,12 @@ import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-#plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
-                    description = 'Plots the "trajectory" of angular distribution functions ADF(cosine(angle);t0) and their average ADF(cosine(angle)).',
+                    description = 'Plots the "trajectory" of angular distribution functions ADF(angle;t0) and their average ADF(angle).',
                     epilog='End of the summary.'
 )
 parser.add_argument('--intraj', type=argparse.FileType('r'),

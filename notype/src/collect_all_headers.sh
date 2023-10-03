@@ -14,9 +14,15 @@ cat > $HEADER << EOF
 #include "lib/mymatrix.hpp"
 #include "lib/Ycomplex.hpp"
 EOF
-
-for file in rdf.hpp sq.hpp msd_and_ngp.hpp mdtraj.hpp io/*.hpp statics/*.hpp
+# First include external objects
+for file in $(ls *.hpp | grep -v mdtraj.hpp)
 do
     echo "#include \"$file\"" >> $HEADER
 done
+# Then MDTRAJ, then its input/output methods
+for file in mdtraj.hpp io/*.hpp
+do
+    echo "#include \"$file\"" >> $HEADER
+done
+
 echo "#endif" >> $HEADER
