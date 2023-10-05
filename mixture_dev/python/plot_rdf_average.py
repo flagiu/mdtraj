@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
+plt.rcParams['figure.dpi'] = 300
 
 def int2types(t, nTypes):
     for x in range(nTypes):
@@ -21,6 +22,7 @@ def int2types(t, nTypes):
 def linMap(x,a,b,c,d):
    y=(x-a)/(b-a)*(d-c)+c
    return y
+linestyles = ['solid','dashed','dashdot','dotted']
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
@@ -59,29 +61,36 @@ for line in lines:
     labels.append(lab)
     Nt.append(int(nt))
 Nt=np.array(Nt)
-print(" plot_rdf_average.py: Atom types:",labels,". Occurrence:",Nt,". Fraction:",Nt/np.sum(Nt))
+xt=Nt/np.sum(Nt) #Fraction
+print(" plot_rdf_average.py: Atom types:",labels,". Occurrence:",Nt,". Fraction:",xt)
 ign=np.array(args.ignore)
 ign_labels = [ labels[ig] for ig in args.ignore ]
 print(" plot_rdf_average.py: List of types to be ignored:",ign_labels)
 
-fig, ax = plt.subplots(dpi=300)
+fig, ax = plt.subplots()
 ax.set_xlabel(r"$r$ [$\AA$]")
 ax.set_ylabel(r"$g(r)$")
+g_tot = np.zeros_like(r)
 for i in range(npairs):
     g = X[:,1+i]
     g_ = X[:,1+i+npairs]
     ti,tj = int2types(i, ntypes)
+    g_tot += (xt[ti]*xt[tj]*g if ti==tj else 2*xt[ti]*xt[tj]*g) # total g(r) of all types (also ignored)
     if len(labels)>0:
         lab = "%s-%s"%( labels[ti],labels[tj] )
     else:
         lab = "%d-%d"%( ti,tj )
     if len(ign)>0 and (ti==ign).any() or (tj==ign).any():
-        continue # ignore this g(r)
-
-    red = linMap(ti, 0,ntypes-1, 1,0)
-    blue = linMap(tj, 0,ntypes-1, 0,1)
-    green = 0.2
-    ax.errorbar(r,g,g_, label=lab, color=(red,green,blue,0.7))
+        continue # ignore this g(r) (but keep it for g_tot(r))
+    
+    ls = linestyles[ti]
+    red = linMap(tj, 0,ntypes-1, 0,1)
+    blue = linMap(tj, 0,ntypes-1, 1,0)
+    green = 0.0 #linMap(ti, 0,npairs-1, 0.2,1)
+    
+    #ax.errorbar(r,g,g_, label=lab, color=(red,green,blue,0.7))
+    ax.plot(r,g, label=lab, color=(red,green,blue,0.7), linestyle=ls)
+ax.plot(r,g_tot, label="total", color=(0,0,0,0.7))
 ax.legend()
 ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major')
@@ -89,6 +98,6 @@ plt.tight_layout()
 
 fig.savefig(outpng)
 fig.savefig(outpdf)
-print(" plot_rdf_average.py: Figure saved on %s, %s\n"%(outpng, outpdf))
+print(" plot_rdf_average.py: Figure saved on %s , %s\n"%(outpng, outpdf))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)

@@ -3,6 +3,7 @@ PATH_TO_MDTRAJ=$HOME'/programmi/mdtraj/mixture_dev'
 back=$(pwd)
 
 cd $PATH_TO_MDTRAJ
+bash install_path.sh
 make
 cd $back
 

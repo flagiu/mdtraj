@@ -111,6 +111,6 @@ plt.tight_layout()
 
 fig.savefig(outpng)
 fig.savefig(outpdf)
-print(" plot_coordnum_average_histogram.py: Figure saved on %s, %s\n"%(outpng, outpdf))
+print(" plot_coordnum_average_histogram.py: Figure saved on %s , %s\n"%(outpng, outpdf))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)
