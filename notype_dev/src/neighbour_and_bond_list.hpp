@@ -1,5 +1,6 @@
 #ifndef _NEIGH_AND_BOND_LIST_H_
 #define _NEIGH_AND_BOND_LIST_H_
+#include<algorithm>
 using namespace std;
 
 //---- "init" functions: prepare arrays, averages and headers for output files
@@ -63,6 +64,43 @@ class Neigh_and_Bond_list
       }
     }
 
+    void sort_by_distance_3vec(vector<ntype>* dist, vector<int>* a, vector<vec>* b)
+    {
+      // assuming same length for all inputs!
+      vector<size_t> p(dist->size()); // vector of 0,1,...,size-1
+      for(auto i=0;i<dist->size();i++) p[i]=i;
+      // sort p according to rSq_list
+      std::sort(p.begin(), p.end(), [&](std::size_t i, std::size_t j){ return (*dist)[i] < (*dist)[j]; } );
+      // now p is a permutation vector!
+      vector<ntype> dist_copy = (*dist);
+      vector<int> a_copy = (*a);
+      vector<vec> b_copy = (*b);
+      for(auto i=0;i<dist->size();i++)
+      {
+        (*dist)[i] = dist_copy[p[i]];
+        (*a)[i] = a_copy[p[i]];
+        (*b)[i] = b_copy[p[i]];
+      }
+      return;
+    }
+    void sort_by_distance_2vec(vector<ntype>* dist, vector<int>* a)
+    {
+      // assuming same length for all inputs!
+      vector<size_t> p(dist->size()); // vector of 0,1,...,size-1
+      for(auto i=0;i<dist->size();i++) p[i]=i;
+      // sort p according to rSq_list
+      std::sort(p.begin(), p.end(), [&](std::size_t i, std::size_t j){ return (*dist)[i] < (*dist)[j]; } );
+      // now p is a permutation vector!
+      vector<ntype> dist_copy = (*dist);
+      vector<int> a_copy = (*a);
+      for(auto i=0;i<dist->size();i++)
+      {
+        (*dist)[i] = dist_copy[p[i]];
+        (*a)[i] = a_copy[p[i]];
+      }
+      return;
+    }
+
     void init(int Nshell_, ntype *rcut_, int p1half_, int N_)
     {
       Nshell=Nshell_;
@@ -80,9 +118,10 @@ class Neigh_and_Bond_list
 
     void build(int timestep, vector<ptype>& ps, mat box, mat boxInv, bool debug)
     { // NOTA BENE: ps deve essere passato con &, perche' dobbiamo modificare le sue variabili
-      int u,i,j;
+      int u,i,j, a;
       vec rij, rij_mic;
       ntype rijSq, rijSq_mic;
+      vector<ntype> bond_list_rijSq[MAX_NSHELL];
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
 
       //---- Reset counters and lists ----//
@@ -90,6 +129,7 @@ class Neigh_and_Bond_list
       {
         if(neigh[u].length()!=N) neigh[u].resize(N);
         bond_list[u].clear();
+        bond_list_rijSq[u].clear();
       }
 
       for(i=0;i<N;i++)
@@ -122,6 +162,7 @@ class Neigh_and_Bond_list
             if(rijSq <= rcutSq[u])
             {
               bond_list[u].push_back( ij2int(i,j,N) );
+              bond_list_rijSq[u].push_back(rijSq); // this is just for ordering bond_list later
 
               ps[i].neigh_list[u].push_back(j);
               ps[j].neigh_list[u].push_back(i);
@@ -135,10 +176,37 @@ class Neigh_and_Bond_list
           }
         }
       }
+      // sort neigh_list and rij_list according to rijSq_list, for each particle
+      for(i=0;i<N;i++)
+      {
+        for(u=0;u<Nshell;u++)
+        {
+          /*
+          if(debug) {
+            cout << "\nUnsorted arrrays:\n  ";
+            for (auto x: ps[i].rijSq_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+            for (auto x: ps[i].neigh_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+          } */
+          sort_by_distance_3vec( &ps[i].rijSq_list[u], &ps[i].neigh_list[u], &ps[i].rij_list[u] );
+          /*
+          if(debug) {
+            cout << "\nSorted arrrays:\n  ";
+            for (auto x: ps[i].rijSq_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+            for (auto x: ps[i].neigh_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+          }
+          */
+        }
+      }
+      // sort bond_list according to bond_list_rijSq
+      for(u=0;u<Nshell;u++) sort_by_distance_2vec( &bond_list_rijSq[u], &bond_list[u]);
       if(debug)
       {
-        cout << " * Build neighbour and bond lists DONE\n";
-        print_bond_summary(ps);
+        cout << " * Build & Sort the Neighbour list & the Bond list DONE\n";
+        //print_bond_summary(ps);
         cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       }
       return;

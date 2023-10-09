@@ -31,8 +31,8 @@ public:
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep;
-  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq, c_sqt; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log; // for file naming
+  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq, c_sqt, c_edq; // compute or not
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_edq, s_log; // for file naming
   bool out_box, out_xyz, out_alphanes;
   bool debug, verbose;
   //
@@ -43,6 +43,7 @@ public:
   int l;
   ntype qldot_th;
   Bond_Parameters<ntype,ptype> *bond_parameters;
+  ED_Bond_Parameter<ntype,ptype> *ed_q_calculator;
   //
   ntype rdf_binw;
   RDF_Calculator<ntype,ptype> *rdf_calculator;
@@ -95,6 +96,7 @@ public:
     cout << " c_altbc = \t " << c_altbc << endl;
     cout << " c_sq = \t " << c_sq << endl;
     cout << " c_sqt = \t " << c_sqt << endl;
+    cout << " c_edq = \t " << c_edq << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
     cout << " box (a|b|c) = \t "; box.show();
@@ -134,6 +136,7 @@ public:
     c_altbc = false;
     c_sq = false;
     c_sqt = false;
+    c_edq = false;
     filetype=FileType::XYZ;
     s_ndens="ndens";
     s_box="box";
@@ -149,6 +152,7 @@ public:
     s_altbc="altbc";
     s_sq="sq";
     s_sqt="sqt";
+    s_edq="ed_q";
     tag="";
     s_out="traj";
     s_log="log";
@@ -191,7 +195,7 @@ public:
     p1 = 2*p1half;
     p2 = 2*p2half;
     if(c_bondorient)             maxshell=MAX_NSHELL; // init all neigh shells
-    else if(c_coordnum || c_adf || c_rmin || c_altbc) maxshell=1;       // init only first neigh shell
+    else if(c_coordnum || c_adf || c_rmin || c_altbc || c_edq) maxshell=1;       // init only first neigh shell
     else                         maxshell=0;       // do not init any
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
@@ -312,6 +316,11 @@ public:
       bond_parameters = new Bond_Parameters<ntype,ptype>();
       bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr, s_nxtal, tag);
     }
+    if(c_edq)
+    {
+      ed_q_calculator = new ED_Bond_Parameter<ntype,ptype>();
+      ed_q_calculator->init(n_b_list, s_edq, tag);
+    }
     if(c_msd) {
       msd_calculator = new MSD_Calculator<ntype,ptype>();
       msd_calculator->init(dtframe,nframes,period, N, s_msd,s_ngp,tag,debug);
@@ -348,6 +357,7 @@ public:
     if(c_coordnum) n_b_list->compute_coordnum(timestep, ps, debug);
     if(c_rmin) n_b_list->compute_rmin(timestep, ps, debug);
     if(c_bondorient) bond_parameters->compute(timestep, ps, debug);
+    if(c_edq) ed_q_calculator->compute(timestep, ps, debug);
     if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
     if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug);
     if(c_adf) adf_calculator->compute(i,nframes,timestep,ps,debug);

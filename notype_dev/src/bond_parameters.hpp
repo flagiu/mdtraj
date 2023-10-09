@@ -167,11 +167,9 @@ class Bond_Parameters
           exit(1);
         }
         rijSq = ps[i].rijSq_list[1][a]; // and use it to recover the radius
-        if(debug) cout << "ok3"<<endl;
         fval = nb_list->fcut( rijSq/nb_list->rcutSq[1] );
         ql_dot[i] += fval*Cl_ij[k] / nb_list->neigh[1][i];
         ql_dot[j] += fval*Cl_ij[k] / nb_list->neigh[1][j];
-        if(debug) cout << "ok4"<<endl;
       }
       if(debug) cout << " * Compute C_l(i,j) and ql_dot(i) (BOC) DONE\n";
       //---- Compute global average of ql_dot(i) ----//
