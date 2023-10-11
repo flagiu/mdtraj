@@ -25,6 +25,10 @@ parser.add_argument('--fskip1', type=float,
                      default=0.0, required=False,
                      help="Fraction of data to be skipped from the end. [default: %(default)s]"
 )
+parser.add_argument('--logScale', type=bool,
+                     default=False, required=False,
+                     help="Use log scale for y axis?. [default: %(default)s]"
+)
 
 args = parser.parse_args()
 
@@ -50,7 +54,8 @@ ax.set_ylabel("Counts")
 ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
 ax.hist(data, bins=bins, ec = "black", rwidth=0.8, density=True)
 ax.set_ylabel("Density")
-ax.set_yscale("log")
+if args.logScale:
+    ax.set_yscale("log")
 ax.tick_params(axis='y',which='both', direction='in')
 ax.grid(axis='both', which='major')
 plt.tight_layout()

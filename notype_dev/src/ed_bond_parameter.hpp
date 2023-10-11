@@ -15,6 +15,8 @@ class ED_Bond_Parameter
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
+    ntype class_boundaries[6] = {1./6., 5./12., 9./16., 11./16., 13./16., 15./16.};
+    int class_labels[7] = { -7, -6, -4, -3, -1, -2, -5 };
 
   public:
     ED_Bond_Parameter(){
@@ -30,10 +32,10 @@ class ED_Bond_Parameter
       const int N=nb_list->N;
       q.resize(N);
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, Particle index, E-D Bond parameter q. # cutoff = "<<nb_list->rcut[0]<<endl;
+      fout << "#Timestep, Particle index, Coordination number, E-D Bond parameter q. # cutoff = "<<nb_list->rcut[0]<<endl;
       fout.close();
-      ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, <q>, fluctuations. # cutoff = "<<nb_list->rcut[0]<<endl;
+      ss.str(std::string()); ss << string_out << "_classes"<< tag << ".dat"; fout.open(ss.str(), ios::out);
+      fout << "#Timestep, Particle index, E-D class. # cutoff = "<<nb_list->rcut[0]<<endl;
       fout.close();
     }
 
@@ -41,19 +43,19 @@ class ED_Bond_Parameter
     {
       const int N=nb_list->N;
       const int u=0; // first shell bonds
-      ntype rijSq, rikSq, costheta, q_unnormalized, Q,Q2;
+      ntype rijSq, rikSq, costheta, q_unnormalized;
       vec rij, rik;
       int i,j,k,a,b;
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
       for(i=0;i<N;i++)
       {
         q_unnormalized = 0.0;
-        for(a=0;a<min(3,int(ps[i].neigh_list[u].size()-1) );a++)
+        for(a=0; a<ps[i].neigh_list[u].size() ;a++)
         {
           //j = ps[i].neigh_list[u][a];
           rij = ps[i].rij_list[u][a];
           rijSq = ps[i].rijSq_list[u][a];
-          for(b=a+1;b<min(4,int(ps[i].neigh_list[u].size()) );b++)
+          for(b=a+1;b<ps[i].neigh_list[u].size();b++)
           {
             //k = ps[i].neigh_list[u][b];
             rik = ps[i].rij_list[u][b];
@@ -66,19 +68,26 @@ class ED_Bond_Parameter
         q[i] = 1. - (3./8.)*q_unnormalized;
       }
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::app);
-      Q = 0.0; //  <q>
-      Q2 = 0.0; // <q^2>
       for(i=0;i<N;i++)
       {
-        fout << timestep << " " << i << " " << q[i] << endl;
-        Q += q[i];
-        Q2 += q[i]*q[i];
+        fout << timestep << " " << i << " " << ps[i].neigh_list[u].size() << " "<< q[i] << endl;
       }
       fout.close();
-      Q /= N;
-      Q2 /= N;
-      ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
-      fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
+      // Assign classes to each tetrahedral environment
+      ss.str(std::string()); ss << string_out << "_classes" << tag << ".dat"; fout.open(ss.str(), ios::app);
+      for(i=0;i<N;i++)
+      {
+        k=0;
+        for(j=0;j<6 && k==0;j++)
+        {
+          if(q[i]<class_boundaries[j])
+          {
+            fout << timestep << " " << i << " " << class_labels[j] << endl;
+            k=1;
+          }
+        }
+        if(k==0) fout << timestep << " " << i << " " << class_labels[6] << endl;
+      }
       fout.close();
       if(debug) cout << "*** "<<myName<<" computation DONE ***\n";
     }

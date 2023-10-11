@@ -134,7 +134,7 @@ read_xyz_frame(fstream &i, bool resetN)
       if(debug) cout << "\n  Line 1: " << N << " atoms\n";
       getline(i,line); // second line
       istringstream(line) >> b >> c >> d >> e;
-      if(debug) cout << "d="<<d<<endl;
+      if(debug) cout << "d (timestep)="<<d<<endl;
       timestep = stoi(d);
       if(debug) cout << "  Line 2: Timestep " << timestep << endl;
       if(resetN) {
