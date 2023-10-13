@@ -17,7 +17,7 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, string_rmin_out, myName, tag;
+    string string_cn_out, string_rmin_out, string_rmax_out, myName, tag;
     fstream fout;
     stringstream ss;
 
@@ -33,7 +33,7 @@ class Neigh_and_Bond_list
 
   public:
     int Nshell, N;
-    ntype rcut[MAX_NSHELL], rcutSq[MAX_NSHELL];
+    ntype rcut[MAX_NSHELL], rcutSq[MAX_NSHELL], rmaxSq;
     vecflex<ntype> neigh[MAX_NSHELL];
     vector<int> bond_list[MAX_NSHELL];  // stores all bonds encoded into an integer through ij2int()
 
@@ -144,7 +144,8 @@ class Neigh_and_Bond_list
       }
       if(debug) cout << " * Reset counters and lists DONE\n";
 
-      //---- Build neighbour list (and save rij vectors) ----//
+      //---- Build neighbour list (and save rij vectors) and compute rmax ----//
+      rmaxSq=0.0;
       for(i=0;i<N;i++)
       {
         for(j=i+1;j<N;j++)
@@ -156,7 +157,11 @@ class Neigh_and_Bond_list
           if(rijSq_mic < rijSq){ // if closer, choose first periodic image
             rijSq = rijSq_mic;
             rij = rij_mic;
+            //if(rijSq>rmaxSq) rmaxSq=rijSq;
           }
+          //else if(rijSq_mic>rmaxSq) rmaxSq=rijSq_mic; // update rmaxSq with max(rijSq,rijSq_mic)
+          if(rijSq>rmaxSq) rmaxSq=rijSq;
+          
           for(u=0;u<Nshell;u++)
           {
             if(rijSq <= rcutSq[u])
@@ -286,6 +291,26 @@ class Neigh_and_Bond_list
       fout << sqrt(rminSq) << endl;
       fout.close();
       if(debug) cout << "*** RMIN computation for timestep " << timestep << " ENDED ***\n";
+      return;
+    }
+
+    //-------------------- Maximum atomic distance --------------------------------------//
+    void init_rmax(string string_rmax_out_, string tag_, bool debug)
+    {
+      if(debug) cout<<"*** Initializing RMAX within "<<myName<<"***\n";
+      string_rmax_out = string_rmax_out_;
+      tag = tag_;
+      ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::out);
+      fout << "# Maximum atomic distance within PBC. # cutoff = " << rcut[0]<< endl;
+      fout.close();
+    }
+    void print_rmax(int timestep, bool debug)
+    {
+      if(debug) cout << "*** PRINT RMAX for timestep " << timestep << " STARTED ***\n";
+      ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::app);
+      fout << sqrt(rmaxSq) << endl;
+      fout.close();
+      if(debug) cout << "*** PRINT RMAX for timestep " << timestep << " ENDED ***\n";
       return;
     }
 };

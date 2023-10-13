@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq -sqt]"
+  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -50,6 +50,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
+  fprintf(stderr, "\n -rmax \t Compute the maximum distance between atoms. OUTPUT: %s.dat.", s_rmax.c_str() );
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
   fprintf(stderr, "\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].", cutoff[0]);
@@ -228,6 +229,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    }
     else if ( !strcmp(argv[i], "-rmin") )
        c_rmin = true;
+     else if ( !strcmp(argv[i], "-rmax") )
+        c_rmax = true;
  	  else if ( !strcmp(argv[i], "-sq") )
  	    {
         c_sq = true;

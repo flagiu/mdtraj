@@ -31,8 +31,8 @@ public:
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep;
-  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_altbc, c_sq, c_sqt, c_edq; // compute or not
-  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_edq, s_log; // for file naming
+  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin,c_rmax, c_altbc, c_sq, c_sqt, c_edq; // compute or not
+  string s_in, s_out, tag, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin,s_rmax, s_tbc, s_altbc, s_sq, s_sqt, s_edq, s_log; // for file naming
   bool out_box, out_xyz, out_alphanes;
   bool debug, verbose;
   //
@@ -93,6 +93,7 @@ public:
     cout << " c_rdf = \t " << c_rdf << endl;
     cout << " c_adf = \t " << c_adf << endl;
     cout << " c_rmin = \t " << c_rmin << endl;
+    cout << " c_rmax = \t " << c_rmax << endl;
     cout << " c_altbc = \t " << c_altbc << endl;
     cout << " c_sq = \t " << c_sq << endl;
     cout << " c_sqt = \t " << c_sqt << endl;
@@ -133,6 +134,7 @@ public:
     c_rdf = false;
     c_adf = false;
     c_rmin = false;
+    c_rmax = false;
     c_altbc = false;
     c_sq = false;
     c_sqt = false;
@@ -149,6 +151,7 @@ public:
     s_rdf="rdf";
     s_adf="adf";
     s_rmin="rmin";
+    s_rmax="rmax";
     s_altbc="altbc";
     s_sq="sq";
     s_sqt="sqt";
@@ -195,7 +198,7 @@ public:
     p1 = 2*p1half;
     p2 = 2*p2half;
     if(c_bondorient)             maxshell=MAX_NSHELL; // init all neigh shells
-    else if(c_coordnum || c_adf || c_rmin || c_altbc || c_edq) maxshell=1;       // init only first neigh shell
+    else if(c_coordnum || c_adf || c_rmin || c_rmax || c_altbc || c_edq) maxshell=1;       // init only first neigh shell
     else                         maxshell=0;       // do not init any
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
@@ -311,6 +314,7 @@ public:
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
     if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);
+    if(c_rmax) n_b_list->init_rmax(s_rmax, tag, debug);
     if(c_bondorient)
     {
       bond_parameters = new Bond_Parameters<ntype,ptype>();
@@ -356,6 +360,7 @@ public:
     if(maxshell>0) n_b_list->build(timestep, ps, box,boxInv, debug);
     if(c_coordnum) n_b_list->compute_coordnum(timestep, ps, debug);
     if(c_rmin) n_b_list->compute_rmin(timestep, ps, debug);
+    if(c_rmax) n_b_list->print_rmax(timestep, debug);
     if(c_bondorient) bond_parameters->compute(timestep, ps, debug);
     if(c_edq) ed_q_calculator->compute(timestep, ps, debug);
     if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
