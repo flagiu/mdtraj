@@ -30,8 +30,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -lammpstrj \t LAMMPS format. It expects the output of a 'dump atom' command.");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
-  fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -box.");
-  fprintf(stderr, "\n -xyz_cp2k \t .xyz format from CP2K. Box size is supplied via -box.");
+  fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -box. Particle labels must be 0,1,2,... .");
+  fprintf(stderr, "\n -xyz_cp2k \t .xyz format from CP2K. Box size is supplied via -box. Particles must be ordered by label.");
   fprintf(stderr, "\n -yuhan \t Hi Yuhan, this is the format you gave me.");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n BOX (Note: it will be overwritten if present in the input file):");
