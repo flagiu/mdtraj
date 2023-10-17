@@ -142,10 +142,10 @@ cn_min = min( 4,int(coordnum_u.min()) )
 for i in range(cn_max - cn_min + 1):
     cn2col[coordnum_u[i]] = cmap( i/(cn_max-1) )
 
-fig, axes = plt.subplots(len(types_u), len(coordnum_u), figsize=(len(coordnum_u)*4, len(types_u)*3) )
-for i,typ in enumerate(types_u):
-    for j,cn in enumerate(coordnum_u):
-        cn2col[cn] = cmap( j/(len(coordnum_u)-1) )
+fig, axes = plt.subplots(len(coordnum_u), len(types_u), figsize=(len(types_u)*5, len(coordnum_u)*3) )
+for i,cn in enumerate(coordnum_u):
+    cn2col[cn] = cmap( i/(len(coordnum_u)-1) )
+    for j,typ in enumerate(types_u):
         ax = axes[i][j]
         selection = (coordnum==cn) & (types==typ)
         n,x,_ = ax.hist(
@@ -157,9 +157,9 @@ for i,typ in enumerate(types_u):
         #density = gaussian_kde(n)
         # normalizzazione sbagliata!
         #ax.plot(bin_centers, density(bin_centers), color=cn2col[cn], alpha=0.7, linewidth=1, zorder=9999 )
-        ax.set_xlabel("q")
-        ax.set_ylabel("Density")
         title="" #r"$r_{cut}=%.2f$ $\AA$"%rcut1
+        if i==0: #first row
+            title += labels[typ]
         if args.i>=0:
             title += r", particle $i=%d$"%args.i
         ax.set_title(title)
@@ -176,15 +176,17 @@ for i,typ in enumerate(types_u):
             ax.axvline(class_q_values[k], linestyle='--', color=cn2col[class_cn_values[k]], alpha=0.7)
             ax.text(
                 class_q_values[k]+0.01, ax.get_ylim()[-1]-0.01, class_expl_ordered[k],
-                horizontalalignment='right', verticalalignment='top', rotation=90, rotation_mode='anchor',
+                horizontalalignment='right', verticalalignment='bottom', rotation=90, rotation_mode='anchor',
                 color=cn2col[class_cn_values[k]], alpha=0.7
             )
         ax.set_xlim( (min(0.0, Xmin),max(1.0, Xmax)) )
         if args.logScale:
             ax.set_yscale("log")
         ax.legend() #bbox_to_anchor=(1.01,1.01))
-        ax.tick_params(axis='y',which='both', direction='in')
+        ax.tick_params(axis='both', which='both', direction='in')
         #ax.grid(axis='both', which='major')
+fig.supxlabel('Order parameter q')
+fig.supylabel('Probability density')
 plt.tight_layout()
 
 plt.savefig(outpng)
