@@ -47,34 +47,52 @@ class Bond_Parameters
       Ql_dot.resize(N);
       ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, Bond order orientation parameter q_l. # l = " << l << ", cutoffs = ";
-      for(auto  i=0;i<Nshell;i++) fout << nb_list->rcut[i]<<", ";
+      for(auto  i=0;i<Nshell;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
       fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, <q_l>, fluctuations. # l = " << l << ", cutoffs = ";
-      for(auto  i=0;i<Nshell;i++) fout << nb_list->rcut[i]<<", ";
+      for(auto  i=0;i<Nshell;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
       fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, Bond order correlation parameter q_l_dot. # l = " << l << ", cutoffs = ";
-      for(auto  i=0;i<Nshell;i++) fout << nb_list->rcut[i]<<", ";
+      for(auto  i=0;i<Nshell;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
       fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_nxtal_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Nc = number of crystalline particles # l = " << l << ", cutoffs = ";
-      for(auto  i=0;i<Nshell;i++) fout << nb_list->rcut[i]<<", ";
+      for(auto  i=0;i<Nshell;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
       fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, <q_l_dot>, fluctuations. # l = " << l << ", cutoffs = ";
-      for(auto  i=0;i<Nshell;i++) fout << nb_list->rcut[i]<<", ";
+      for(auto  i=0;i<Nshell;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
       fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".xyz"; fout.open(ss.str(), ios::out);
       fout.close();
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".local.ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, local <q_l_dot(i)>. # l = " << l << ", cutoffs = ";
-      for(auto  i=0;i<Nshell;i++) fout << nb_list->rcut[i]<<", ";
+      for(auto  i=0;i<Nshell;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
       fout << endl;
       fout.close();
     }
@@ -108,15 +126,15 @@ class Bond_Parameters
           for(k=0;k<ps[i].neigh_list[u].size();k++){
             j = ps[i].neigh_list[u][k];
             if(j>i) continue; // avoid double counting!
+            t = nb_list->types2int(ps[i].label, ps[j].label);
             rij = ps[i].rij_list[u][k];
             rijSq = ps[i].rijSq_list[u][k];
   //          fval = fcut( rijSq/cutoffSq[u], p1half, p2half );
             if(u==0){ // Ider uses a step function for u==0?
-              fval = ( rijSq <= nb_list->rcutSq[u] ? 1.0 : 0.0 );
+              fval = ( rijSq <= nb_list->rcutSq[u][t] ? 1.0 : 0.0 );
             } else {
-              fval = nb_list->fcut( rijSq/nb_list->rcutSq[u] );
+              fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
             }
-            t = nb_list->types2int(ps[i].label, ps[j].label);
             nb_list->neigh[u][t][i] += fval;
             t = nb_list->types2int(ps[j].label, ps[i].label);
             nb_list->neigh[u][t][j] += fval;
@@ -162,6 +180,7 @@ class Bond_Parameters
         Cl_ij.set(k, 0.0);
         i = nb_list->int2i( nb_list->bond_list[1][k], N );
         j = nb_list->int2j( nb_list->bond_list[1][k], N );
+        t = nb_list->types2int(ps[i].label, ps[j].label);
         for(a=0;a<l_deg; a++) {
           Cl_ij[k] += ( real(qlm[a][i])*real(qlm[a][j]) + imag(qlm[a][i])*imag(qlm[a][j]) );
         }
@@ -179,7 +198,7 @@ class Bond_Parameters
           exit(1);
         }
         rijSq = ps[i].rijSq_list[1][a]; // and use it to recover the radius
-        fval = nb_list->fcut( rijSq/nb_list->rcutSq[1] );
+        fval = nb_list->fcut( rijSq/nb_list->rcutSq[1][t] );
         tot_neigh = 0.0;
         for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[1][t][i];
         ql_dot[i] += fval*Cl_ij[k] / tot_neigh;
@@ -213,8 +232,9 @@ class Bond_Parameters
       for(i=0;i<N;i++){
         for(k=0;k<ps[i].neigh_list[2].size();k++){
           j = ps[i].neigh_list[2][k];
+          t = nb_list->types2int(ps[i].label, ps[j].label);
           rijSq = ps[i].rijSq_list[2][k];
-          fval = nb_list->fcut( rijSq/nb_list->rcutSq[2] );
+          fval = nb_list->fcut( rijSq/nb_list->rcutSq[2][t] );
           tot_neigh = 0.0;
           for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[2][t][i];
           Ql_dot[i] += fval*ql_dot[j] / tot_neigh;

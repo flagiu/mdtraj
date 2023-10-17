@@ -13,12 +13,15 @@ gunzip dump.lammpstrj.gz
 #mpirun lmp -in in.lmp > out.lmp
 
 echo "RUNME.sh: Test liquid g(r) and coordination number at equilibrium:"
-../../bin/mdtraj -lammpstrj dump.lammpstrj -fskip 0.25 0.0 -rdf 0.1 -cn -rcut1 3.0
+../../bin/mdtraj -lammpstrj dump.lammpstrj -fskip 0.25 0.0 -rdf 0.1 -cn -rcut rcut.save
 printf "Exit $? \n\n"
 python3 ../../python/plot_rdf_average.py
 python3 ../../python/plot_coordnum_average_histogram.py
 
 echo "RUNME.sh: Test coordination number in transient:"
-../../bin/mdtraj -lammpstrj dump.lammpstrj -fskip 0.0 0.5 -cn -rcut1 3.0
+../../bin/mdtraj -lammpstrj dump.lammpstrj -fskip 0.0 0.5 -cn -rcut rcut.save
 python3 ../../python/plot_coordnum_average.py
 
+echo "$0: Test E-D q order parameter at equilibrium:"
+../../bin/mdtraj -lammpstrj dump.lammpstrj -fskip 0.25 0.0 -rcut rcut.save -edq
+python3 ../../python/plot_ed_q_histogram.py

@@ -46,7 +46,8 @@ outpng="coordnum_ave.png"
 outpdf="coordnum_ave.pdf"
 
 header=args.inavg.readline()
-rcut1 = float( header.split("# cutoff =")[1].split(',')[0] )
+rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
+rcuts = [float(rc) for rc in rcuts_str]
 
 X = np.loadtxt(args.inavg)
 timesteps = X[:,0]
@@ -68,19 +69,19 @@ ign=np.array(args.ignore)
 ign_labels = [ labels[ig] for ig in args.ignore ]
 print(" plot_coordnum_average.py: List of types to be ignored:",ign_labels)
 #---------------------------------------------------------------------------------------------------------#
+if len(labels)==0:
+   for i in range(ntypes):
+      labels.append(str(i))
 
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"Timestep")
 ax.set_ylabel(r"Average Coordination Number")
-ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
 for i in range(npairs):
     c = X[:,1+i]
     c_ = X[:,1+i+npairs]
     ti,tj = int2types(i, ntypes)
-    if len(labels)>0:
-        lab = "%s-%s"%( labels[ti],labels[tj] )
-    else:
-        lab = "%d-%d"%( ti,tj )
+    lab = r"%s-%s, $r_{cut}=%.2f$ $\AA$"%( labels[ti],labels[tj], rcuts[i] )
+
     if len(ign)>0 and (ti==ign).any() or (tj==ign).any():
         continue # ignore this one
 

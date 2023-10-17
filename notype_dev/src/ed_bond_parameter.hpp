@@ -34,9 +34,11 @@ class ED_Bond_Parameter
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, Coordination number, E-D Bond parameter q. # cutoff = "<<nb_list->rcut[0]<<endl;
       fout.close();
+      /*
       ss.str(std::string()); ss << string_out << "_classes"<< tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, E-D class. # cutoff = "<<nb_list->rcut[0]<<endl;
       fout.close();
+      */
     }
 
     void compute(int timestep, vector<ptype> ps, bool debug)
@@ -73,6 +75,7 @@ class ED_Bond_Parameter
         fout << timestep << " " << i << " " << ps[i].neigh_list[u].size() << " "<< q[i] << endl;
       }
       fout.close();
+      /*
       // Assign classes to each tetrahedral environment
       ss.str(std::string()); ss << string_out << "_classes" << tag << ".dat"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++)
@@ -89,6 +92,7 @@ class ED_Bond_Parameter
         if(k==0) fout << timestep << " " << i << " " << class_labels[6] << endl;
       }
       fout.close();
+      */
       if(debug) cout << "*** "<<myName<<" computation DONE ***\n";
     }
 

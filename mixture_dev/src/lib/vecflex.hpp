@@ -58,7 +58,7 @@ public:
       for (int i = 0; i < length(); i++) {
         cout << v[i];
         if (i < length()-1)
-          cout << ",";
+          cout << ", ";
         else
           cout << ")\n";
       }
@@ -257,6 +257,24 @@ public:
     for (int i=0;i<length();i++)
       p *= v[i];
     return p;
+  }
+
+  ntype min(void) const
+  {
+    ntype m=v[0];
+    for(int i=1;i<length();i++)
+	if( v[i]<m )
+	  m = v[i];
+    return m;
+  }
+  
+  ntype max(void) const
+  {
+    ntype m=v[0];
+    for(int i=1;i<length();i++)
+	if( v[i]>m )
+	  m = v[i];
+    return m;
   }
 
   vecflex<ntype> pop(const int& a) const

@@ -7,9 +7,6 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 	- uniform timestep.
 	- S(q) for cubic boxes only (?).
 
-- Under development:
-	- multi-species system for .xyz, CP2K-.xyz, lammpstrj input files.
-
 - Bugs to be corrected:
 	- q_l order parameters seems to be offset by ~sqrt(2).
 	- g(r) is <1 for large r in non-cubic boxes.
@@ -45,12 +42,15 @@ path-to-this-repo/version/bin/mdtraj -h
 The subfolders python/ and shell/ contain some utility scripts (to be used before/after the main program) for plotting or extra calculations. Default units are: Angstrom, picoseconds.
 
 The subfolder examples/ contains some example of application to real or toy systems:
-- LJ particles in different 3d cell shapes: cubic, orthorombic, triclinic.
-- Toy particles displaced along a 3d cubic lattice with small random gaussian noise.
+- (notype) LJ particles in different 3d cell shapes: cubic, orthorombic, triclinic.
+- (both) Toy particles displaced along a 3d cubic lattice with small random gaussian noise.
+- (mixture) Binary LJ mixture.
+- (mixture) Short sample of a Phase-Change Heterostructure.
 
 ## Future development
 
-- Multi-species for more input formats.
+- More input formats for multi-species.
+- More analysis tools for multi-species.
 - S(q) with non-cubic boxes?
 - Add example with antimony?
 - Add logarithmic timestep?

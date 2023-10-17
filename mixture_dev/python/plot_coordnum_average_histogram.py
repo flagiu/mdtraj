@@ -56,7 +56,8 @@ outpng="coordnum_ave_hist.png"
 outpdf="coordnum_ave_hist.pdf"
 
 header=args.inavg.readline()
-rcut1 = float( header.split("# cutoff =")[1].split(',')[0] )
+rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
+rcuts = [float(rc) for rc in rcuts_str]
 
 X = np.loadtxt(args.inavg)
 # Apply fskip
@@ -69,6 +70,7 @@ X = X[n0:n-n1]
 timesteps = X[:,0]
 npairs = int( (X.shape[1]-1)/2 )
 ntypes = int(np.floor( (2*npairs)**0.5 ))
+assert len(rcuts_str)==npairs
 
 #--------------------------------------------------------------------------------------------------------#
 labels=[]
@@ -85,18 +87,19 @@ ign=np.array(args.ignore)
 ign_labels = [ labels[ig] for ig in args.ignore ]
 print(" plot_coordnum_average_histogram.py: List of types to be ignored:",ign_labels)
 #---------------------------------------------------------------------------------------------------------#
+if len(labels)==0:
+   for i in range(ntypes):
+      labels.append(str(i))
 
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"Average Coordination Number")
 ax.set_ylabel(r"Counts")
-ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
+title=""
 for i in range(npairs):
     c = X[:,1+i]
     ti,tj = int2types(i, ntypes)
-    if len(labels)>0:
-        lab = "%s-%s"%( labels[ti],labels[tj] )
-    else:
-        lab = "%d-%d"%( ti,tj )
+    lab = r"%s-%s, $r_{cut}=%.2f$ $\AA$"%( labels[ti],labels[tj], rcuts[i] )
+
     if len(ign)>0 and (ti==ign).any() or (tj==ign).any():
         continue # ignore this one
 
@@ -104,6 +107,7 @@ for i in range(npairs):
     blue = linMap(tj, 0,ntypes-1, 0,1)
     green = 0.2
     ax.hist(c, label=lab, color=(red,green,blue,0.7))
+ax.set_title(title)
 ax.legend()
 ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major')

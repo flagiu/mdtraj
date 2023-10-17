@@ -51,6 +51,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n -rmax \t Compute the maximum distance between atoms. OUTPUT: %s.dat.", s_rmax.c_str() );
+  fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
+  fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
   fprintf(stderr, "\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].", cutoff[0]);
@@ -58,8 +60,6 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].", cutoff[2]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD and S(q,t). If negative, don't. [default %d].", period);
-  fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
-  fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
