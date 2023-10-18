@@ -28,6 +28,9 @@ x_tolerance=5e-5
 #-------------------------------------#
 args = parser.parse_args()
 
+header=args.inavg.readline()
+rcut1 = float( header.split("# cutoff =")[1].split(',')[0] )
+
 Xt = np.loadtxt(args.intraj, unpack=False)
 ntraj = Xt.shape[1]-1
 
@@ -60,6 +63,7 @@ for i in range(ntraj):
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"Angle [degrees]")
 ax.set_ylabel(r"ADF")
+ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
 ax.xaxis.set_ticks(np.arange(0.0, 180.0, 15.0))
 ax.tick_params(which='both', direction='in')
 for i in range(ntraj):

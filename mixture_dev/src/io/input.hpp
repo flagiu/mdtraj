@@ -153,14 +153,25 @@ read_xyz_frame(fstream &i, bool resetN)
     {
       // assumes particles are ordered by type !!
       string line, a,b,c,d,e, cur_type_str;
+      stringstream ss;
       int cur_type=0;
       getline(i,line); // first line
       istringstream(line) >> a;
       N = stoi(a);
       if(debug) cout << "\n  Line 1: " << N << " atoms\n";
       getline(i,line); // second line
-      istringstream(line) >> b >> c >> d >> e;
-      timestep = stoi(d);
+      ss << line;
+      do {
+        try {
+          ss >> a;
+          timestep = stoi(a);
+          break;
+        }
+        catch (...) {
+          if(debug) cout << "a="<<a <<endl;
+          continue;
+        }
+      } while(true);
       if(debug) cout << "  Line 2: Timestep " << timestep << endl;
       if(resetN) {
         ps.resize(N);

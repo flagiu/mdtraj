@@ -17,7 +17,7 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, string_rmin_out, string_rmax_out, myName, tag;
+    string string_cn_out, string_rmin_out, string_rmax_out, log_file, myName, tag;
     fstream fout;
     stringstream ss;
 
@@ -52,16 +52,22 @@ class Neigh_and_Bond_list
     void print_bond_summary(vector<ptype> ps)
     {
       int i,u,ii;
+
+      ss.str(std::string()); ss << log_file << tag; fout.open(ss.str(), ios::app);
+      fout << "#---------------------- BOND SUMMARY --------------------------#\n";
       for(u=0;u<Nshell;u++)
       {
         for(i=0;i<N;i++)
         {
-          cout << "  Shell u="<<u<<" of particle i="<<i<<" contains "<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
-          for(ii=0;ii<ps[i].neigh_list[u].size();ii++) cout<<ps[i].neigh_list[u][ii]<<" ";
-          cout << endl;
+          fout << "Shell u="<<u<<" of particle i="<<i<<" contains "<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
+          for(ii=0;ii<ps[i].neigh_list[u].size();ii++) fout<<ps[i].neigh_list[u][ii]<<" ";
+          fout << endl;
         }
         cout << "> System has "<<bond_list[u].size()<<" bonds within rcut="<<rcut[u]<<endl;
       }
+      fout << "#--------------------------------------------------------------#\n";
+      fout.close();
+      cout << "Summary of neighbour and bond lists saved into log file: "<<log_file <<tag <<endl;
     }
 
     void sort_by_distance_3vec(vector<ntype>* dist, vector<int>* a, vector<vec>* b)
@@ -101,8 +107,9 @@ class Neigh_and_Bond_list
       return;
     }
 
-    void init(int Nshell_, ntype *rcut_, int p1half_, int N_)
+    void init(int Nshell_, ntype *rcut_, int p1half_, int N_, string log_file_)
     {
+      log_file = log_file_;
       Nshell=Nshell_;
       N=N_;
       for(int u=0;u<Nshell;u++)
@@ -161,7 +168,7 @@ class Neigh_and_Bond_list
           }
           //else if(rijSq_mic>rmaxSq) rmaxSq=rijSq_mic; // update rmaxSq with max(rijSq,rijSq_mic)
           if(rijSq>rmaxSq) rmaxSq=rijSq;
-          
+
           for(u=0;u<Nshell;u++)
           {
             if(rijSq <= rcutSq[u])
@@ -211,7 +218,7 @@ class Neigh_and_Bond_list
       if(debug)
       {
         cout << " * Build & Sort the Neighbour list & the Bond list DONE\n";
-        //print_bond_summary(ps);
+        print_bond_summary(ps);
         cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       }
       return;

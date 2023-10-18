@@ -17,7 +17,7 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, string_rmin_out, string_rmax_out, myName, tag;
+    string string_cn_out, string_rmin_out, string_rmax_out, log_file, myName, tag;
     fstream fout;
     stringstream ss;
 
@@ -112,11 +112,13 @@ class Neigh_and_Bond_list
     void print_bond_summary(vector<ptype> ps)
     {
       int i,u,ii;
+      ss.str(std::string()); ss << log_file << tag; fout.open(ss.str(), ios::app);
+      fout << "#---------------------- BOND SUMMARY --------------------------#\n";
       for(u=0;u<Nshell;u++)
       {
         for(i=0;i<N;i++)
         {
-          cout << "  Shell u="<<u<<" of particle i="<<i<<" contains "<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
+          cout << "  Shell u="<<u<<" of particle i="<<i<<" of type "<<ps[i].label<<" contains "<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
           for(ii=0;ii<ps[i].neigh_list[u].size();ii++) cout<<ps[i].neigh_list[u][ii]<<" ";
           cout << endl;
         }
@@ -124,6 +126,9 @@ class Neigh_and_Bond_list
         for(int t=0;t<nTypePairs;t++) cout <<rcut[u][t]<< " ";
         cout << endl;
       }
+      fout << "#--------------------------------------------------------------#\n";
+      fout.close();
+      cout << " Summary of neighbour and bond lists saved into log file: "<<log_file <<tag <<endl;
     }
 
     void sort_by_distance_3vec(vector<ntype>* dist, vector<int>* a, vector<vec>* b)
@@ -163,8 +168,9 @@ class Neigh_and_Bond_list
       return;
     }
 
-    void init(string s_rcut, int Nshell_, int p1half_, int N_, int nTypes_, bool debug)
+    void init(string s_rcut, int Nshell_, int p1half_, int N_, int nTypes_, string log_file_, bool debug)
     {
+      log_file = log_file_;
       Nshell=Nshell_;
       N=N_;
       nTypes=nTypes_;
@@ -219,6 +225,7 @@ class Neigh_and_Bond_list
       for(i=0;i<N;i++)
       {
         for(j=i+1;j<N;j++)
+      log_file = log_file_;
         {
           t = types2int( ps[i].label, ps[j].label);
           rij = ps[j].r - ps[i].r;
@@ -232,7 +239,7 @@ class Neigh_and_Bond_list
           }
           //else if(rijSq_mic>rmaxSq) rmaxSq=rijSq_mic; // update rmaxSq with max(rijSq,rijSq_mic)
           if(rijSq>rmaxSq) rmaxSq=rijSq;
-          
+
           for(u=0;u<Nshell;u++)
           {
             if(rijSq <= rcutSq[u][t])

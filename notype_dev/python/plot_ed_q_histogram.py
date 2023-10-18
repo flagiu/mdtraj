@@ -12,6 +12,8 @@ cmap = mpl.colormaps['brg']
 
 outpng="ed_q_hist.png"
 outpdf="ed_q_hist.pdf"
+cnMIN=2
+cnMAX=12
 class_labels_ordered = ['g','f','d','c','a','b','e']
 class_explanations_ordered =  [
     'octahedral',
@@ -78,18 +80,26 @@ x = np.loadtxt(args.indat)
 indices = x[:,1]
 if args.i>=0:
     x = x[indices==args.i]
+if len(x)==0:
+    print("[ ERROR: no particle with index %d]\n"%args.i)
+    exit(1)
 # filter by coordination number
 coordnum = x[:,2]
-selection = (coordnum>2) & (coordnum<7)
+selection = (coordnum>=cnMIN) & (coordnum<=cnMAX)
 if args.cn>=0:
     selection = selection & (coordnum==args.cn)
 x = x[selection]
+if len(x)==0:
+    print("[ ERROR: no particle with coordination number in [%d,%d] ]\n"%(cnMIN,cnMAX))
+    exit(1)
 # filter by time
 t = np.unique(x[:,0])
 n = len(t) # number of frames
 n0 = int(args.fskip0*n)
 n1 = int(args.fskip1*n)
-assert n-n0-n1 > 0 # cannot skip all lines!
+if n-n0-n1 <=0:
+    print("[ ERROR: cannot skip all frames! nskip0=%d, nskip1=%d, but there are n=%d frames! ]\n"%(n0,n1,n))
+    exit(1)
 t0 = t[n0]
 t1 = t[n-1-n1]
 selection = (x[:,0]>=t0) & (x[:,0]<=t1)
@@ -103,8 +113,8 @@ coordnum_u = np.unique(coordnum)
 data = x[:,3]
 
 fig, ax = plt.subplots(figsize=(10,6))
-ax.set_xlabel("q")
-ax.set_ylabel("Density")
+ax.set_xlabel("Order parameter q")
+ax.set_ylabel("Probability")
 title=r"$r_{cut}=%.2f$ $\AA$"%rcut1
 if args.i>=0:
     title += r", particle $i=%d$"%args.i
@@ -112,25 +122,32 @@ ax.set_title(title)
 
 cn2col = {}
 for i,cn in enumerate(coordnum_u):
-    cn2col[cn] = cmap( i/(len(coordnum_u)-1) )
-    n,x,_ = ax.hist(data[coordnum==cn], bins=args.nbins, label=r"$N_c=%d$"%cn, density=True, histtype='step', color=cn2col[cn], alpha=0.7, linewidth=2, zorder=9999) # plot on top of all!
-    bin_centers = 0.5*(x[1:]+x[:-1])
-    density = gaussian_kde(n)
+    cn2col[cn] = cmap(0.5) # i/(len(coordnum_u)-1) )
+    counts,edges = np.histogram(data[selection], bins=args.nbins, density=None)
+    ax.stairs(counts/counts.sum(), edges,
+        label=r"$N_c=%d$""\n(%d events)"%(cn, counts.sum()),
+        color=cn2col[cn], alpha=0.7, linewidth=2, zorder=9999 # plot on top of all!
+    )
+    #bin_centers = 0.5*(x[1:]+x[:-1])
+    #density = gaussian_kde(n)
     # normalizzazione sbagliata!
     #ax.plot(bin_centers, density(bin_centers), color=cn2col[cn], alpha=0.7, linewidth=1, zorder=9999 )
 Xmin = ax.get_xlim()[0]
 Xmax = ax.get_xlim()[1]
-for i in range(len(class_q_values)):
-    xlo = min(0.0, Xmin) if i==0                   else 0.5*(class_q_values[i-1]+class_q_values[i])
-    xhi = max(1.0, Xmax) if i==len(class_q_values)-1 else 0.5*(class_q_values[i]+class_q_values[i+1])
-    # frac=(i+1)/(len(class_q_values)+1)
-    # ax.axvspan(xlo,xhi, color=(frac,frac,frac,0.3))
-    ax.axvline(class_q_values[i], linestyle='--', color=cn2col[class_cn_values[i]], alpha=0.7)
-    ax.text(
-        class_q_values[i]+0.01, ax.get_ylim()[-1]-0.01, class_expl_ordered[i],
-        horizontalalignment='right', verticalalignment='top', rotation=90, rotation_mode='anchor',
-        color=cn2col[class_cn_values[i]], alpha=0.7
-    )
+for cn in coordnum_u:
+    for i in range(len(class_q_values)):
+        if class_cn_values[i]!=cn:
+            continue
+        xlo = min(0.0, Xmin) if i==0                   else 0.5*(class_q_values[i-1]+class_q_values[i])
+        xhi = max(1.0, Xmax) if i==len(class_q_values)-1 else 0.5*(class_q_values[i]+class_q_values[i+1])
+        # frac=(i+1)/(len(class_q_values)+1)
+        # ax.axvspan(xlo,xhi, color=(frac,frac,frac,0.3))
+        ax.axvline(class_q_values[i], linestyle='--', color=cn2col[class_cn_values[i]], alpha=0.7)
+        ax.text(
+            class_q_values[i]+0.01, ax.get_ylim()[-1]-0.01, class_expl_ordered[i],
+            horizontalalignment='right', verticalalignment='top', rotation=90, rotation_mode='anchor',
+            color=cn2col[class_cn_values[i]], alpha=0.7
+        )
 ax.set_xlim( (min(0.0, Xmin),max(1.0, Xmax)) )
 if args.logScale:
     ax.set_yscale("log")

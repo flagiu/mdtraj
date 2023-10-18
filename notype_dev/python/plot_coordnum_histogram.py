@@ -43,7 +43,8 @@ assert n-n0-n1 > 0 # cannot skip all lines!
 x = x[n0:n-n1]
 
 data = x[:,2]
-d = np.diff(np.unique(data)).min()
+cn_u = np.unique(data)
+d = 1 if len(cn_u)==1 else np.diff(cn_u).min()
 left_of_first_bin = data.min() - float(d)/2
 right_of_last_bin = data.max() + float(d)/2
 bins = np.arange(left_of_first_bin, right_of_last_bin + d, d)

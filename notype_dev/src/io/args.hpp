@@ -101,7 +101,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      c_adf = true;
 	      i++;
 	      if (i == argc) { fprintf(stderr, "ERROR: '-adf' must be followed by bin width!\n"); exit(-1); }
-	      adf_binw = atof(argv[i]);
+	      adf_binw = stof(argv[i]);
+        if(adf_binw<=0 || adf_binw>=1) { fprintf(stderr, "ERROR: adf bin width value must be in (0,1)!\n"); exit(1); }
 	    }
 	  else if ( !strcmp(argv[i], "-bo") )
 	      c_bondorient = true;

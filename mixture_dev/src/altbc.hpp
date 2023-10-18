@@ -52,7 +52,7 @@ class ALTBC_Calculator
       }
       fout << endl; // end of block
       fout.close();
-      
+
       for(i=0; i<nbins; i++)
       {
         shell1 = 4.0 * M_PI * bins[i]*bins[i] * binw;
@@ -103,6 +103,8 @@ class ALTBC_Calculator
             if(bin0<nbins && bin1<nbins && fabs(costheta) >= cos_th)
             {
               value[bin0 + nbins*bin1] += 1.0;
+              counts++;
+              value[bin1 + nbins*bin0] += 1.0;
               counts++;
             }
           }

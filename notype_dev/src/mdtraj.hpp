@@ -310,7 +310,7 @@ public:
     if(maxshell>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(maxshell, cutoff, p1half, N);
+      n_b_list->init(maxshell, cutoff, p1half, N, s_log);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
     if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);
@@ -335,7 +335,7 @@ public:
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();
-      adf_calculator->init(adf_binw, s_adf, tag);
+      adf_calculator->init(adf_binw, cutoff[0], s_adf, tag);
     }
     if(c_altbc) {
       altbc_calculator = new ALTBC_Calculator<ntype,ptype>();

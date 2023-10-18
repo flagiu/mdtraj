@@ -12,6 +12,8 @@ cmap = mpl.colormaps['brg']
 
 outpng="ed_q_hist.png"
 outpdf="ed_q_hist.pdf"
+cnMIN=2
+cnMAX=10
 class_labels_ordered = ['g','f','d','c','a','b','e']
 class_explanations_ordered =  [
     'octahedral',
@@ -112,7 +114,7 @@ for ign in ign_labels:
 x = x[selection]
 # filter by coordination number
 coordnum = x[:,3]
-selection = (coordnum>2) & (coordnum<7)
+selection = (coordnum>=cnMIN) & (coordnum<=cnMAX)
 if args.cn>=0:
     selection = selection & (coordnum==args.cn)
 x = x[selection]
@@ -137,21 +139,28 @@ coordnum_u = np.unique(coordnum)
 data = x[:,4]
 
 cn2col = {}
-cn_max = max(int(coordnum_u.max()), 6)
-cn_min = min( 4,int(coordnum_u.min()) )
+cn_max = int(coordnum_u.max())
+cn_min = int(coordnum_u.min())
 for i in range(cn_max - cn_min + 1):
     cn2col[coordnum_u[i]] = cmap( i/(cn_max-1) )
 
 fig, axes = plt.subplots(len(coordnum_u), len(types_u), figsize=(len(types_u)*5, len(coordnum_u)*3) )
 for i,cn in enumerate(coordnum_u):
-    cn2col[cn] = cmap( i/(len(coordnum_u)-1) )
+    cn2col[cn] = cmap(0.5) #cmap( i/(len(coordnum_u)-1) )
     for j,typ in enumerate(types_u):
-        ax = axes[i][j]
+        if len(coordnum_u)>1 and len(types_u)>1:
+            ax = axes[i][j]
+        elif len(coordnum_u)>1:
+            ax = axes[i]
+        elif len(types_u)>1:
+            ax = axes[j]
+        else:
+            ax = axes
         selection = (coordnum==cn) & (types==typ)
-        n,x,_ = ax.hist(
-            data[selection], bins=args.nbins, density=True,
-            label=r"$N_c(%s)=%d$"%(labels[typ],cn),
-            histtype='step', color=cn2col[cn], alpha=0.7, linewidth=2, zorder=9999 # plot on top of all!
+        counts,edges = np.histogram(data[selection], bins=args.nbins, density=None)
+        ax.stairs(counts/counts.sum(), edges,
+            label=r"$N_c(%s)=%d$""\n(%d events)"%(labels[typ],cn, counts.sum()),
+            color=cn2col[cn], alpha=0.7, linewidth=2, zorder=9999 # plot on top of all!
         )
         #bin_centers = 0.5*(x[1:]+x[:-1])
         #density = gaussian_kde(n)
@@ -186,7 +195,7 @@ for i,cn in enumerate(coordnum_u):
         ax.tick_params(axis='both', which='both', direction='in')
         #ax.grid(axis='both', which='major')
 fig.supxlabel('Order parameter q')
-fig.supylabel('Probability density')
+fig.supylabel('Probability')
 plt.tight_layout()
 
 plt.savefig(outpng)
