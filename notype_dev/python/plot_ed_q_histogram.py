@@ -52,9 +52,9 @@ parser.add_argument('--i', type=int,
                      default=-1, required=False,
                      help="Plot only data of particle i; i can be 0,1,...,N-1 . Plot all if i<0. [default: %(default)s]"
 )
-parser.add_argument('--cn', type=int,
-                     default=-1, required=False,
-                     help="Plot only data of particles with given coordination number (between 3 and 6); plot all if cn<0. [default: %(default)s]"
+parser.add_argument('--cn', type=int, nargs=2,
+                     default=[cnMIN, cnMAX], required=False,
+                     help="Plot only data of particles with coordination number within the interval [min,max]. [default: %(default)s]"
 )
 parser.add_argument('--fskip0', type=float,
                      default=0.0, required=False,
@@ -85,12 +85,14 @@ if len(x)==0:
     exit(1)
 # filter by coordination number
 coordnum = x[:,2]
-selection = (coordnum>=cnMIN) & (coordnum<=cnMAX)
-if args.cn>=0:
-    selection = selection & (coordnum==args.cn)
+if len(args.cn)==2:
+    selection = (coordnum>=args.cn[0]) & (coordnum<=args.cn[1])
+else:
+    print("[ ERROR: argument --cn must be followed by 2 positive integers. ]\n")
+    exit(1)
 x = x[selection]
 if len(x)==0:
-    print("[ ERROR: no particle with coordination number in [%d,%d] ]\n"%(cnMIN,cnMAX))
+    print("[ ERROR: no particle with coordination number in the given interval: {args.cn} ]\n")
     exit(1)
 # filter by time
 t = np.unique(x[:,0])
@@ -122,7 +124,8 @@ ax.set_title(title)
 
 cn2col = {}
 for i,cn in enumerate(coordnum_u):
-    cn2col[cn] = cmap(0.5) # i/(len(coordnum_u)-1) )
+    cn2col[cn] = cmap( 0.5 if len(coordnum_u)==1 else i/(len(coordnum_u)-1) )
+    selection = coordnum==cn
     counts,edges = np.histogram(data[selection], bins=args.nbins, density=None)
     ax.stairs(counts/counts.sum(), edges,
         label=r"$N_c=%d$""\n(%d events)"%(cn, counts.sum()),
