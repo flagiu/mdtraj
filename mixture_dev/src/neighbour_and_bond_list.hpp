@@ -225,7 +225,6 @@ class Neigh_and_Bond_list
       for(i=0;i<N;i++)
       {
         for(j=i+1;j<N;j++)
-      log_file = log_file_;
         {
           t = types2int( ps[i].label, ps[j].label);
           rij = ps[j].r - ps[i].r;

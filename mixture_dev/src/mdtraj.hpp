@@ -349,7 +349,7 @@ public:
     if(maxshell>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(s_rcut, maxshell, p1half, N, nTypes, debug);
+      n_b_list->init(s_rcut, maxshell, p1half, N, nTypes, s_log, debug);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
     if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);
