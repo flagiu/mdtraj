@@ -310,7 +310,7 @@ public:
     if(maxshell>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(maxshell, cutoff, p1half, N, s_log);
+      n_b_list->init(maxshell, cutoff, p1half, N, s_log, tag);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
     if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);

@@ -118,17 +118,19 @@ class Neigh_and_Bond_list
       {
         for(i=0;i<N;i++)
         {
-          cout << "  Shell u="<<u<<" of particle i="<<i<<" of type "<<ps[i].label<<" contains "<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
-          for(ii=0;ii<ps[i].neigh_list[u].size();ii++) cout<<ps[i].neigh_list[u][ii]<<" ";
-          cout << endl;
+          fout << "  Shell u="<<u<<" of particle i="<<i<<" of type="<<ps[i].label<<" contains Nc="<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
+          for(ii=0;ii<ps[i].neigh_list[u].size();ii++) fout<<ps[i].neigh_list[u][ii]<<" ";
+          fout << "\n   ";
+          for(ii=0;ii<ps[i].neigh_list[u].size();ii++) fout<<sqrt(ps[i].rijSq_list[u][ii])<<" ";
+          fout << endl;
         }
-        cout << "> System has "<<bond_list[u].size()<<" bonds within rcut=";
-        for(int t=0;t<nTypePairs;t++) cout <<rcut[u][t]<< " ";
-        cout << endl;
+        fout << "> System has "<<bond_list[u].size()<<" bonds within rcut=";
+        for(int t=0;t<nTypePairs;t++) fout <<rcut[u][t]<< " ";
+        fout << endl;
       }
       fout << "#--------------------------------------------------------------#\n";
       fout.close();
-      cout << " Summary of neighbour and bond lists saved into log file: "<<log_file <<tag <<endl;
+      //cout << " Summary of neighbour and bond lists saved into log file: "<<log_file <<tag <<endl;
     }
 
     void sort_by_distance_3vec(vector<ntype>* dist, vector<int>* a, vector<vec>* b)
@@ -168,9 +170,10 @@ class Neigh_and_Bond_list
       return;
     }
 
-    void init(string s_rcut, int Nshell_, int p1half_, int N_, int nTypes_, string log_file_, bool debug)
+    void init(string s_rcut, int Nshell_, int p1half_, int N_, int nTypes_, string log_file_, string tag_, bool debug)
     {
       log_file = log_file_;
+      tag=tag_;
       Nshell=Nshell_;
       N=N_;
       nTypes=nTypes_;
@@ -268,10 +271,10 @@ class Neigh_and_Bond_list
       }
       // sort bond_list according to bond_list_rijSq
       for(u=0;u<Nshell;u++) sort_by_distance_2vec( &bond_list_rijSq[u], &bond_list[u]);
+      print_bond_summary(ps); // to the log file
       if(debug)
       {
         cout << " * Build neighbour and bond lists DONE\n";
-        print_bond_summary(ps);
         cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       }
       return;

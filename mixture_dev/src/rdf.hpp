@@ -77,11 +77,11 @@ class RDF_Calculator
           ave2[tp].resize(nbins);
           //if(t1!=t2) normalization =     Nt_[t1]/V * 4.0*M_PI/3.0 * Nt_[t2]/2.0; // * 2.0; // multiply by 2 because it's off-diagonal
           //else       normalization = (Nt_[t1]-1)/V * 4.0*M_PI/3.0 * Nt_[t2]/2.0;
-          if(t1!=t2) normalization =     Nt_[t1]*Nt_[t2]/V * 4.0*M_PI/3.0 *2.0;
-          else       normalization = Nt_[t1]*(Nt_[t1]-1)/V * 4.0*M_PI/3.0;
+          if(t1!=t2) normalization =     Nt_[t1]*Nt_[t2]/2.0/V * 4.0*M_PI/3.0 *2.0;
+          else       normalization = Nt_[t1]*(Nt_[t1]-1)/2.0/V * 4.0*M_PI/3.0;
           // normalization:
-          //    N[t1]*N[t2] / V = average density of unordered pairs i(t1) != j(t2)
-          //    N[t1]*(N[t1]-1) /V = average density of pairs unordered i(t1) != j(t1)
+          //    N[t1]*N[t2]/2 / V = average density of ordered pairs i(t1) < j(t2)
+          //    N[t1]*(N[t1]-1)/2 /V = average density of ordered pairs i(t1) < j(t1)
           //    4*pi/3*((r_2)^3 - (r_1)^3) = volume of the shell
           //    the off-diagonal part must be further divided by 2
           shell1 = 0.0;
@@ -115,8 +115,7 @@ class RDF_Calculator
       }
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
       for(i=0;i<N;i++){
-        for(j=0;j<N;j++){
-          if(i==j) continue;
+        for(j=i+1;j<N;j++){
           rij = ps[j].r - ps[i].r; // real distance
           r = rij.norm();
           r_mic = (rij - box*round(boxInv*rij)).norm(); // first periodic image

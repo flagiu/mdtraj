@@ -179,6 +179,7 @@ public:
     s_log="log";
     s_atom_label="labels";
     ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::out);
+    fout << "LOG SUMMARY"<<endl;
     fout.close();
     period = -1; // default: don't average over t0 for MSD
     remove_rot_dof = false;
@@ -349,7 +350,7 @@ public:
     if(maxshell>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(s_rcut, maxshell, p1half, N, nTypes, s_log, debug);
+      n_b_list->init(s_rcut, maxshell, p1half, N, nTypes, s_log, tag, debug);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
     if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);

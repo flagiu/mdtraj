@@ -20,7 +20,8 @@ def int2types(t, nTypes):
     return None,None
 
 def linMap(x,a,b,c,d):
-   y=(x-a)/(b-a)*(d-c)+c
+   if a==b: y=c
+   else:    y=(x-a)/(b-a)*(d-c)+c
    return y
 linestyles = ['solid','dashed','dashdot','dotted']
 
@@ -82,12 +83,12 @@ for i in range(npairs):
         lab = "%d-%d"%( ti,tj )
     if len(ign)>0 and (ti==ign).any() or (tj==ign).any():
         continue # ignore this g(r) (but keep it for g_tot(r))
-    
+
     ls = linestyles[ti]
     red = linMap(tj, 0,ntypes-1, 0,1)
     blue = linMap(tj, 0,ntypes-1, 1,0)
     green = 0.0 #linMap(ti, 0,npairs-1, 0.2,1)
-    
+
     #ax.errorbar(r,g,g_, label=lab, color=(red,green,blue,0.7))
     ax.plot(r,g, label=lab, color=(red,green,blue,0.7), linestyle=ls)
 ax.plot(r,g_tot, label="total", color=(0,0,0,0.7))

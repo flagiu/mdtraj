@@ -252,40 +252,51 @@ public:
   mymatrix<ntype,Nr,Nc> inverse() const
   {
     mymatrix<ntype,Nr,Nc> m;
-    ntype d;
+    ntype de;
     if (rows()==2 && cols()==2) {
-       d = M[0][0]*M[1][1] - M[0][1]*M[1][0];
-       if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
-       m[0][0] =  M[1][1]/d;
-       m[0][1] = -M[0][1]/d;
-       m[1][0] = -M[1][0]/d;
-       m[1][1] =  M[0][0]/d;
+       de = M[0][0]*M[1][1] - M[0][1]*M[1][0];
+       if( de==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+       m[0][0] =  M[1][1]/de;
+       m[0][1] = -M[0][1]/de;
+       m[1][0] = -M[1][0]/de;
+       m[1][1] =  M[0][0]/de;
     }
     else if (rows()==3 && cols()==3) {
-      /* // hard-coded minors
+      // hard-coded minors
+      ntype a,b,c,d,e,f,g,h,i;
       ntype A,B,C,D,E,F,G,H,I;
-      A = (M[1][1]*M[2][2]-M[1][2]*M[2][1]);
-      B =-(M[1][0]*M[2][2]-M[1][2]*M[2][0]);
-      C = (M[1][0]*M[2][1]-M[1][1]*M[2][0]);
-      D =-(M[0][1]*M[2][2]-M[0][2]*M[2][1]);
-      E = (M[0][0]*M[2][2]-M[0][2]*M[2][0]);
-      F =-(M[0][0]*M[2][1]-M[0][1]*M[2][0]);
-      G = (M[0][1]*M[1][2]-M[0][2]*M[1][1]);
-      H =-(M[0][0]*M[1][2]-M[0][2]*M[1][0]);
-      I = (M[0][0]*M[1][1]-M[0][1]*M[1][0]);
-      d = M[0][0]*A + M[0][1]*B + M[0][2]*C;
-      if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
-      m[0][0]=A/d;
-      m[0][1]=B/d;
-      m[0][2]=C/d;
-      m[1][0]=D/d;
-      m[1][1]=E/d;
-      m[1][2]=F/d;
-      m[2][0]=G/d;
-      m[2][1]=H/d;
-      m[2][2]=I/d;
-      */
+      a=M[0][0];
+      b=M[0][1];
+      c=M[0][2];
+      d=M[1][0];
+      e=M[1][1];
+      f=M[1][2];
+      g=M[2][0];
+      h=M[2][1];
+      i=M[2][2];
+      A = (e*i-f*h);
+      B =-(d*i-f*g);
+      C = (d*h-e*g);
+      D =-(b*i-c*h);
+      E = (a*i-c*g);
+      F =-(a*h-b*g);
+      G = (b*f-c*e);
+      H =-(a*f-c*d);
+      I = (a*e-b*d);
+      de = a*A + b*B + c*C;
+      if( de==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+      m[0][0]=A/de; // now transpose the entries!!
+      m[1][0]=B/de;
+      m[2][0]=C/de;
+      m[0][1]=D/de;
+      m[1][1]=E/de;
+      m[2][1]=F/de;
+      m[0][2]=G/de;
+      m[1][2]=H/de;
+      m[2][2]=I/de;
+
       // Cayley method
+      /*
        d = det();
        if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
        ntype trace, traceSq;
@@ -296,6 +307,7 @@ public:
        trace = tr();
        traceSq = sq.tr();
        m = ( ( 0.5*(trace*trace - traceSq)*eye ) - ( trace*self ) + sq ) / d;
+       */
     }
     else { cout << "[ERROR: inverse() not yet implemented for " << rows() << "x" << cols() << " matrices.]"<<endl; exit(1); }
     return m;

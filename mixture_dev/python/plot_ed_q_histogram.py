@@ -80,8 +80,8 @@ parser.add_argument('--logScale', type=bool,
 args = parser.parse_args()
 
 header=args.indat.readline()
-rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
-rcuts = [float(rc) for rc in rcuts_str]
+#rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
+#rcuts = [float(rc) for rc in rcuts_str]
 
 #--------------------------------------------------------------------------------------------------------#
 labels=[]
