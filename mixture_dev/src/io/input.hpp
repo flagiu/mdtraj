@@ -202,7 +202,7 @@ read_xyz_frame(fstream &i, bool resetN)
         ps[j].r[0] = stof(b);
         ps[j].r[1] = stof(c);
         ps[j].r[2] = stof(d);
-        Nt[cur_type]++;
+        if(resetN) Nt[cur_type]++;
       }
       if(resetN) nTypes = cur_type+1;
     }

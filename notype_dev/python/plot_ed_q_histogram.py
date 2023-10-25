@@ -14,27 +14,24 @@ outpng="ed_q_hist.png"
 outpdf="ed_q_hist.pdf"
 cnMIN=2
 cnMAX=12
-class_labels_ordered = ['g','f','d','c','a','b','e']
-class_explanations_ordered =  [
-    'octahedral',
-    '5-fold defective octahedral',
-    '4-fold planar defective octahedral',
-    '4-fold defective octahedral',
-    '3-fold planar defective octahedral',
-    '3-fold pyramidal defective octahedral',
-    'tetrahedral',
-]
-class_expl_ordered =  [
-    'oct.',
-    '5x def. oct.',
-    '4x plan. def. oct.',
-    '4x def. oct.',
-    '3x plan. def. oct.',
-    '3x pyr. def. oct.',
-    'tetr.',
-]
-class_q_values = [ 0., 1./3., 0.5, 5./8., 3./4., 7./8., 1. ]
-class_cn_values = [6,5,4,4,3,3,4]
+class LocalStructure:
+    def __init__(self, label:str, explanation:str, expl:str, cn:int, q:float, q_boundaries ):
+        self.label = label
+        self.explanation = explanation
+        self.expl = expl
+        self.cn = int(cn)
+        self.q = float(q)
+        self.q_boundaries = q_boundaries
+
+localStructures = (
+    LocalStructure( 'a', '3-fold planar defective octahedral', '3x plan. def. oct.', 3, 3./4., (0.6,0.8) ),
+    LocalStructure( 'b', '3-fold pyramidal defective octahedral', '3x pyr. def. oct.', 3, 7./8., (0.8,1.0) ),
+    LocalStructure( 'c', '4-fold defective octahedral', '4x def. oct.', 4, 5./8., (.5,.8) ),
+    LocalStructure( 'd', '4-fold planar defective octahedral', '4x plan. def. oct.', 4, .5, (0.4,0.5) ),
+    LocalStructure( 'e', 'tetrahedral', 'tetr.', 4, 1., (0.8,1.0) ),
+    LocalStructure( 'f', '5-fold defective octahedral', '5x def. oct.', 5, 1./3., (.1,.5) ),
+    LocalStructure( 'g', 'octahedral', 'oct.', 6, 0., (-.1,.1) )
+)
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
@@ -68,6 +65,10 @@ parser.add_argument('--logScale', type=bool,
                      default=False, required=False,
                      help="Use log scale for y axis?. [default: %(default)s]"
 )
+parser.add_argument('--density', type=bool,
+                     default=False, required=False,
+                     help="Plot probability density? Else, plot probability. [default: %(default)s]"
+)
 
 args = parser.parse_args()
 
@@ -85,7 +86,7 @@ if len(x)==0:
     exit(1)
 # filter by coordination number
 coordnum = x[:,2]
-if len(args.cn)==2:
+if len(args.cn)==2 and args.cn[0]>0 and args.cn[1]>=args.cn[0]:
     selection = (coordnum>=args.cn[0]) & (coordnum<=args.cn[1])
 else:
     print("[ ERROR: argument --cn must be followed by 2 positive integers. ]\n")
@@ -113,10 +114,28 @@ indices = x[:,1]
 coordnum = x[:,2]
 coordnum_u = np.unique(coordnum)
 data = x[:,3]
-
+#---------------------------------------------------------#
+# analysis
+f = open("ed_q_structures.txt","w")
+f.write("[Local structure]\n")
+f.write("| Counts | % within same coord.num. |\n")
+f.write("|-----------------------------------|\n")
+for ls in localStructures:
+    f.write(f"[{ls.expl}]\n")
+    for typ in types_u:
+        selection = (coordnum==ls.cn)
+        total = len(data[selection])
+        selection = selection & (data>ls.q_boundaries[0]) & (data<=ls.q_boundaries[1])
+        count = len(data[selection])
+        f.write(f"{count}\t{count/total*100:.2f}\n")
+f.write("|-----------------------------------|\n")
+f.close()
+print("%s: Analysis printed to ed_q_structures.txt \n"%(sys.argv[0]))
+#---------------------------------------------------------#
+# plot
 fig, ax = plt.subplots(figsize=(10,6))
 ax.set_xlabel("Order parameter q")
-ax.set_ylabel("Probability")
+ax.set_ylabel("Probability density") if args.density else: ax.set_ylabel("Probability")
 title=r"$r_{cut}=%.2f$ $\AA$"%rcut1
 if args.i>=0:
     title += r", particle $i=%d$"%args.i
@@ -126,9 +145,14 @@ cn2col = {}
 for i,cn in enumerate(coordnum_u):
     cn2col[cn] = cmap( 0.5 if len(coordnum_u)==1 else i/(len(coordnum_u)-1) )
     selection = coordnum==cn
-    counts,edges = np.histogram(data[selection], bins=args.nbins, density=None)
-    ax.stairs(counts/counts.sum(), edges,
-        label=r"$N_c=%d$""\n(%d events)"%(cn, counts.sum()),
+    counts,edges = np.histogram(data[selection], bins=args.nbins, density=args.density)
+    total = len(data[selection])
+    if args.density:
+        probs = counts
+    else:
+        probs = counts/total if total>0 else counts
+    ax.stairs(probs, edges,
+        label=r"$N_c=%d$""\n(%d events)"%(cn, total),
         color=cn2col[cn], alpha=0.7, linewidth=2, zorder=9999 # plot on top of all!
     )
     #bin_centers = 0.5*(x[1:]+x[:-1])
@@ -137,20 +161,16 @@ for i,cn in enumerate(coordnum_u):
     #ax.plot(bin_centers, density(bin_centers), color=cn2col[cn], alpha=0.7, linewidth=1, zorder=9999 )
 Xmin = ax.get_xlim()[0]
 Xmax = ax.get_xlim()[1]
-for cn in coordnum_u:
-    for i in range(len(class_q_values)):
-        if class_cn_values[i]!=cn:
-            continue
-        xlo = min(0.0, Xmin) if i==0                   else 0.5*(class_q_values[i-1]+class_q_values[i])
-        xhi = max(1.0, Xmax) if i==len(class_q_values)-1 else 0.5*(class_q_values[i]+class_q_values[i+1])
-        # frac=(i+1)/(len(class_q_values)+1)
-        # ax.axvspan(xlo,xhi, color=(frac,frac,frac,0.3))
-        ax.axvline(class_q_values[i], linestyle='--', color=cn2col[class_cn_values[i]], alpha=0.7)
-        ax.text(
-            class_q_values[i]+0.01, ax.get_ylim()[-1]-0.01, class_expl_ordered[i],
-            horizontalalignment='right', verticalalignment='top', rotation=90, rotation_mode='anchor',
-            color=cn2col[class_cn_values[i]], alpha=0.7
-        )
+for ls in localStructures:
+    if ls.cn!=cn:
+        continue
+    #ax.axvspan(ls.q_boundaries[0], ls.q_boundaries[1], color=cmap(ls.q), alpha=0.1)
+    ax.axvline(ls.q, linestyle='--', color=cn2col[ls.cn], alpha=0.7)
+    ax.text(
+        ls.q-0.01, ax.get_ylim()[-1]-0.01, ls.expl,
+        horizontalalignment='right', verticalalignment='bottom', rotation=90, rotation_mode='anchor',
+        color=cn2col[ls.cn], alpha=0.7
+    )
 ax.set_xlim( (min(0.0, Xmin),max(1.0, Xmax)) )
 if args.logScale:
     ax.set_yscale("log")

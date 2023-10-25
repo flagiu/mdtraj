@@ -25,11 +25,12 @@ class RDF_Calculator
     void int2types(int t, int *t1, int *t2){
       int x,low,high;
       for(x=0; x<nTypes; x++){
-        low = x * nTypes - x*(x-1)/2;
-        high = (x+1) * nTypes - x*(x-1)/2 - 1;
+        low = x * nTypes - int(x*(x-1)/2);
+        high = (x+1) * nTypes - int((x+1)*x/2) - 1;
         if(t>=low && t<=high){
           *t1 = x;
-          *t2 = t-low;
+          *t2 = x + (t-low);
+          break;
         }
       }
       return;
@@ -65,6 +66,9 @@ class RDF_Calculator
       value.resize(nTypePairs);
       ave.resize(nTypePairs);
       ave2.resize(nTypePairs);
+      cout << "Nt = ";
+      for(t1=0;t1<nTypes;t1++) cout <<Nt_[t1]<<" ";
+      cout<<endl;
       for(t1=0;t1<nTypes;t1++)
       {
         for(t2=t1;t2<nTypes;t2++)
@@ -77,13 +81,13 @@ class RDF_Calculator
           ave2[tp].resize(nbins);
           //if(t1!=t2) normalization =     Nt_[t1]/V * 4.0*M_PI/3.0 * Nt_[t2]/2.0; // * 2.0; // multiply by 2 because it's off-diagonal
           //else       normalization = (Nt_[t1]-1)/V * 4.0*M_PI/3.0 * Nt_[t2]/2.0;
-          if(t1!=t2) normalization =     Nt_[t1]*Nt_[t2]/2.0/V * 4.0*M_PI/3.0 *2.0;
-          else       normalization = Nt_[t1]*(Nt_[t1]-1)/2.0/V * 4.0*M_PI/3.0;
+          if(t1!=t2) normalization =     Nt_[t1]*Nt_[t2]/V * 4.0*M_PI/3.0 *2.0;
+          else       normalization = Nt_[t1]*(Nt_[t1]-1)/V * 4.0*M_PI/3.0;
           // normalization:
           //    N[t1]*N[t2]/2 / V = average density of ordered pairs i(t1) < j(t2)
           //    N[t1]*(N[t1]-1)/2 /V = average density of ordered pairs i(t1) < j(t1)
           //    4*pi/3*((r_2)^3 - (r_1)^3) = volume of the shell
-          //    the off-diagonal part must be further divided by 2
+          //    the off-diagonal part must be further divided by 2 because of the symmetry between t1 and t2
           shell1 = 0.0;
           for(k=0; k<nbins; k++){
             bins[k] = (k+0.5)*binw; // take the center of the bin for histogram
@@ -115,7 +119,8 @@ class RDF_Calculator
       }
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
       for(i=0;i<N;i++){
-        for(j=i+1;j<N;j++){
+        for(j=0;j<N;j++){
+          if(i==j) continue;
           rij = ps[j].r - ps[i].r; // real distance
           r = rij.norm();
           r_mic = (rij - box*round(boxInv*rij)).norm(); // first periodic image

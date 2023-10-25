@@ -57,11 +57,12 @@ class Neigh_and_Bond_list
     void int2types(int t, int *t1, int *t2){
       int x,low,high;
       for(x=0; x<nTypes; x++){
-        low = x * nTypes - x*(x-1)/2;
-        high = (x+1) * nTypes - x*(x-1)/2 - 1;
+        low = x * nTypes - int(x*(x-1)/2);
+        high = (x+1) * nTypes - int((x+1)*x/2) - 1;
         if(t>=low && t<=high){
           *t1 = x;
-          *t2 = t-low;
+          *t2 = x + (t-low);
+          break;
         }
       }
       return;
