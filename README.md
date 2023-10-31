@@ -55,3 +55,4 @@ The subfolder examples/ contains some example of application to real or toy syst
 - Add example with antimony?
 - Add logarithmic timestep?
 - Add more input formats? GROMACS, ...
+- Add structural quasi-entropy? [Oganov,Valle,2008]
