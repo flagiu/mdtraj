@@ -372,7 +372,7 @@ public:
     }
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
-      rdf_calculator->init(rdf_binw, L, N, V, nTypes, Nt, s_rdf, tag);
+      rdf_calculator->init(rdf_binw, box, N, V, nTypes, Nt, s_rdf, tag);
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();

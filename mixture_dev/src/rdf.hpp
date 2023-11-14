@@ -42,7 +42,7 @@ class RDF_Calculator
     }
     virtual ~RDF_Calculator(){}
 
-    void init(ntype binw_, vec box_diagonal, int N, ntype V, int nTypes_, int* Nt_, string string_out_, string tag_)
+    void init(ntype binw_, mat box, int N, ntype V, int nTypes_, int* Nt_, string string_out_, string tag_)
     {
       string_out = string_out_;
       tag = tag_;
@@ -50,8 +50,11 @@ class RDF_Calculator
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
       int k,t1,t2,tp;
-      ntype r, shell1, shell2, normalization;
-      nbins = int(floor( 0.5*box_diagonal.abs().min() / binw ));
+      ntype twice_rmax, r, shell1, shell2, normalization;
+      // r_max = 1/2 * max( |ax+bx+cx|, |ay+by+cy|, |az+bz+cz| ) for minimum image convention
+      twice_rmax = max( fabs(box[0][0]+box[0][1]+box[0][2]), fabs(box[1][0]+box[1][1]+box[1][2]) );
+      twice_rmax = max( twice_rmax, fabs(box[2][0]+box[2][1]+box[2][2]) );
+      nbins = int(floor( 0.5*twice_rmax / binw ));
       bins.resize(nbins);
 
       shell1 = 0.0;
