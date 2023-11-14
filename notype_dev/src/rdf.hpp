@@ -26,10 +26,9 @@ class RDF_Calculator
       string_out = string_out_;
       tag = tag_;
       binw = binw_;
-      // r_max = 1/2 * max( |ax+bx+cx|, |ay+by+cy|, |az+bz+cz| ) for minimum image convention
-      ntype twice_rmax = max( fabs(box[0][0]+box[0][1]+box[0][2]), fabs(box[1][0]+box[1][1]+box[1][2]) );
-      twice_rmax = max( twice_rmax, fabs(box[2][0]+box[2][1]+box[2][2]) );
-      nbins = int(floor( 0.5*twice_rmax / binw ));
+      // r_max = 1/2 * min( |ax+bx+cx|, |ay+by+cy|, |az+bz+cz| ) for minimum image convention
+      ntype rmax = 0.5* min( min( fabs(box[0][0]+box[0][1]+box[0][2]), fabs(box[1][0]+box[1][1]+box[1][2]) ), fabs(box[2][0]+box[2][1]+box[2][2]) );
+      nbins = int(floor( rmax / binw ));
       bins.resize(nbins);
       norm.resize(nbins);
       value.resize(nbins);
