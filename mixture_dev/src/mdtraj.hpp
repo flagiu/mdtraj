@@ -337,7 +337,9 @@ public:
 
     ss.str(std::string());  ss << s_atom_label << tag << ".dat"; fout.open(ss.str(), ios::out);
     for(auto a=0;a<nTypes;a++) {
-      if(filetype==FileType::XYZ_CP2K) fout << type_names[a] <<" "<<Nt[a]<<endl;
+      if(filetype==FileType::XYZ_CP2K ||
+        filetype==FileType::XDATCAR || filetype==FileType::XDATCARV ||
+        filetype==FileType::YUHAN) fout << type_names[a] <<" "<<Nt[a]<<endl;
       else                             fout << a <<" "<<Nt[a]<<endl;
     }
     fout.close();

@@ -81,8 +81,8 @@ parser.add_argument('--density', type=bool,
 args = parser.parse_args()
 
 header=args.indat.readline()
-#rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
-#rcuts = [float(rc) for rc in rcuts_str]
+rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
+rcuts = [float(rc) for rc in rcuts_str]
 
 #--------------------------------------------------------------------------------------------------------#
 labels=[]
@@ -170,7 +170,8 @@ for ls in localStructures:
         total = len(data[selection])
         selection = selection & (data>ls.q_boundaries[0]) & (data<=ls.q_boundaries[1])
         count = len(data[selection])
-        f.write(f"{labels[typ]}\t{count}\t{count/total*100:.2f}\n")
+        perc = count/total*100 if total>0 else 0.0
+        f.write(f"{labels[typ]}\t{count}\t{perc:.2f}\n")
 f.write("|-----------------------------------------------|\n")
 f.close()
 print("%s: Analysis printed to ed_q_structures.txt \n"%(sys.argv[0]))

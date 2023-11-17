@@ -68,9 +68,6 @@ class RDF_Calculator
       value.resize(nTypePairs);
       ave.resize(nTypePairs);
       ave2.resize(nTypePairs);
-      cout << "Nt = ";
-      for(t1=0;t1<nTypes;t1++) cout <<Nt_[t1]<<" ";
-      cout<<endl;
       for(t1=0;t1<nTypes;t1++)
       {
         for(t2=t1;t2<nTypes;t2++)

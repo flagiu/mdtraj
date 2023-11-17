@@ -29,7 +29,8 @@ parser.add_argument('--fskip1', type=float,
 args = parser.parse_args()
 
 header=args.indat.readline()
-rcut1 = float( header.split("# cutoff =")[1].split(',')[0] )
+rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
+rcuts = [float(rc) for rc in rcuts_str]
 
 x = np.loadtxt(args.indat)
 n = len(x)
@@ -47,7 +48,6 @@ bins = np.arange(left_of_first_bin, right_of_last_bin + d, d)
 fig, ax = plt.subplots(dpi=200)
 ax.set_xlabel("Coordination Number")
 ax.set_ylabel("Counts")
-ax.set_title(r"$r_{cut}=%.2f$ $\AA$"%rcut1)
 ax.hist(data, bins=bins, ec = "black", rwidth=0.8, density=True)
 ax.set_ylabel("Density")
 ax.set_yscale("log")

@@ -270,6 +270,7 @@ void Trajectory<ntype, ptype>::
 read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
 {
     string line, a,b,c,d;
+    stringstream ss;
     ntype s;
     int format;
     if(resetN || !constantBox) {
@@ -295,11 +296,32 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
 
 	    getline(i,line); // line 6
 	    if(debug) cout << "  Line 6: species = " << line << endl;
+      if(resetN)
+      {
+        ss<<line;
+        int cur_type=0;
+        while(ss>>a)
+        {
+          type_names[cur_type]=a;
+          cur_type++;
+        }
+        nTypes = cur_type;
+        ss.str(std::string()); ss.clear(); // clear the string stream!
+      }
 
 	    getline(i,line); // line 7
-	    istringstream(line) >> a >> b; // MULTI-SPECIES TO BE IMPLEMENTED
-	    N = stoi(a);
-	    if(debug) cout << "  Line 7: number of species 1 = " << N << endl;
+	    if(debug) cout << "  Line 7: number of atoms per species = " << line << endl;
+      if(resetN)
+      {
+        ss<<line;
+        N=0;
+        for(int cur_type=0;cur_type<nTypes;cur_type++)
+        {
+          ss>>a;
+          Nt[cur_type]=stoi(a);
+          N += Nt[cur_type];
+        }
+      }
     }
     getline(i,line); // line 8
     istringstream(line) >> a >> b >> c;
@@ -314,12 +336,20 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
       if(constantBox) nframes = (nlines - 7) / (1+N);
       else            nframes = nlines / (8+N); // 8 system info + N position lines
     }
-    for(auto &p: ps) {
-      p.read_3cols(i); // N particle lines
+    int cur_type=0;
+    int cumulative_Nt=Nt[cur_type];
+    for(int j=0;j<N;j++) {
+      if(j==cumulative_Nt)
+      {
+        cur_type++;
+        cumulative_Nt+=Nt[cur_type];
+      }
+      ps[j].read_3cols(i); // N particle lines
+      ps[j].label = cur_type;
       // from direct to cartesian
-      if(format==0) p.r = box*p.r; // x' = (x*ax + y*bx + z*cx) etc.
+      if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
       // already cartesian: must only be scaled by s
-      else if(format==1) p.r*=s;
+      else if(format==1) ps[j].r*=s;
     }
 }
 
