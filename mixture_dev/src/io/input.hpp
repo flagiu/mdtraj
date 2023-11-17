@@ -27,6 +27,10 @@ read_frame(fstream &i, bool resetN, int frameIdx)
         read_contcar_frame(i, resetN);
         timestep+=dtframe; // artificial time
         break;
+      case FileType::POSCAR:
+        read_poscar_frame(i, resetN);
+        timestep+=dtframe; // artificial time
+        break;
       case FileType::ALPHANES:
         read_alphanes_frame(i, resetN);
         timestep+=dtframe; // artificial time
@@ -212,6 +216,7 @@ void Trajectory<ntype, ptype>::
 read_contcar_frame(fstream &i, bool resetN)
 {
     string line, a,b,c,d;
+    stringstream ss;
     ntype s;
     int format;
 
@@ -239,11 +244,32 @@ read_contcar_frame(fstream &i, bool resetN)
 
     getline(i,line); // line 6
     if(debug) cout << "  Line 6: species = " << line << endl;
+    if(resetN)
+    {
+      ss<<line;
+      int cur_type=0;
+      while(ss>>a)
+      {
+        type_names[cur_type]=a;
+        cur_type++;
+      }
+      nTypes = cur_type;
+      ss.str(std::string()); ss.clear(); // clear the string stream!
+    }
 
     getline(i,line); // line 7
-    istringstream(line) >> a >> b; // MULTI-SPECIES TO BE IMPLEMENTED
-    N = stoi(a);
-    if(debug) cout << "  Line 7: number of species 1 = " << N << endl;
+    if(debug) cout << "  Line 7: number of atoms per species = " << line << endl;
+    if(resetN)
+    {
+      ss<<line;
+      N=0;
+      for(int cur_type=0;cur_type<nTypes;cur_type++)
+      {
+        ss>>a;
+        Nt[cur_type]=stoi(a);
+        N += Nt[cur_type];
+      }
+    }
 
     getline(i,line); // line 8
     if(debug) cout << "  Line 8: coordinates format = " << line << endl;
@@ -255,14 +281,113 @@ read_contcar_frame(fstream &i, bool resetN)
       ps.resize(N);
       nframes = nlines / (8+N+ 9+N+ 4+3*N); // N positions, N velocities, 3*N predictor-corrector
     }
-    for(auto &p: ps) {
-      p.read_3cols(i); // N particle lines
-      if(format==0) p.r = box*p.r; // x' = (x*ax + y*bx + z*cx) --> r' = r*Box
-      else if(format==1) p.r*=s;
+    int cur_type=0;
+    int cumulative_Nt=Nt[cur_type];
+    for(int j=0;j<N;j++)
+    {
+      if(j==cumulative_Nt)
+      {
+        cur_type++;
+        cumulative_Nt+=Nt[cur_type];
+      }
+      ps[j].read_3cols(i); // N particle lines
+      ps[j].label = cur_type;
+      // from direct to cartesian
+      if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
+      // already cartesian: must only be scaled by s
+      else if(format==1) ps[j].r*=s;
     }
 
     for(auto j=0;j<9+N;j++) getline(i,line); // skip velocities
     for(auto j=0;j<4+3*N;j++) getline(i,line); // skip predictor-corrector
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_poscar_frame(fstream &i, bool resetN)
+{
+    string line, a,b,c,d;
+    stringstream ss;
+    ntype s;
+    int format;
+
+    getline(i,line); // line 1
+    if(debug) cout << "\n  Line 1: " << line << endl;
+
+    getline(i,line); // line 2
+    istringstream(line) >> a;
+    s=stof(a);
+    if(debug) cout << "  Line 2: scaling factor = " << s << endl;
+
+    getline(i,line); // line 3
+    istringstream(line) >> a >> b >> c;
+    box[0] << s*stof(a), s*stof(b), s*stof(c);
+    getline(i,line); // line 4
+    istringstream(line) >> a >> b >> c;
+    box[1] << s*stof(a), s*stof(b), s*stof(c);
+    getline(i,line); // line 5
+    istringstream(line) >> a >> b >> c;
+    box[2] << s*stof(a), s*stof(b), s*stof(c);
+    box = box.T(); // !!!!!!!!!!!
+    if(debug) cout << "  Line 3-5: lattice vectors\n";
+    if(debug) box.show();
+    if(debug) boxInv.show();
+
+    getline(i,line); // line 6
+    if(debug) cout << "  Line 6: species = " << line << endl;
+    if(resetN)
+    {
+      ss<<line;
+      int cur_type=0;
+      while(ss>>a)
+      {
+        type_names[cur_type]=a;
+        cur_type++;
+      }
+      nTypes = cur_type;
+      ss.str(std::string()); ss.clear(); // clear the string stream!
+    }
+
+    getline(i,line); // line 7
+    if(debug) cout << "  Line 7: number of atoms per species = " << line << endl;
+    if(resetN)
+    {
+      ss<<line;
+      N=0;
+      for(int cur_type=0;cur_type<nTypes;cur_type++)
+      {
+        ss>>a;
+        Nt[cur_type]=stoi(a);
+        N += Nt[cur_type];
+      }
+    }
+
+    getline(i,line); // line 8
+    if(debug) cout << "  Line 8: coordinates format = " << line << endl;
+    if(line=="Direct" || line=="direct") format=0; // lattice units
+    else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
+    else { cout << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
+
+    if(resetN) {
+      ps.resize(N);
+      nframes = nlines / (8+N);
+    }
+    int cur_type=0;
+    int cumulative_Nt=Nt[cur_type];
+    for(int j=0;j<N;j++)
+    {
+      if(j==cumulative_Nt)
+      {
+        cur_type++;
+        cumulative_Nt+=Nt[cur_type];
+      }
+      ps[j].read_3cols(i); // N particle lines
+      ps[j].label = cur_type;
+      // from direct to cartesian
+      if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
+      // already cartesian: must only be scaled by s
+      else if(format==1) ps[j].r*=s;
+    }
 }
 
 template <class ntype, class ptype>

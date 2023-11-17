@@ -15,7 +15,7 @@ using namespace std;
 const string root_path="/home/flavio/programmi/mdtraj/mixture_dev";
 #define MAX_N_TYPES 5
 enum class FileType {
-  XYZ, XYZ_CP2K, CONTCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
+  XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
 };
 
 template<class ntype, class ptype>
@@ -46,7 +46,7 @@ public:
   Bond_Parameters<ntype,ptype> *bond_parameters;
   ED_Bond_Parameter<ntype,ptype> *ed_q_calculator;
   //
-  ntype rdf_binw;
+  ntype rdf_binw, rdf_rmax;
   RDF_Calculator<ntype,ptype> *rdf_calculator;
   //
   int qmodmin,qmodmax,qmodstep;
@@ -128,6 +128,7 @@ public:
     cout << " p2 = \t " << p2 << endl;
     cout << " MSD period = \t " << period << endl;
     cout << " rdf_binw = \t " << rdf_binw << endl;
+    cout << " rdf_rmax = \t " << rdf_rmax << endl;
     cout << " adf_binw = \t " << adf_binw << endl;
     cout << " q_mod_min,q_modmax,q_mod_step = \t " << qmodmin << ", " << qmodmax << ", "<< qmodstep << endl;
     cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
@@ -207,6 +208,7 @@ public:
     p1half=6;
     qldot_th = 0.65;
     rdf_binw=0.0;
+    rdf_rmax=0.0;
     qmodmin=2;
     qmodmax=100;
     qmodstep=1;
@@ -260,6 +262,7 @@ public:
   void read_frame(fstream &i, bool resetN, int frameIdx);
   void removeRotDof();
   void read_contcar_frame(fstream &i, bool resetN);
+  void read_poscar_frame(fstream &i, bool resetN);
   void read_xdatcar_frame(fstream &i, bool resetN, bool constantBox);
   void read_xyz_frame(fstream &i, bool resetN);
   void read_xyz_cp2k_frame(fstream &i, bool resetN);
@@ -279,9 +282,10 @@ public:
     if(debug) cout << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
     fin.open(s_in, ios::in);
 
-    if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
+    if(filetype==FileType::CONTCAR || filetype==FileType::POSCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
       timestep=-1; dtframe = 1;
-    } // set manual time for CONTCAR, ALPHANES, ALPHANES9 file format
+    } // set manual time for CONTCAR, POSCAR, ALPHANES, ALPHANES9 file format
+    //---------- Read 1st frame -------------//
     read_frame(fin, true, 0);
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
@@ -292,11 +296,18 @@ public:
     nskip1=int(fskip1*nframes);
     nframes_original = nframes;
     nframes = nframes - nskip0 - nskip1;
-    if(nframes<2) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
+    if(nframes<1) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
 
-    read_frame(fin, false, 1);
-    if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
-    if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
+    //---------- Read 2nd frame (if it exists) -------------//
+    try
+    {
+      read_frame(fin, false, 1);
+      if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
+      if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
+    } catch (...) {
+      cout << "WARNING: only 1 frame in trajectory.\n";
+      dtframe=1; // meaningless, but avoids nonsense later
+    }
     init_computations();
     if(debug) cout << "Initialized arrays for computations.\n";
     fin.close();
@@ -305,7 +316,8 @@ public:
     if(debug || verbose) cout << "#------- MAIN LOOP ------#\n";
     fin.open(s_in, ios::in);
     printProgress.init( nframes, 2000 ); // update % every 2000 ms
-    if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {timestep=-1; } // set manual time
+    if(filetype==FileType::CONTCAR || filetype==FileType::CONTCAR ||
+      filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {timestep=-1; } // set manual time
     string junk_line;
     if(filetype==FileType::XDATCARV) { for(int i=0;i<7;i++) getline(fin, junk_line); } // skip first 7 lines (so that you can use resetN=false)
     timer.go();
@@ -338,6 +350,7 @@ public:
     ss.str(std::string());  ss << s_atom_label << tag << ".dat"; fout.open(ss.str(), ios::out);
     for(auto a=0;a<nTypes;a++) {
       if(filetype==FileType::XYZ_CP2K ||
+        filetype==FileType::CONTCAR || filetype==FileType::POSCAR ||
         filetype==FileType::XDATCAR || filetype==FileType::XDATCARV ||
         filetype==FileType::YUHAN) fout << type_names[a] <<" "<<Nt[a]<<endl;
       else                             fout << a <<" "<<Nt[a]<<endl;
@@ -374,11 +387,11 @@ public:
     }
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
-      rdf_calculator->init(rdf_binw, box, N, V, nTypes, Nt, s_rdf, tag);
+      rdf_calculator->init(rdf_binw, rdf_rmax, box, N, V, nTypes, Nt, s_rdf, tag);
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();
-      adf_calculator->init(adf_binw, s_adf, tag);
+      adf_calculator->init(adf_binw, nTypes, s_adf, tag);
     }
     if(c_altbc) {
       altbc_calculator = new ALTBC_Calculator<ntype,ptype>();

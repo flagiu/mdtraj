@@ -122,12 +122,12 @@ f.write("| Counts | % within same coord.num. |\n")
 f.write("|-----------------------------------|\n")
 for ls in localStructures:
     f.write(f"[{ls.expl}]\n")
-    for typ in types_u:
-        selection = (coordnum==ls.cn)
-        total = len(data[selection])
-        selection = selection & (data>ls.q_boundaries[0]) & (data<=ls.q_boundaries[1])
-        count = len(data[selection])
-        f.write(f"{count}\t{count/total*100:.2f}\n")
+    selection = (coordnum==ls.cn)
+    total = len(data[selection])
+    selection = selection & (data>ls.q_boundaries[0]) & (data<=ls.q_boundaries[1])
+    count = len(data[selection])
+    perc= count/total*100 if total>0 else 0.0
+    f.write(f"{count}\t{perc:.2f}\n")
 f.write("|-----------------------------------|\n")
 f.close()
 print("%s: Analysis printed to ed_q_structures.txt \n"%(sys.argv[0]))
@@ -135,7 +135,7 @@ print("%s: Analysis printed to ed_q_structures.txt \n"%(sys.argv[0]))
 # plot
 fig, ax = plt.subplots(figsize=(10,6))
 ax.set_xlabel("Order parameter q")
-ax.set_ylabel("Probability density") if args.density else: ax.set_ylabel("Probability")
+ax.set_ylabel("Probability density") if args.density else ax.set_ylabel("Probability")
 title=r"$r_{cut}=%.2f$ $\AA$"%rcut1
 if args.i>=0:
     title += r", particle $i=%d$"%args.i

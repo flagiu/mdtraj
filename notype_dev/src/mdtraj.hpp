@@ -253,11 +253,12 @@ public:
     if(verbose || debug) {cout << "Begin of run():\n"; print_state();}
     nlines = getLineCount(s_in);
     if(debug) cout << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
-    fin.open(s_in, ios::in);
 
+    fin.open(s_in, ios::in);
     if(filetype==FileType::CONTCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
       timestep=-1; dtframe = 1;
     } // set manual time for CONTCAR, ALPHANES, ALPHANES9 file format
+    //---------- Read 1st frame -------------//
     read_frame(fin, true, 0);
     t0frame = timestep;
     if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
@@ -267,11 +268,18 @@ public:
     nskip1=int(fskip1*nframes);
     nframes_original = nframes;
     nframes = nframes - nskip0 - nskip1;
-    if(nframes<2) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
+    if(nframes<1) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
 
-    read_frame(fin, false, 1);
-    if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
-    if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
+    //---------- Read 2nd frame (if it exists) -------------//
+    try
+    {
+      read_frame(fin, false, 1);
+      if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
+      if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
+    } catch (...) {
+      cout << "WARNING: only 1 frame in trajectory.\n";
+      dtframe=1; // meaningless, but avoids nonsense later
+    }
     init_computations();
     if(debug) cout << "Initialized arrays for computations.\n";
     fin.close();

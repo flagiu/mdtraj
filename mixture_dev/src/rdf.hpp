@@ -9,12 +9,13 @@ class RDF_Calculator
   using vec=myvec<ntype,3>;
   using mat=mymatrix<ntype,3,3>;
   private:
-    ntype binw;
+    int image_convention=1; // 0: no images (cluster) ; 1: 1 replica (minimum image) ; -1: all replicas (crystal)
+    ntype binw, rmax;
     int nbins, nTypes, nTypePairs;
     vecflex<ntype> bins;
     vector< vecflex<ntype> > norm, value, ave, ave2;
     string string_out, myName, tag;
-    fstream fout;
+    fstream fout;\
     stringstream ss;
 
     int types2int(int ti, int tj){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
@@ -42,7 +43,7 @@ class RDF_Calculator
     }
     virtual ~RDF_Calculator(){}
 
-    void init(ntype binw_, mat box, int N, ntype V, int nTypes_, int* Nt_, string string_out_, string tag_)
+    void init(ntype binw_, ntype rmax_, mat box, int N, ntype V, int nTypes_, int* Nt_, string string_out_, string tag_)
     {
       string_out = string_out_;
       tag = tag_;
@@ -50,9 +51,18 @@ class RDF_Calculator
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
       int k,t1,t2,tp;
-      ntype rmax, r, shell1, shell2, normalization;
-      // r_max = 1/2 * min( |ax+bx+cx|, |ay+by+cy|, |az+bz+cz| ) for minimum image convention
-      rmax = 0.5* min( min( fabs(box[0][0]+box[0][1]+box[0][2]), fabs(box[1][0]+box[1][1]+box[1][2]) ), fabs(box[2][0]+box[2][1]+box[2][2]) );
+      ntype r, r_limit, shell1, shell2, normalization;
+      // r_limit = 1/2 * min( |ax+bx+cx|, |ay+by+cy|, |az+bz+cz| ) for minimum image convention
+      r_limit = 0.5* min( min( fabs(box[0][0]+box[0][1]+box[0][2]), fabs(box[1][0]+box[1][1]+box[1][2]) ), fabs(box[2][0]+box[2][1]+box[2][2]) );
+      if(rmax_<=0) rmax = r_limit;
+      else
+      {
+        rmax = rmax_;
+        if(rmax<binw) { cout << "[ERROR: bin_width > r_max for g(r) ! ]\n"; exit(1);}
+        if(rmax>r_limit) {
+          cout << "WARNING: r_max="<<rmax<<" with r_limit="<<r_limit<<" may result in artefacts.\n";
+        }
+      }
       nbins = int(floor( rmax / binw ));
       bins.resize(nbins);
 
@@ -149,6 +159,7 @@ class RDF_Calculator
         }
       }
       fout.close();
+      
       if(frameidx == (nframes-1)){
           ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
           for(k=0; k<nbins; k++)
@@ -162,7 +173,8 @@ class RDF_Calculator
             for(tp=0;tp<nTypePairs;tp++)
             {
               ave2[tp][k] /= nframes;
-              fout << sqrt( (ave2[tp][k]-ave[tp][k]*ave[tp][k])/(nframes -1) );
+              if(nframes>1) fout << sqrt( (ave2[tp][k]-ave[tp][k]*ave[tp][k])/(nframes -1) );
+              else  fout << 0.0;
               if(tp<nTypePairs-1) fout << " ";
               else fout << endl;
             }

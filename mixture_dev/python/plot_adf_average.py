@@ -27,12 +27,12 @@ linestyles = ['solid','dashed','dashdot','dotted']
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
-                    description = 'Plots the RDF for each pair of types.',
+                    description = 'Plots the ADF for each type of central atom and for each pair of types for the edge atoms.',
                     epilog='End of the summary.'
 )
 parser.add_argument('--inavg',  type=argparse.FileType('r'),
-                     default="rdf.ave", required=False,
-                     help="Input file with average RDF (r | g_00 g_01 ... | errors). [default: %(default)s]"
+                     default="adf.ave", required=False,
+                     help="Input file with average ADF (cosine | 0-0-0 0-0-1 0-0-2 ... 1-0-1 1-0-2 ... 0-1-0 0-1-1 ... | errors). [default: %(default)s]"
 )
 parser.add_argument('--inlabels',  type=argparse.FileType('r'),
                      default="labels.dat", required=False,
@@ -49,13 +49,20 @@ parser.add_argument('--yshift',  type=float,
 
 args = parser.parse_args()
 
-outpng="rdf.png"
-outpdf="rdf.pdf"
+outname="adf"
 
 X = np.loadtxt(args.inavg.name)
-r = X[:,0]
-npairs = int( (X.shape[1]-1)/2 )
-ntypes = int(np.floor( (2*npairs)**0.5 ))
+x = X[:,0]
+ntriplets = int( (X.shape[1]-1)/2 )
+ntypes = int(np.floor( (2*ntriplets)**(1/3.) ))
+npairs = int(ntypes*(ntypes+1)/2)
+
+#----------- Convert from cos(angle) to angle ----------------#
+jacob = np.sqrt(1-x*x)
+x = np.arccos( x ) * 180/np.pi # (degrees)
+for i in range(ntriplets*2):
+    X[:,i+1] *= jacob
+#-------------------------------------------------------------#
 
 labels=[]
 Nt=[]
@@ -67,42 +74,45 @@ for line in lines:
     Nt.append(int(nt))
 Nt=np.array(Nt)
 xt=Nt/np.sum(Nt) #Fraction
-print(" plot_rdf_average.py: Atom types:",labels,". Occurrence:",Nt,". Fraction:",xt)
+print(" plot_adf_average.py: Atom types:",labels,". Occurrence:",Nt,". Fraction:",xt)
 ign=np.array(args.ignore)
 ign_labels = [ labels[ig] for ig in args.ignore ]
-print(" plot_rdf_average.py: List of types to be ignored:",ign_labels)
+print(" plot_adf_average.py: List of types to be ignored:",ign_labels)
 
 fig, ax = plt.subplots()
-ax.set_xlabel(r"$r$ [$\AA$]")
-ax.set_ylabel(r"$g(r)$")
-g_tot = np.zeros_like(r)
-for i in range(npairs):
-    g = X[:,1+i]
-    g_ = X[:,1+i+npairs]
-    ti,tj = int2types(i, ntypes)
-    g_tot += (xt[ti]*xt[tj]*g if ti==tj else 2*xt[ti]*xt[tj]*g) # total g(r) of all types (also ignored)
-    if len(labels)>0:
-        lab = "%s-%s"%( labels[ti],labels[tj] )
-    else:
-        lab = "%d-%d"%( ti,tj )
-    if len(ign)>0 and (ti==ign).any() or (tj==ign).any():
-        continue # ignore this g(r) (but keep it for g_tot(r))
+ax.set_xlabel(r"Angle [degrees]")
+ax.set_ylabel(r"ADF")
+y_tot = np.zeros_like(x)
+for ti in range(ntypes):
+    for tp in range(npairs):
+        idx = ti*npairs+tp
+        y = X[:,1+idx]
+        y_ = X[:,1+idx+ntriplets]
+        tj,tk = int2types(tp, ntypes)
+        y_tot += 0.0 #(xt[ti]*xt[tj]*xt[tk]*y if tj==tk else 2*xt[ti]*xt[tj]*x[tk]*y)
+        if len(labels)>0:
+            lab = "%s-%s-%s"%( labels[tj],labels[ti],labels[tk] )
+        else:
+            lab = "%d-%d-%d"%( tj,ti,tk )
+        if len(ign)>0 and (ti==ign).any() or (tj==ign).any() or (tk==ign).any():
+            continue # ignore this y (but keep it for y_tot)
 
-    ls = linestyles[ti]
-    red = linMap(tj, 0,ntypes-1, 0,1)
-    blue = linMap(tj, 0,ntypes-1, 1,0)
-    green = 0.0 #linMap(ti, 0,npairs-1, 0.2,1)
+        ls = linestyles[ti]
+        red = linMap(tj, 0,ntypes-1, 0,1)
+        blue = linMap(tk, 0,ntypes-1, 1,0)
+        green = 0.0 #linMap(ti, 0,npairs-1, 0.2,1)
 
-    #ax.errorbar(r,g,g_, label=lab, color=(red,green,blue,0.7))
-    ax.plot(r,g + (i+1)*args.yshift, label=lab, color=(red,green,blue,0.7), linestyle=ls)
-ax.plot(r,g_tot, label="total", color=(0,0,0,0.7))
+        #ax.errorbar(r,g,g_, label=lab, color=(red,green,blue,0.7))
+        ax.plot(x,y + (idx+1)*args.yshift, label=lab, color=(red,green,blue,0.7), linestyle=ls)
+
+ax.plot(x,y_tot/ntriplets, label="average", color=(0,0,0,0.7))
 ax.legend()
 ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 
-fig.savefig(outpng)
-fig.savefig(outpdf)
-print(" plot_rdf_average.py: Figure saved on %s , %s\n"%(outpng, outpdf))
+fig.savefig(outname+".png")
+fig.savefig(outname+".png")
+print(" plot_rdf_average.py: Figure saved on %s.png , %s.pdf\n"%(outname,outname))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)

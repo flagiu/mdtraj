@@ -4,7 +4,7 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
   				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
@@ -15,7 +15,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "  Computes some statistical quantities over the MD trajectory of a mono-species system.\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
-  fprintf(stderr, " !!! WARNING: currently implemented only: -xyz, -xyz_cp2k, -lammpstrj ; and -rdf. !!!\n");
+  fprintf(stderr, " !!! WARNING: currently implemented only: -contcar -poscar -xdatcar(V) -xyz, -xyz_cp2k, -lammpstrj ; and -adf -edq -rdf an maybe some more. !!!\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "\n -h/--help \t Print this summary.");
   fprintf(stderr, "\n -d/--debug \t Open in debug mode.");
@@ -26,6 +26,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file (one row for each timestep; 6 columns for box + 3N columns for coordinates).");
   fprintf(stderr, "\n -alphanes9 \t like -alphanes but with 9 columns for box.");
   fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
+  fprintf(stderr, "\n -poscar \t Concatenation of POSCAR files.");
   fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat).");
   fprintf(stderr, "\n -lammpstrj \t LAMMPS format. It expects the output of a 'dump atom' command.");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
@@ -50,7 +51,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -edq \t Compute the Eddington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
-  fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
+  fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width, max_distance. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n -rmax \t Compute the maximum distance between atoms. OUTPUT: %s.dat.", s_rmax.c_str() );
   fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
@@ -214,8 +215,11 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      c_rdf = true;
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-rdf' must be followed by bin width!\n"); exit(-1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-rdf' must be followed by (bin width) and (max distance)!\n"); exit(-1); }
 	      rdf_binw = atof(argv[i]);
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-rdf' must be followed by (bin width) and (max distance)!\n"); exit(-1); }
+	      rdf_rmax = atof(argv[i]);
 	    }
     else if ( !strcmp(argv[i], "-rmin") )
        c_rmin = true;
@@ -309,51 +313,66 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      s_in = string(argv[i]);
 	    }
 	  else if ( !strcmp(argv[i], "-contcar") )
-	    {
-	      i++;
-	      if (i == argc)
-		{
-		  fprintf(stderr, "ERROR: '-contcar' must be followed by file name!\n");
-		  exit(-1);
-		}
-              filetype = FileType::CONTCAR;
-	      s_in = string(argv[i]);
-	    }
-	  else if ( !strcmp(argv[i], "-jmd") )
-	    {
-	      i++;
-	      if (i == argc)
-    		{
-    		  fprintf(stderr, "ERROR: '-jmd' must be followed by file name!\n");
-    		  exit(-1);
-    		}
-        filetype = FileType::JMD;
-	      s_in = string(argv[i]);
-	    }
+    {
+      i++;
+      if (i == argc)
+  		{
+  		  fprintf(stderr, "ERROR: '-contcar' must be followed by file name!\n");
+  		  exit(-1);
+  		}
+      filetype = FileType::CONTCAR;
+	    s_in = string(argv[i]);
+	  }
+
+    else if ( !strcmp(argv[i], "-poscar") )
+    {
+      i++;
+      if (i == argc)
+  		{
+  		  fprintf(stderr, "ERROR: '-poscar' must be followed by file name!\n");
+  		  exit(-1);
+  		}
+      filetype = FileType::POSCAR;
+	    s_in = string(argv[i]);
+	  }
+
+    else if ( !strcmp(argv[i], "-jmd") )
+	  {
+	    i++;
+	    if (i == argc)
+      {
+    	  fprintf(stderr, "ERROR: '-jmd' must be followed by file name!\n");
+    	  exit(-1);
+    	}
+      filetype = FileType::JMD;
+	    s_in = string(argv[i]);
+	  }
 
 	  else if ( !strcmp(argv[i], "-lammpstrj") )
-	    {
-	      i++;
-	      if (i == argc)
-    		{
-    		  fprintf(stderr, "ERROR: '-lammpstrj' must be followed by file name!\n");
-    		  exit(-1);
-    		}
-        filetype = FileType::LAMMPSTRJ;
-	      s_in = string(argv[i]);
-	    }
-	  else if ( !strcmp(argv[i], "-xdatcar") )
-	    {
-	      i++;
-	      if (i == argc)
-		{
-		  fprintf(stderr, "ERROR: '-xdatcar' must be followed by file name!\n");
-		  exit(-1);
-		}
-              filetype = FileType::XDATCAR;
-	      s_in = string(argv[i]);
-	    }
-	  else if ( !strcmp(argv[i], "-xdatcarV") )
+    {
+	    i++;
+	    if (i == argc)
+    	{
+    	  fprintf(stderr, "ERROR: '-lammpstrj' must be followed by file name!\n");
+    	  exit(-1);
+    	}
+      filetype = FileType::LAMMPSTRJ;
+	    s_in = string(argv[i]);
+	  }
+
+    else if ( !strcmp(argv[i], "-xdatcar") )
+	  {
+	    i++;
+	    if (i == argc)
+		  {
+        fprintf(stderr, "ERROR: '-xdatcar' must be followed by file name!\n");
+        exit(-1);
+      }
+      filetype = FileType::XDATCAR;
+	    s_in = string(argv[i]);
+	  }
+
+    else if ( !strcmp(argv[i], "-xdatcarV") )
 	    {
 	      i++;
 	      if (i == argc)
