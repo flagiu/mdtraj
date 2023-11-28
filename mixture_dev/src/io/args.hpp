@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -rdf -rmin -rmax -sq -sqt]"
+  				  " [-box1 -box3 .box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -41,6 +41,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -box3 \t INPUT: Lx,Ly,Lz. Sizes of the orthorombic box");
   fprintf(stderr, "\n -box6 \t INPUT: Ax,Bx,Cx,By,Cy,Cz. Components of an upper-diagonalized box");
   fprintf(stderr, "\n -box9 \t INPUT: Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz. Components of a general box");
+  fprintf(stderr, "\n -image_convention \t How many box images? 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff). [default 1] [CAN BE MODIFIED ONLY FOR g(r)].");
   fprintf(stderr, "\n -remove_rot_dof \t Rotate the positions and the box to upper-diagonalize it. [default don't].");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n STATISTICAL ANALYSIS:");
@@ -177,8 +178,15 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		    }
 			set_L_from_box();
 	    }
-	  else if ( !strcmp(argv[i], "-remove_rot_dof") )
-	      remove_rot_dof = true;
+	  else if ( !strcmp(argv[i], "-image_convention") )
+    {
+      i++;
+      if (i == argc) { fprintf(stderr, "ERROR: '-image_convention' must be followed by an integer value!\n"); exit(-1); }
+	    image_convention = atoi(argv[i]);
+      if (image_convention!=1 && image_convention!=0 && image_convention!=-1) { fprintf(stderr, "ERROR: '-image_convention' must be followed by an integer value among {1,0,-1}!\n"); exit(-1); }
+    }
+    else if ( !strcmp(argv[i], "-remove_rot_dof") )
+        remove_rot_dof = true;
 	  else if ( !strcmp(argv[i], "-l") )
 	    {
 	      i++;
