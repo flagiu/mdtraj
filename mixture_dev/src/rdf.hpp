@@ -10,7 +10,7 @@ class RDF_Calculator
   using mat=mymatrix<ntype,3,3>;
   private:
     int image_convention=1; // 0: no images (cluster) ; 1: 1 replica (minimum image) ; -1: all replicas (crystal)
-    ntype binw, rmax;
+    ntype binw;
     int nbins, nTypes, nTypePairs;
     vecflex<ntype> bins;
     vector< vecflex<ntype> > norm, value, ave, ave2;
@@ -38,6 +38,8 @@ class RDF_Calculator
     }
 
   public:
+    ntype rmax;
+
     RDF_Calculator(){
       myName = "RDF";
     }
@@ -90,13 +92,16 @@ class RDF_Calculator
           ave2[tp].resize(nbins);
           //if(t1!=t2) normalization =     Nt_[t1]/V * 4.0*M_PI/3.0 * Nt_[t2]/2.0; // * 2.0; // multiply by 2 because it's off-diagonal
           //else       normalization = (Nt_[t1]-1)/V * 4.0*M_PI/3.0 * Nt_[t2]/2.0;
-          if(t1!=t2) normalization =     Nt_[t1]*Nt_[t2]/V * 4.0*M_PI/3.0 *2.0;
-          else       normalization = Nt_[t1]*(Nt_[t1]-1)/V * 4.0*M_PI/3.0;
           // normalization:
           //    N[t1]*N[t2]/2 / V = average density of ordered pairs i(t1) < j(t2)
           //    N[t1]*(N[t1]-1)/2 /V = average density of ordered pairs i(t1) < j(t1)
           //    4*pi/3*((r_2)^3 - (r_1)^3) = volume of the shell
           //    the off-diagonal part must be further divided by 2 because of the symmetry between t1 and t2
+          if(t1!=t2) normalization =       Nt_[t1]*Nt_[t2]/2 /V * 4.0*M_PI/3.0 *2.0;
+          else  {
+            if(Nt_[t1]>1) normalization = Nt_[t1]*(Nt_[t1]-1)/2 /V * 4.0*M_PI/3.0;
+            else          normalization = 2*Nt_[t1]*(2*Nt_[t1]-1)/2 /(2*V) * 4.0*M_PI/3.0;
+          }
           shell1 = 0.0;
           for(k=0; k<nbins; k++){
             bins[k] = (k+0.5)*binw; // take the center of the bin for histogram
@@ -115,11 +120,11 @@ class RDF_Calculator
       fout.close();
     }
 
-    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, mat box, mat boxInv, bool debug)
+    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, PBC<ntype> *pbc, bool debug)
     {
-      int i,j, k, tp, ti,tj;
+      int i,j, k, tp, ti,tj, num_images,img;
       const int N=ps.size();
-      vec rij;
+      vec rij, r_images[MAX_N_IMAGES];
       ntype r,r_mic;
       for(tp=0;tp<nTypePairs;tp++){
         for(k=0; k<nbins; k++){
@@ -128,19 +133,26 @@ class RDF_Calculator
       }
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
       for(i=0;i<N;i++){
-        for(j=0;j<N;j++){
-          if(i==j) continue;
+        for(j=i;j<N;j++){
+          //if(i==j) continue;
           rij = ps[j].r - ps[i].r; // real distance
+          num_images = pbc->apply(rij, r_images);
+          /*
           r = rij.norm();
           r_mic = (rij - box*round(boxInv*rij)).norm(); // first periodic image
           if( r_mic < r) r = r_mic; // if closer, choose first periodic image
+          */
           // if(debug) cout << "  PBC for (i,j)=(" <<i<<","<<j<<") : " << r_true << " --> " << r << endl;
-          k = int(floor( r/binw ));
-          if(k<nbins){
-            ti = ps[i].label;
-            tj = ps[j].label;
-            tp = types2int(ti,tj);
-            value[tp][k] += 1.0;
+          for(img=0;img<num_images;img++){
+            r = r_images[img].norm();
+            if(r==0.0) continue;
+            k = int(floor( r/binw ));
+            if(k<nbins){
+              ti = ps[i].label;
+              tj = ps[j].label;
+              tp = types2int(ti,tj);
+              value[tp][k] += 1.0;
+            }
           }
         }
       }
@@ -159,7 +171,7 @@ class RDF_Calculator
         }
       }
       fout.close();
-      
+
       if(frameidx == (nframes-1)){
           ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
           for(k=0; k<nbins; k++)

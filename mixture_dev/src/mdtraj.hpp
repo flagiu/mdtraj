@@ -10,11 +10,11 @@
 #include "lib/particle.hpp"
 #include "lib/mymatrix.hpp"
 #include "lib/Ycomplex.hpp"
+#include "lib/pbc.hpp"
 using namespace std;
 
 const string root_path="/home/flavio/programmi/mdtraj/mixture_dev";
 #define MAX_N_TYPES 5
-#define MAX_N_IMAGES 300
 enum class FileType {
   XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
 };
@@ -28,7 +28,7 @@ public:
   string type_names[MAX_N_TYPES]; // name for each type
   vec L; // dimensions of an orthorombic simulation box ( ??? centered in 0: -Lx/2 < x < Lx/2 )
   mat box, boxInv; // most general simulation box
-  int image_convention; // 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff)
+  int image_convention; // 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff radius)
   bool remove_rot_dof; // remove the 3 rotational degrees of freedom from the box?
   bool pbc_out; // print output with PBC?
   ntype V, mdens, ndens; // volume, mass density, nuerical density
@@ -49,6 +49,7 @@ public:
   ED_Bond_Parameter<ntype,ptype> *ed_q_calculator;
   //
   ntype rdf_binw, rdf_rmax;
+  PBC<ntype> *pbc;
   RDF_Calculator<ntype,ptype> *rdf_calculator;
   //
   int qmodmin,qmodmax,qmodstep;
@@ -391,6 +392,8 @@ public:
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
       rdf_calculator->init(rdf_binw, rdf_rmax, box, N, V, nTypes, Nt, s_rdf, tag);
+      pbc = new PBC<ntype>();
+      pbc->init(image_convention,rdf_calculator->rmax,box,debug);
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();
@@ -423,7 +426,7 @@ public:
     if(c_bondorient) bond_parameters->compute(timestep, ps, debug);
     if(c_edq) ed_q_calculator->compute(timestep, ps, debug);
     if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
-    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,box,boxInv,debug);
+    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,pbc,debug);
     if(c_adf) adf_calculator->compute(i,nframes,timestep,ps,debug);
     if(c_altbc) altbc_calculator->compute(i,nframes,timestep,ps,debug);
     if(c_sq)
@@ -475,53 +478,6 @@ public:
   void print_out_xyz();
   void init_out_alphanes();
   void print_out_alphanes();
-
-// apply MIC for general periodic boxes
-  vec mic(vec& r)
-  {
-    return r - box * round(boxInv*r);
-  }
-
-  int all_images(vec r, ntype rmax, vec* r_images)
-  {
-    int x,y,z, xmax,ymax,zmax, count=0;
-    vec s, ds, trial;
-    s = boxInv*r;
-    xmax = round(rmax/fabs(box[0][0]+box[0][1]+box[0][2]));
-    ymax = round(rmax/fabs(box[1][0]+box[1][1]+box[1][2]));
-    zmax = round(rmax/fabs(box[2][0]+box[2][1]+box[2][2]));
-    if(debug) cout << "ALL_IMAGES\n xmax="<<xmax<<"\n ymax="<<ymax<<"\n zmax="<<zmax<<endl;
-    for(x=-xmax;x<=xmax && count<MAX_N_IMAGES;x++)
-    {
-      for(y=-ymax;y<=ymax && count<MAX_N_IMAGES;y++)
-      {
-        for(z=-zmax;z<=zmax && count<MAX_N_IMAGES;z++)
-        {
-          ds << x,y,z;
-          trial = box*(s+ds);
-          if(trial.norm()<rmax)
-          {
-            *(r_images+count) = trial;
-            count++;
-          }
-        }
-      }
-    }
-    return count;
-  }
-
-  int pbc(vec r, ntype rmax, vec* r_images)
-  {
-    switch (image_convention)
-    {
-      case 1: (*r_images) = mic(r); return 1;
-      case 0: (*r_images) = r; return 1;
-      case -1: return all_images(r,rmax,r_images);
-      default:
-        fprintf(stderr,"ERROR: image_convention must be an integer value among {1,0,-1}\n");
-        exit(1);
-    }
-  }
 
 };
 

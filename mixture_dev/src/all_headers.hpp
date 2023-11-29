@@ -10,6 +10,7 @@
 #include "lib/particle.hpp"
 #include "lib/mymatrix.hpp"
 #include "lib/Ycomplex.hpp"
+#include "lib/pbc.hpp"
 #include "adf.hpp"
 #include "all_headers.hpp"
 #include "altbc.hpp"

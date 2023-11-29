@@ -36,5 +36,5 @@ x = x[n0:n-n1]
 
 plt.xlabel("x")
 plt.ylabel("counts")
-plt.hist(x)
+plt.hist(x[:,args.x])
 plt.show()

@@ -13,9 +13,9 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_summary()
   {
   fprintf(stderr, "\n#---------------------------------------------------------------------------------------#.\n");
-  fprintf(stderr, "  Computes some statistical quantities over the MD trajectory of a mono-species system.\n");
+  fprintf(stderr, "  Computes some statistical quantities over the MD trajectory of a multi-species system.\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
-  fprintf(stderr, " !!! WARNING: currently implemented only: -contcar -poscar -xdatcar(V) -xyz, -xyz_cp2k, -lammpstrj ; and -adf -edq -rdf an maybe some more. !!!\n");
+  fprintf(stderr, " !!! WARNING: maybe I forgot to implement some functions !!!\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "\n -h/--help \t Print this summary.");
   fprintf(stderr, "\n -d/--debug \t Open in debug mode.");
@@ -41,7 +41,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -box3 \t INPUT: Lx,Ly,Lz. Sizes of the orthorombic box");
   fprintf(stderr, "\n -box6 \t INPUT: Ax,Bx,Cx,By,Cy,Cz. Components of an upper-diagonalized box");
   fprintf(stderr, "\n -box9 \t INPUT: Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz. Components of a general box");
-  fprintf(stderr, "\n -image_convention \t How many box images? 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff). [default 1] [CAN BE MODIFIED ONLY FOR g(r)].");
+  fprintf(stderr, "\n -image_convention \t How many box images? [ONLY FOR g(r)]. 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff). [default 1].");
   fprintf(stderr, "\n -remove_rot_dof \t Rotate the positions and the box to upper-diagonalize it. [default don't].");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n STATISTICAL ANALYSIS:");
@@ -114,46 +114,46 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      c_edq = true;
 	  else if ( !strcmp(argv[i], "-box1") )
 	    {
-		  i++;
-		  if (i == argc){
-		    fprintf(stderr, "ERROR: '-box1' must be followed by the box size!\n");
-		    exit(-1);
-		  }
+		    i++;
+  		  if (i == argc){
+  		    fprintf(stderr, "ERROR: '-box1' must be followed by the box size!\n");
+  		    exit(-1);
+  		  }
 	      for(int j=0;j<3;j++) L[j] = atof(argv[i]);
-		  set_box_from_L();
+		    set_box_from_L();
 	    }
 	  else if ( !strcmp(argv[i], "-box3") )
 	    {
-	        for(int j=0;j<3;j++){
+	      for(int j=0;j<3;j++){
 		      i++;
 		      if (i == argc){
-			    fprintf(stderr, "ERROR: '-box3' must be followed by the 3 box sizes!\n");
-			    exit(-1);
-			  }
+			      fprintf(stderr, "ERROR: '-box3' must be followed by the 3 box sizes!\n");
+			      exit(-1);
+			    }
 		      L[j] = atof(argv[i]);
 		    }
-		set_box_from_L();
+		    set_box_from_L();
 	    }
 	  else if ( !strcmp(argv[i], "-box6") )
 	    {
-	        for(int j=0;j<6;j++){
+	      for(int j=0;j<6;j++){
 		      i++;
 		      if (i == argc){
-			    fprintf(stderr, "ERROR: '-box6' must be followed by the 6 box sizes!\n");
-			    exit(-1);
-			  }
-			  switch(j)
-			  {
-			    case 0: box[0][0] = atof(argv[i]); break;
-			    case 1: box[0][1] = atof(argv[i]); break;
-			    case 2: box[0][2] = atof(argv[i]); break;
-			    case 3: box[1][1] = atof(argv[i]); break;
-			    case 4: box[1][2] = atof(argv[i]); break;
-			    case 5: box[2][2] = atof(argv[i]); break;
-			  }
+			      fprintf(stderr, "ERROR: '-box6' must be followed by the 6 box sizes!\n");
+			      exit(-1);
+  			  }
+  			  switch(j)
+  			  {
+  			    case 0: box[0][0] = atof(argv[i]); break;
+  			    case 1: box[0][1] = atof(argv[i]); break;
+  			    case 2: box[0][2] = atof(argv[i]); break;
+  			    case 3: box[1][1] = atof(argv[i]); break;
+  			    case 4: box[1][2] = atof(argv[i]); break;
+  			    case 5: box[2][2] = atof(argv[i]); break;
+  			  }
 		    }
-			box[1][0]=box[2][0]=box[2][1]=0.0;
-			set_L_from_box();
+  			box[1][0]=box[2][0]=box[2][1]=0.0;
+  			set_L_from_box();
 	    }
 	  else if ( !strcmp(argv[i], "-box9") )
 	    {
@@ -183,7 +183,10 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
       i++;
       if (i == argc) { fprintf(stderr, "ERROR: '-image_convention' must be followed by an integer value!\n"); exit(-1); }
 	    image_convention = atoi(argv[i]);
-      if (image_convention!=1 && image_convention!=0 && image_convention!=-1) { fprintf(stderr, "ERROR: '-image_convention' must be followed by an integer value among {1,0,-1}!\n"); exit(-1); }
+      if (image_convention!=1 && image_convention!=0 && image_convention!=-1) {
+        fprintf(stderr, "ERROR: '-image_convention' must be followed by an integer value among {1,0,-1}!\n");
+        exit(-1);
+      }
     }
     else if ( !strcmp(argv[i], "-remove_rot_dof") )
         remove_rot_dof = true;

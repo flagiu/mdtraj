@@ -13,6 +13,7 @@ cat > $HEADER << EOF
 #include "lib/particle.hpp"
 #include "lib/mymatrix.hpp"
 #include "lib/Ycomplex.hpp"
+#include "lib/pbc.hpp"
 EOF
 # First include external objects
 for file in $(ls *.hpp | grep -v mdtraj.hpp)

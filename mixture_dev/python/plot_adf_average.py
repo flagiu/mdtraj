@@ -82,6 +82,7 @@ print(" plot_adf_average.py: List of types to be ignored:",ign_labels)
 fig, ax = plt.subplots()
 ax.set_xlabel(r"Angle [degrees]")
 ax.set_ylabel(r"ADF")
+if args.yshift: ax.set_title(r"Shifted by %.1f"%args.yshift, fontsize=10)
 y_tot = np.zeros_like(x)
 for ti in range(ntypes):
     for tp in range(npairs):
