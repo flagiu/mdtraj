@@ -6,9 +6,6 @@ import numpy as np
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
 
-outpng="coordnum_hist.png"
-outpdf="coordnum_hist.pdf"
-
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
                     description = 'Histogram of coordination number of all particles at all times.',
@@ -28,6 +25,10 @@ parser.add_argument('--fskip1', type=float,
 parser.add_argument('--logScale', type=bool,
                      default=False, required=False,
                      help="Use log scale for y axis?. [default: %(default)s]"
+)
+parser.add_argument('--outname',  type=str,
+                     default="coordnum_hist", required=False,
+                     help="Prefix for the output file. [default: %(default)s]"
 )
 
 args = parser.parse_args()
@@ -61,7 +62,7 @@ ax.tick_params(axis='y',which='both', direction='in')
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 
-plt.savefig(outpng)
-plt.savefig(outpdf)
-print(" plot_coordnum_histogram.py: Figure saved on %s , %s\n"%(outpng, outpdf))
+fig.savefig(args.outname+".pdf")
+fig.savefig(args.outname+".png")
+print("Figure saved on %s.png , %s.pdf\n"%(args.outname,args.outname))
 #plt.show()

@@ -10,8 +10,6 @@ plt.rcParams['axes.labelsize'] = 'large'
 plt.rcParams['figure.dpi'] = 300
 cmap = mpl.colormaps['brg']
 
-outpng="ed_q_hist.png"
-outpdf="ed_q_hist.pdf"
 cnMIN=2
 cnMAX=12
 class LocalStructure:
@@ -69,6 +67,10 @@ parser.add_argument('--density', type=bool,
                      default=False, required=False,
                      help="Plot probability density? Else, plot probability. [default: %(default)s]"
 )
+parser.add_argument('--outname',  type=str,
+                     default="ed_q_hist", required=False,
+                     help="Prefix for the output file. [default: %(default)s]"
+)
 
 args = parser.parse_args()
 
@@ -116,7 +118,7 @@ coordnum_u = np.unique(coordnum)
 data = x[:,3]
 #---------------------------------------------------------#
 # analysis
-f = open("ed_q_structures.txt","w")
+f = open(args.outname+".txt","w")
 f.write("[Local structure]\n")
 f.write("| Counts | % within same coord.num. |\n")
 f.write("|-----------------------------------|\n")
@@ -130,7 +132,6 @@ for ls in localStructures:
     f.write(f"{count}\t{perc:.2f}\n")
 f.write("|-----------------------------------|\n")
 f.close()
-print("%s: Analysis printed to ed_q_structures.txt \n"%(sys.argv[0]))
 #---------------------------------------------------------#
 # plot
 fig, ax = plt.subplots(figsize=(10,6))
@@ -179,7 +180,8 @@ ax.tick_params(axis='y',which='both', direction='in')
 #ax.grid(axis='both', which='major')
 plt.tight_layout()
 
-plt.savefig(outpng)
-plt.savefig(outpdf)
-print("%s: Figure saved on %s , %s\n"%(sys.argv[0],outpng, outpdf))
+fig.savefig(args.outname+".pdf")
+fig.savefig(args.outname+".png")
+print("Analysis of structures was printed on %s.txt"%(args.outname))
+print("Figure was saved on %s.png , %s.pdf\n"%(args.outname,args.outname))
 #plt.show()

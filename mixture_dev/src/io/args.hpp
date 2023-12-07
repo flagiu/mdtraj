@@ -50,7 +50,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension, with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
-  fprintf(stderr, "\n -edq \t Compute the Eddington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
+  fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width, max_distance. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );

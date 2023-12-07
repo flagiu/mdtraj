@@ -3,7 +3,7 @@
 
 #include "neighbour_and_bond_list.hpp"
 using namespace std;
-//---------------------- Eddington-Debenedetti Bond order parameter q -------------------------------//
+//---------------------- Errington-Debenedetti Bond order parameter q -------------------------------//
 template <class ntype, class ptype>
 class ED_Bond_Parameter
 {
@@ -20,7 +20,7 @@ class ED_Bond_Parameter
 
   public:
     ED_Bond_Parameter(){
-      myName = "Eddington-Debenetetti BOND PARAMETER";
+      myName = "Errington-Debenetetti BOND PARAMETER";
     }
     virtual ~ED_Bond_Parameter(){}
 
