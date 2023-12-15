@@ -20,7 +20,7 @@ class ED_Bond_Parameter
 
   public:
     ED_Bond_Parameter(){
-      myName = "Errington-Debenetetti BOND PARAMETER";
+      myName = "Errington-Debenedetti BOND PARAMETER";
     }
     virtual ~ED_Bond_Parameter(){}
 

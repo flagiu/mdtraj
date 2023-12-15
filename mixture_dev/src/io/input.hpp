@@ -631,6 +631,21 @@ read_lammpstrj_frame(fstream &i, bool resetN)
 
   xy=xz=yz=0.0;
   switch (ncols) {
+    case 3:
+      cout << "WARNING: dump file has non-periodic cubic box\n";
+      getline(i,line); istringstream(line) >> a >> b;
+      xlo = stof(a);
+      xhi = stof(b);
+
+      getline(i,line); istringstream(line) >> a >> b;
+      ylo = stof(a);
+      yhi = stof(b);
+
+      getline(i,line); istringstream(line) >> a >> b;
+      zlo = stof(a);
+      zhi = stof(b);
+      break;
+
     case 6:
       getline(i,line); istringstream(line) >> a >> b;
       xlo = stof(a);

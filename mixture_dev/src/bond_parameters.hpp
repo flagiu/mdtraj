@@ -3,7 +3,39 @@
 
 #include "neighbour_and_bond_list.hpp"
 using namespace std;
-//---------------------- Bond Orientational parameters: BOO (q_lm) and BOC (q_lm^dot) -------------------------------//
+//------ Bond Orientational parameters: BOO (q_lm) and BOC (q_lm^dot) --------//
+// Bond orientational order parameter:
+// q_lm(i) is the local average of spherical harmonics:
+//   q_lm(i) = <Y_lm(r_ij)>_{neighbours j} = Sum_j { Y_lm(r_ij) } / Sum_j
+//   Note: it's a complex vector with index m=-l,...,l.
+//   Note: here we define the neighbours by a cutoff radius rcut1 (1st shell).
+//   Note: here we use a smoothed version where the Sum_j is weighted by a
+//     smooth cutoff function f(r_ij/rcut1).
+//   This is saved into ${string_bondorient_out}.dat
+// q_l(i) is a local rotationally invariant descriptor of the environment (Steinhardt parameter)
+//   q_l(i) = { 4*pi/(2*l+1) * Sum_m |q_lm(i)|^2 }^(1/2)
+//          = {4*pi/(2*l+1)}^(1/2) * Norm(q_lm(i))
+//   Note: it is proportional to the norm of the vector q_lm(i) with index m.
+//   This is saved into ${string_bondorient_out}.ave
+//
+// Bond order correlation parameter:
+// C_l(i,j) is the cosine similarity of a bond <i,j> between particles i,j,
+// in terms of the BOO. A bond is defined by being in the 1st shell.
+//   C_l(i,j) = DotProduct( q_lm(i), q_lm(j) ) / [ Norm( q_lm(i) ) * Norm( q_lm(j) ) ]
+//   Note: if i,j belong to the same crystalline cluster: C~1 ; otherwise C~0.
+//   Problem: C_l is complex... I take the real part. Should I take the norm?
+//   Problem: what happens when Norm(q_l(i))==0.0 ? I define C_l=0, but this is arbitrary.
+// q_l^dot(i) is the local average of C_l(i,j) over neighbours j.
+//   Note: here we use a cutoff radius rcut2 (2nd shell) which can be > rcut1.
+//   Note: here we weight Sum_j by a smooth cutoff function f(r_ij/rcut2).
+//   This is saved into ${string_bondcorr_out}.ave
+//
+// One then defines that particle i is crystalline if q_l^dot(i) > threshold (usually 0.55 or 0.65).
+// This is saved into the string_nxtal_out files.
+//
+// Otherwise, you can observe the average of q_l^dot(i) around any particle i,
+// within a large cutoff radius rcut3 (3rd shell).
+//----------------------------------------------------------------------------//
 template <class ntype, class ptype>
 class Bond_Parameters
 {
@@ -13,8 +45,8 @@ class Bond_Parameters
     Neigh_and_Bond_list<ntype,ptype> *nb_list;
     int l, l_deg; // angular momentum and its degeneracy
     bool l_is_odd;
-    vecflex<ntype> ql, Cl_ij, ql_dot, Ql_dot;
-    vector< vecflex< complex<ntype> > > qlm; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
+    vecflex<ntype> ql, ql_ave, Cl_ij, ql_dot, Ql_dot;
+    vector< vecflex< complex<ntype> > > qlm, qlm_ave; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
     ntype qldot_th;
     string string_bondcorr_out, string_bondorient_out, string_nxtal_out, myName, tag;
     fstream fout;
@@ -43,6 +75,9 @@ class Bond_Parameters
       qlm.resize(l_deg);
       for(int a=0;a<l_deg;a++) qlm[a].resize(N);
       ql.resize(N);
+      qlm_ave.resize(l_deg);
+      for(int a=0;a<l_deg;a++) qlm_ave[a].resize(N);
+      ql_ave.resize(N);
       ql_dot.resize(N);
       Ql_dot.resize(N);
       ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
@@ -97,6 +132,7 @@ class Bond_Parameters
       fout.close();
     }
 
+
     void compute(int timestep, vector<ptype> ps, bool debug)
     {
       if(debug) nb_list->print_bond_summary(ps);
@@ -112,15 +148,20 @@ class Bond_Parameters
       //---- Reset counters ----//
       for(i=0;i<N;i++){
           ql.set(i, 0.0);
+          ql_ave.set(i, 0.0);
           ql_dot.set(i, 0.0);
           Ql_dot.set(i, 0.0);
-          for(a=0;a<l_deg; a++) qlm[a].set(i, 0.0);
+          for(a=0;a<l_deg; a++){
+            qlm[a].set(i, 0.0);
+            qlm_ave[a].set(i, 0.0);
+          }
           for(u=0;u<Nshell;u++)
             for(t=0;t<nTypePairs;t++)
               nb_list->neigh[u][t][i] = 0.;
       }
       if(debug) cout << " * Reset counters DONE\n";
-      //---- Compute Y_lm's and neighs ----//
+
+      //---- Compute <Y_lm>'s (on 1st shell) and neighs (on all shells) ----//
       for(i=0;i<N;i++){
         for(u=0;u<Nshell;u++){
           for(k=0;k<ps[i].neigh_list[u].size();k++){
@@ -129,12 +170,9 @@ class Bond_Parameters
             t = nb_list->types2int(ps[i].label, ps[j].label);
             rij = ps[i].rij_list[u][k];
             rijSq = ps[i].rijSq_list[u][k];
-  //          fval = fcut( rijSq/cutoffSq[u], p1half, p2half );
-            if(u==0){ // Ider uses a step function for u==0?
-              fval = ( rijSq <= nb_list->rcutSq[u][t] ? 1.0 : 0.0 );
-            } else {
-              fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
-            }
+            // Ider uses a step function for u==0?
+            // if(u==0) fval = ( rijSq <= nb_list->rcutSq[u][t] ? 1.0 : 0.0 );
+            fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
             nb_list->neigh[u][t][i] += fval;
             t = nb_list->types2int(ps[j].label, ps[i].label);
             nb_list->neigh[u][t][j] += fval;
@@ -149,7 +187,30 @@ class Bond_Parameters
           }
         }
       }
-      if(debug) cout << " * Compute ql(m,i) and neigh(i) DONE (but ql(m,i) has yet to be normalized)\n";
+      // compute a locally averaged version of qlm(i) within the 1st shell
+      u=0;
+      for(i=0;i<N;i++){
+        for(k=0;k<ps[i].neigh_list[u].size();k++){
+          j = ps[i].neigh_list[u][k];
+          t = nb_list->types2int(ps[i].label, ps[j].label);
+          rij = ps[i].rij_list[u][k];
+          rijSq = ps[i].rijSq_list[u][k];
+          // Ider uses a step function for u==0?
+          // if(u==0) fval = ( rijSq <= nb_list->rcutSq[u][t] ? 1.0 : 0.0 );
+          fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
+          for(a=0;a<l_deg; a++){
+              m=a-l; // -l <= m <= l
+              qlm_ave[a][i] += fval*qlm[a][j];
+          }
+        }
+        qlm_ave[a][i] += qlm[a][i]; // sum particle i as well
+        tot_neigh=0.;
+        for(t=0;t<nTypePairs;t++) tot_neigh+=nb_list->neigh[u][t][i];
+        if(tot_neigh>0) qlm[a][i] /= tot_neigh; // qlm(i) = <Ylm>(i) completed
+        qlm_ave[a][i] /= (1.0 + tot_neigh); // sum particle i as well
+      }
+      if(debug) cout << " * Compute ql(m,i), ql(m,i)_ave and neigh(i) DONE\n";
+
       //---- Compute ql~qlm(i)*qlm(i) ----//
       Q = 0.0; //  <ql>
       Q2 = 0.0; // <ql^2>
@@ -159,7 +220,6 @@ class Bond_Parameters
         tot_neigh = 0.0;
         for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[0][t][i];
         for(a=0;a<l_deg; a++) {
-          if(tot_neigh>0) qlm[a][i] /= tot_neigh; // qlm(i) = <Ylm>(i) completed
           re=real(qlm[a][i]);
           im=imag(qlm[a][i]);
           ql[i] += re*re + im*im;
@@ -174,9 +234,35 @@ class Bond_Parameters
       fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
       fout.close();
       if(debug) cout << " * Compute ql(i) (BOO) DONE\n";
+
+      //---- Compute ql_ave~qlm_ave(i)*qlm_ave(i) ----//
+      Q = 0.0; //  <ql>
+      Q2 = 0.0; // <ql^2>
+      ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      for(i=0;i<N;i++)
+      {
+        tot_neigh = 0.0;
+        for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[0][t][i];
+        for(a=0;a<l_deg; a++) {
+          re=real(qlm_ave[a][i]);
+          im=imag(qlm_ave[a][i]);
+          ql_ave[i] += re*re + im*im;
+        }
+        ql_ave[i] = ql_factor * sqrt(ql_ave[i]);
+        fout << timestep << " " << i << " " << ql_ave[i] << endl;
+        Q += ql_ave[i] / N;
+        Q2 += ql_ave[i]*ql_ave[i] / N;
+      }
+      fout.close();
+      ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
+      fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
+      fout.close();
+      if(debug) cout << " * Compute ql(i)_ave (averaged BOO) DONE\n";
+
       //---- Compute Cl_ij~qlm(i)*qlm(j) (I take the real part) and ql_dot(i) (BOC) ----//
+      // C_ij runs over 1st-shell bonds.
       Cl_ij.resize( nb_list->bond_list[1].size() );
-      for(k=0;k<nb_list->bond_list[1].size();k++){ // Cij and BOC are computed on 2nd shell neighbours
+      for(k=0;k<nb_list->bond_list[1].size();k++){
         Cl_ij.set(k, 0.0);
         i = nb_list->int2i( nb_list->bond_list[1][k], N );
         j = nb_list->int2j( nb_list->bond_list[1][k], N );
@@ -185,7 +271,9 @@ class Bond_Parameters
           Cl_ij[k] += ( real(qlm[a][i])*real(qlm[a][j]) + imag(qlm[a][i])*imag(qlm[a][j]) );
         }
         if( ql[i]==0.0 || ql[j]==0.0) Cl_ij[k]=0.0; // safety condition (NOT JUSTIFIED!)
-        else Cl_ij[k] /= (ql[i]*ql[j]); // Cl_ij[k] done
+        else Cl_ij[k] *= (ql_factor*ql_factor)/(ql[i]*ql[j]); // normalization factors
+        // Cl_ij[k] done.
+        // q_l^dot is the average of C_l(ij) over the 2nd shell u=1
         a = indexOf<int>( ps[i].neigh_list[1], j ); // find index of j in i's neighbour list
         if(a<0) {
           cout << "[ERROR: could not find j="<<j<<" in the 2nd-shell-neighbour-list of i="<<i<<"]\n";
@@ -207,17 +295,12 @@ class Bond_Parameters
         ql_dot[j] += fval*Cl_ij[k] / tot_neigh;
       }
       if(debug) cout << " * Compute C_l(i,j) and ql_dot(i) (BOC) DONE\n";
+
       //---- Compute global average of ql_dot(i) ----//
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
       Q = 0.0; //  <ql_dot>
       Q2 = 0.0; // <ql_dot^2>
       for(i=0;i<N;i++){
-  /*      for(k=0;k<ps[i].neigh_list[1].size();k++){
-          j = ps[i].neigh_list[1][k];
-          rijSq = ps[i].rijSq_list[1][k];
-          fval = fcut( rijSq/cutoffSq[1], p1half, p2half );
-          ql_dot[i] += fval*Cl_ij[ a++ ] / neigh[1][i];
-        }*/
         fout << timestep << " " << i << " " << ql_dot[i] << endl;
         Q += ql_dot[i] / N;
         Q2 += ql_dot[i]*ql_dot[i] / N;
@@ -227,6 +310,7 @@ class Bond_Parameters
       fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
       fout.close();
       if(debug) cout << " * Compute global average of BOC DONE\n";
+
       //---- Compute a Locally Confined version of the global BOC ~ average <ql_dot(i)> around i ----//
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".local.ave"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++){
@@ -243,6 +327,7 @@ class Bond_Parameters
       }
       fout.close();
       if(debug) cout << " * Compute local average of BOC DONE\n";
+
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".xyz"; fout.open(ss.str(), ios::app);
       fout << N << endl << "-1: crystal, -2: noncrystal. Timestep = " << timestep << endl;
       m=0; // number of crystalline particles

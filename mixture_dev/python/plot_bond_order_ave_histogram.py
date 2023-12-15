@@ -36,6 +36,10 @@ parser.add_argument('--qmax', type=float,
                      default=1.1, required=False,
                      help="Minimum q value for the histogram and for the plot limits. [default: %(default)s]"
 )
+parser.add_argument('--density', type=bool,
+                     default=True, required=False,
+                     help="Plot probability density rather than counts? [default: %(default)s]"
+)
 x_tolerance=1e-5
 
 #-------------------------------------#
@@ -48,21 +52,18 @@ if args.scale!='lin' and args.scale!='log':
 if args.inavg=="NONE":
 	args.inavg = "boc.l%d.ave"%args.l
 
-Xa = np.loadtxt(args.inavg, unpack=False)
-t = Xa[:,0]
-q = Xa[:,1]
-q_ = Xa[:,2]
+t,q,q_ = np.loadtxt(args.inavg).T
 
 fig, ax = plt.subplots(dpi=300)
 ax.set_xlabel(r"$q_{%d}^{dot}$"%args.l)
-ax.set_ylabel("counts")
+ax.set_ylabel("Density") if args.density else ax.set_ylabel("Counts")
 if args.scale=='log':
 	ax.set_yscale('log')
 	ax.grid(axis='both', which='major')
 	ax.grid(axis='y', which='minor', alpha=0.2)
 else:
 	ax.grid(axis='both', which='major')
-counts,bins = np.histogram(q, bins=args.nbins, range=(args.qmin,args.qmax) )
+counts,bins = np.histogram(q, bins=args.nbins, range=(args.qmin,args.qmax), density=args.density )
 ax.stairs(counts,bins, baseline=0, fill=True)
 ax.set_xlim((args.qmin, args.qmax))
 ax.tick_params(which='both', direction='in')

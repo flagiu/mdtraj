@@ -15,7 +15,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "  Computes some statistical quantities over the MD trajectory of a multi-species system.\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
-  fprintf(stderr, " !!! WARNING: maybe I forgot to implement some functions !!!\n");
+  fprintf(stderr, " !!! WARNING: maybe I forgot to convert some functions from notype to mixture !!!\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "\n -h/--help \t Print this summary.");
   fprintf(stderr, "\n -d/--debug \t Open in debug mode.");
