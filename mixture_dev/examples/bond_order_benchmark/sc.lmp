@@ -1,0 +1,20 @@
+# Benchmark for Eddington-Debenedetti q order parameter
+
+units           metal
+boundary        p p p
+atom_style      atomic
+
+variable a equal 1
+variable Lx equal 2
+
+lattice sc $a
+
+region mybox block 0 ${Lx} 0 ${Lx} 0 ${Lx}	# this is in lattice units
+create_box 	1 mybox
+create_atoms 	1 box
+mass		1 1
+
+neighbor        1.1 bin
+neigh_modify    delay 6
+
+write_data sc.data

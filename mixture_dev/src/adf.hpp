@@ -40,16 +40,16 @@ class ADF_Calculator
       nbins = int(floor( 2.0 / binw )); // -1 < cos(angle) < 1
       bins.resize(nbins);
       int i,t1,t2,tp;
-      for(i=0; i<nbins; i++)
-      {
-        bins[i] = -1.0 + (i+0.5)*binw; // take the center of the bin for histogram
-        fout << bins[i] << endl;
-      }
       value.resize(nTypes);
       ave.resize(nTypes);
       ave2.resize(nTypes);
       ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
       fout << "# First block: cos(angle); other blocks: ADF for each frame )\n";
+      for(i=0; i<nbins; i++)
+      {
+        bins[i] = -1.0 + (i+0.5)*binw; // take the center of the bin for histogram
+        fout << bins[i] << endl;
+      }
 
       for(t1=0;t1<nTypes;t1++)
       {
@@ -118,7 +118,7 @@ class ADF_Calculator
         for(ti=0;ti<nTypes;ti++){
           for(tp=0;tp<nTypePairs;tp++){
             if(counts>0) value[ti][tp][k] /= (counts*binw); // ci sta la larghezza del bin?
-            fout << value[ti][tp][k] << endl;
+            fout << value[ti][tp][k];
             ave[ti][tp][k] += value[ti][tp][k];
             ave2[ti][tp][k] += value[ti][tp][k]*value[ti][tp][k];
             if(ti==nTypes-1 && tp==nTypePairs-1) fout << endl;

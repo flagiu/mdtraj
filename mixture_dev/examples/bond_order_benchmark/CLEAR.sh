@@ -1,1 +1,2 @@
-rm *.traj *.xxx *.ave *.dat *.png *.pdf log ed_q*txt *.xyz log*
+#!/bin/bash
+rm -r __pycache__ *.out *.data *.dat *.xyz *.traj *.ave *.png *.pdf log* *.xxx *.box ed*.txt
