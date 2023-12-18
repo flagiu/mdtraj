@@ -115,8 +115,8 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_xyz_frame(fstream &i, bool resetN)
   {
-    // assumes labels are 0,1,..,nType-1
-    string line, a,b,c,d;
+    // any string labels, but must be ordered by type
+    string line, a,b,c,d, cur_type_str;
     getline(i,line); // first line
     istringstream(line) >> a;
     N = stoi(a);
@@ -129,26 +129,37 @@ read_xyz_frame(fstream &i, bool resetN)
       ps.resize(N);
       nframes = nlines / (N+2);
     }
-    for(auto &p: ps)
+    int cur_type=0;
+    for(int j=0;j<N;j++)
     {
       getline(i, line);
       istringstream(line) >> a >> b >> c >> d;
-      //if(debug) cout << "Read particle: " << a << " @ " << b << " @ " << c << " @ " << d << endl;
-      p.label = stoi(a);
-      p.r[0] = stof(b);
-      p.r[1] = stof(c);
-      p.r[2] = stof(d);
+      //try { p.label = stoi(a); } except { cout << "[Warning: could not convert type to integer.]\n"; }
+      ps[j].r[0] = stof(b);
+      ps[j].r[1] = stof(c);
+      ps[j].r[2] = stof(d);
 
-      if(resetN)
+      if(j==0)
       {
-        nTypes = max(nTypes,p.label+1);
-        if(nTypes>MAX_N_TYPES) {
+        cur_type_str=a;
+        type_names[cur_type]=cur_type_str;
+      }
+      else if(a!=cur_type_str)
+      {
+        if(debug) cout << " Updating " << cur_type_str << "-->" << a << endl;
+        cur_type_str=a;
+        cur_type++;
+        if(cur_type>=MAX_N_TYPES) {
           cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
           exit(1);
         }
-        Nt[p.label]++;
+        type_names[cur_type]=cur_type_str;
       }
+      ps[j].label = cur_type;
+      if(resetN) Nt[ps[j].label]++;
     }
+
+    if(resetN) nTypes = cur_type+1;
   }
 
   template <class ntype, class ptype>

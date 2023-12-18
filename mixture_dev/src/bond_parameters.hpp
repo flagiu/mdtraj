@@ -23,7 +23,7 @@ using namespace std;
 // in terms of the BOO. A bond is defined by being in the 1st sphere.
 //   C_l(i,j) = DotProduct( q_lm(i), q_lm(j) ) / [ Norm( q_lm(i) ) * Norm( q_lm(j) ) ]
 //   Note: if i,j belong to the same crystalline cluster: C~1 ; otherwise C~0.
-//   Problem: C_l is complex... I take the real part. Should I take the norm?
+//   Problem: C_l is complex... I take the real part. Should I take the norm? No, real part is better
 //   Problem: what happens when Norm(q_l(i))==0.0 ? I define C_l=0, but this is arbitrary.
 // q_l^dot(i) is the local average of C_l(i,j) over neighbours j.
 //   Note: here we use a cutoff radius rcut2 (2nd sphere) which can be > rcut1.
@@ -266,13 +266,15 @@ class Bond_Parameters
         j = nb_list->int2j( nb_list->bond_list[u][k], N );
         t = nb_list->types2int(ps[i].label, ps[j].label);
         for(a=0;a<l_deg; a++) {
-          Cl_ij[k] += ( real(qlm[a][i])*real(qlm[a][j]) + imag(qlm[a][i])*imag(qlm[a][j]) );
+          Cl_ij[k] += real( qlm[a][i]*conj(qlm[a][j]) );
+          // abs or real or complex Cl_ij? 
         }
         if( ql[i]==0.0 || ql[j]==0.0) Cl_ij[k]=0.0; // safety condition for divergence (NOT JUSTIFIED!)
         else Cl_ij[k] *= (ql_factor*ql_factor)/(ql[i]*ql[j]); // normalization factors
         // Cl_ij[k] done.
       }
       if(debug) cout << " * Compute C_l(i,j) DONE\n";
+
       //---- Compute ql_dot(i) (BOC) ----//
       u=1; // q_l^dot is the average of C_l(ij) over the 2nd sphere
       for(i=0;i<N;i++){

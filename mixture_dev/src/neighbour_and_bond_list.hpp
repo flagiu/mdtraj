@@ -72,34 +72,26 @@ class Neigh_and_Bond_list
 
     void read_rcut_from_file(string s_rcut, bool debug)
     {
-      int u,ti,tj,t;
+      int u,t;
       string line, x;
       if(debug) cout << "*** Reading RCUT from file "<<s_rcut<<" ***\n";
       fout.open(s_rcut, ios::in);
+      if(fout.fail()) // checks to see if file opended
+      {
+        cout << "ERROR: could not open RCUT file '"<<s_rcut<<"'\n\n";
+        exit(1);
+      }
       for(u=0;u<Nsphere;u++)
       {
-        for(ti=0;ti<nTypes;ti++)
+        getline(fout,line);
+        ss << line;
+        for(t=0;t<nTypePairs;t++)
         {
-          getline(fout,line);
-          ss << line;
-          for(tj=0;tj<nTypes;tj++)
-          {
-            t = types2int(ti,tj);
-            ss >> x;
-            if(ti<=tj)
-            {
-              rcut[u][t] = stof(x);
-              rcutSq[u][t] = SQUARE(rcut[u][t]);
-            }
-            else if(  stof(x) != rcut[u][t] )
-            {
-              cout << "[ ERROR: asymmetric cutoff for types ti="<<ti<<",tj="<<tj<<" in sphere u="<<u<<" ]\n";
-              exit(1);
-            }
-          }
-          ss.str(std::string()); ss.clear(); // clear the string stream!
+          ss >> x;
+          rcut[u][t] = stof(x);
+          rcutSq[u][t] = SQUARE(rcut[u][t]);
         }
-        if(u<Nsphere-1) getline(fout,line); // empty line between blocks!
+        ss.str(std::string()); ss.clear(); // clear the string stream!
       }
       fout.close();
       if(debug) cout << "*** Reading RCUT file DONE ***\n";
