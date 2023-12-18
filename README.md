@@ -9,7 +9,6 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 
 - Bugs to be corrected:
 	- q_l order parameters seems to be offset by ~sqrt(2).
-	- g(r) is <1 for large r in non-cubic boxes.
 	- Check again the NGP.
 	- S(q,0) is wrong by some period-dependent factor.
 
@@ -56,3 +55,4 @@ The subfolder examples/ contains some example of application to real or toy syst
 - Add logarithmic timestep?
 - Add more input formats? GROMACS, ...
 - Add structural quasi-entropy? [Oganov,Valle,2008]
+- Add crystalline clusters analysis?

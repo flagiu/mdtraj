@@ -110,9 +110,11 @@ for ti in range(ntypes):
 ax.plot(x,y_tot/ntriplets, label="0.0", color=(0,0,0,0.7))
 ax.text(180+2, 0.0, "total", horizontalalignment='left', verticalalignment='center')
 ax.set_xlim(0,180)
+ax.set_xticks([0,30,60,90,120,150,180], minor=False)
+ax.set_xticks([15,45,75,105,135,175], minor=True)
 #ax.legend()
 ax.tick_params(which='both', direction='in')
-ax.grid(axis='both', which='major')
+ax.grid(axis='both', which='major', alpha=0.3)
 plt.tight_layout()
 
 fig.savefig(outname+".png")

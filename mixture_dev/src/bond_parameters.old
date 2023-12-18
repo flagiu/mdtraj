@@ -36,8 +36,6 @@ using namespace std;
 // Otherwise, you can observe the average of q_l^dot(i) around any particle i,
 // within a large cutoff radius rcut3 (3rd sphere).
 //----------------------------------------------------------------------------//
-#define PRINT_CUTOFFS_HEADER(Nsph,nbl,fout) for(auto  u=0;u<Nsph;u++){ for(int t=0;t<nbl->nTypePairs;t++) {fout << nbl->rcut[u][t]<<" ";} fout << "; "; } fout << endl;
-
 template <class ntype, class ptype>
 class Bond_Parameters
 {
@@ -82,43 +80,55 @@ class Bond_Parameters
       ql_ave.resize(N);
       ql_dot.resize(N);
       Ql_dot.resize(N);
-
       ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, Bond order orientation parameter q_l. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      for(auto  i=0;i<Nsphere;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
+      fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, <q_l>, fluctuations. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      for(auto  i=0;i<Nsphere;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
+      fout << endl;
       fout.close();
-
-      ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, Particle index, bar{q_l}: Local average of q_l within 1st-neigh-sphere. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
-      fout.close();
-      ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, <bar{q_l}>, fluctuations. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
-      fout.close();
-
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, Bond order correlation parameter q_l_dot. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      for(auto  i=0;i<Nsphere;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
+      fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_nxtal_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Nc = number of crystalline particles # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      for(auto  i=0;i<Nsphere;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
+      fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, <q_l_dot>, fluctuations. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      for(auto  i=0;i<Nsphere;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
+      fout << endl;
       fout.close();
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".xyz"; fout.open(ss.str(), ios::out);
       fout.close();
-
-      ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".local_ave"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, Particle index, atom-centered <q_l_dot(i)>. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".local.ave"; fout.open(ss.str(), ios::out);
+      fout << "#Timestep, Particle index, local <q_l_dot(i)>. # l = " << l << ", cutoffs = ";
+      for(auto  i=0;i<Nsphere;i++)
+        for(int t=0;t<nb_list->nTypePairs;t++)
+          fout << nb_list->rcut[i][t]<<" ";
+        fout << "; ";
+      fout << endl;
       fout.close();
     }
 
@@ -130,7 +140,7 @@ class Bond_Parameters
       const int Nsphere=nb_list->Nsphere;
       const int nTypes=nb_list->nTypes;
       const int nTypePairs=nb_list->nTypePairs;
-      ntype fval, rijSq, Q,Q2, ql_factor = sqrt(4.0*M_PI/(ntype)l_deg), re,im;
+      ntype fval, rijSq, Q,Q2, ql_factor = sqrt(4.0*M_PI/(ntype)l_deg), re,im, tot_neigh;
       complex<ntype> Yval;
       vec rij;
       int i,j,k,a,m,u, t;
@@ -145,10 +155,9 @@ class Bond_Parameters
             qlm[a].set(i, 0.0);
             qlm_ave[a].set(i, 0.0);
           }
-          for(u=0;u<Nsphere;u++){
-            nb_list->neigh_anytype[u][i] = 0.;
-            for(t=0;t<nTypePairs;t++) nb_list->neigh[u][t][i] = 0.;
-          }
+          for(u=0;u<Nsphere;u++)
+            for(t=0;t<nTypePairs;t++)
+              nb_list->neigh[u][t][i] = 0.;
       }
       if(debug) cout << " * Reset counters DONE\n";
 
@@ -157,7 +166,7 @@ class Bond_Parameters
         for(u=0;u<Nsphere;u++){
           for(k=0;k<ps[i].neigh_list[u].size();k++){
             j = ps[i].neigh_list[u][k];
-            if(i>j) continue; // avoid double counting!
+            if(j>i) continue; // avoid double counting!
             t = nb_list->types2int(ps[i].label, ps[j].label);
             rij = ps[i].rij_list[u][k];
             rijSq = ps[i].rijSq_list[u][k];
@@ -165,10 +174,8 @@ class Bond_Parameters
             // if(u==0) fval = ( rijSq <= nb_list->rcutSq[u][t] ? 1.0 : 0.0 );
             fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
             nb_list->neigh[u][t][i] += fval;
-            nb_list->neigh_anytype[u][i] += fval;
             t = nb_list->types2int(ps[j].label, ps[i].label);
             nb_list->neigh[u][t][j] += fval;
-            nb_list->neigh_anytype[u][j] += fval;
             if(u!=0) continue; // Y(l,m) are computed on first sphere neighbours only
             for(a=0;a<l_deg; a++){
                 m=a-l; // -l <= m <= l
@@ -180,17 +187,6 @@ class Bond_Parameters
           }
         }
       }
-      if(debug) cout << " * Compute qlm(i) (to be normalized) and neigh(i) DONE\n";
-
-      // Normalize qlm
-      u=0;
-      for(i=0;i<N;i++){
-        if(nb_list->neigh_anytype[u][i]>0){ // avoid divergence
-          for(a=0;a<l_deg; a++) qlm[a][i] /= nb_list->neigh_anytype[u][i];
-        }
-      }
-      if(debug) cout << " * Normalization of qlm(i) DONE\n";
-
       // compute a locally averaged version of qlm(i) within the 1st sphere
       u=0;
       for(i=0;i<N;i++){
@@ -203,13 +199,15 @@ class Bond_Parameters
           // if(u==0) fval = ( rijSq <= nb_list->rcutSq[u][t] ? 1.0 : 0.0 );
           fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
           for(a=0;a<l_deg; a++){
-            qlm_ave[a][i] += fval*qlm[a][j]/(1.0 + nb_list->neigh_anytype[u][i]);
+              m=a-l; // -l <= m <= l
+              qlm_ave[a][i] += fval*qlm[a][j];
           }
         }
-        for(a=0;a<l_deg; a++){
-          qlm_ave[a][i] += qlm[a][i]/(1.0 + nb_list->neigh_anytype[u][i]); // sum particle i as well
-        }
-        // qlm_ave(i) = (local average of qlm(i) ) COMPLETED
+        qlm_ave[a][i] += qlm[a][i]; // sum particle i as well
+        tot_neigh=0.;
+        for(t=0;t<nTypePairs;t++) tot_neigh+=nb_list->neigh[u][t][i];
+        if(tot_neigh>0) qlm[a][i] /= tot_neigh; // qlm(i) = <Ylm>(i) completed
+        qlm_ave[a][i] /= (1.0 + tot_neigh); // sum particle i as well
       }
       if(debug) cout << " * Compute ql(m,i), ql(m,i)_ave and neigh(i) DONE\n";
 
@@ -219,6 +217,8 @@ class Bond_Parameters
       ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++)
       {
+        tot_neigh = 0.0;
+        for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[0][t][i];
         for(a=0;a<l_deg; a++) {
           re=real(qlm[a][i]);
           im=imag(qlm[a][i]);
@@ -238,9 +238,11 @@ class Bond_Parameters
       //---- Compute ql_ave~qlm_ave(i)*qlm_ave(i) ----//
       Q = 0.0; //  <ql>
       Q2 = 0.0; // <ql^2>
-      ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++)
       {
+        tot_neigh = 0.0;
+        for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[0][t][i];
         for(a=0;a<l_deg; a++) {
           re=real(qlm_ave[a][i]);
           im=imag(qlm_ave[a][i]);
@@ -278,11 +280,14 @@ class Bond_Parameters
       for(i=0;i<N;i++){
         for(k=0;k<ps[i].neigh_list[u].size();k++){
           j = ps[i].neigh_list[u][k];
-          if(i>j) continue; // avoid double counting
           rijSq = ps[i].rijSq_list[u][a]; // and use it to recover the radius
           fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
-          ql_dot[i] += fval*Cl_ij[k] / nb_list->neigh_anytype[u][i];
-          ql_dot[j] += fval*Cl_ij[k] / nb_list->neigh_anytype[u][j];  // take into account j>i
+          tot_neigh = 0.0;
+          for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[u][t][i];
+          ql_dot[i] += fval*Cl_ij[k] / tot_neigh;
+          tot_neigh = 0.0;
+          for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[u][t][j];
+          ql_dot[j] += fval*Cl_ij[k] / tot_neigh;
         }
       }
       if(debug) cout << " * Compute ql_dot(i) (BOC) DONE\n";
@@ -303,15 +308,16 @@ class Bond_Parameters
       if(debug) cout << " * Compute global average of BOC DONE\n";
 
       //---- Compute a Locally Confined version of the global BOC ~ average <ql_dot(i)> around i ----//
-      u=2; // 3rd sphere of neighbours
-      ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".local_ave"; fout.open(ss.str(), ios::app);
+      ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".local.ave"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++){
-        for(k=0;k<ps[i].neigh_list[u].size();k++){
-          j = ps[i].neigh_list[u][k];
+        for(k=0;k<ps[i].neigh_list[2].size();k++){
+          j = ps[i].neigh_list[2][k];
           t = nb_list->types2int(ps[i].label, ps[j].label);
-          rijSq = ps[i].rijSq_list[u][k];
-          fval = nb_list->fcut( rijSq/nb_list->rcutSq[u][t] );
-          Ql_dot[i] += fval*ql_dot[j] / nb_list->neigh_anytype[u][j];
+          rijSq = ps[i].rijSq_list[2][k];
+          fval = nb_list->fcut( rijSq/nb_list->rcutSq[2][t] );
+          tot_neigh = 0.0;
+          for(t=0;t<nTypePairs;t++) tot_neigh += nb_list->neigh[2][t][i];
+          Ql_dot[i] += fval*ql_dot[j] / tot_neigh;
         }
         fout << timestep << " " << i << " " << Ql_dot[i] << endl;
       }

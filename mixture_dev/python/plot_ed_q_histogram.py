@@ -10,8 +10,7 @@ plt.rcParams['axes.labelsize'] = 'large'
 plt.rcParams['figure.dpi'] = 300
 cmap = mpl.colormaps['brg']
 
-outpng="ed_q_hist.png"
-outpdf="ed_q_hist.pdf"
+outname="ed_q_hist"
 cnMIN=2
 cnMAX=12
 class LocalStructure:
@@ -156,7 +155,7 @@ cn2col = {}
 cn_max = int(coordnum_u.max())
 cn_min = int(coordnum_u.min())
 for i in range(cn_max - cn_min + 1):
-    cn2col[coordnum_u[i]] = cmap( i/(cn_max-1) )
+    cn2col[coordnum_u[i]] = cmap( i/(cn_max-cn_min+1) )
 #---------------------------------------------------------#
 # analysis
 f = open("ed_q_structures.txt","w")
@@ -235,7 +234,7 @@ fig.supxlabel('Order parameter q')
 fig.supylabel('Probability density') if args.density else fig.supylabel('Probability')
 plt.tight_layout()
 
-plt.savefig(outpng)
-plt.savefig(outpdf)
-print("%s: Figure saved on %s , %s\n"%(sys.argv[0],outpng, outpdf))
+plt.savefig(outname+".png")
+plt.savefig(outname+".pdf")
+print("%s: Figure saved on %s.png , %s.pdf\n"%(sys.argv[0],outname,outname))
 #plt.show()

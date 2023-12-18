@@ -8,7 +8,7 @@ using namespace std;
 
 //------------------------------ Neighbour and Bond list --------------------------------------------//
 
-#define MAX_NSHELL 3
+#define MAX_NSPHERE 3
 
 template <class ntype, class ptype>
 class Neigh_and_Bond_list
@@ -23,6 +23,7 @@ class Neigh_and_Bond_list
 
     ntype fcut_generic(ntype x, int pow1, int pow2)
     {
+      if(x==1.0) return ((ntype)pow1) / ((ntype)pow2); // avoid divergence
       ntype x1=1.0, x2=1.0;
       for(auto i=0; i<pow2; i++) {
         x2 *= x;
@@ -33,10 +34,11 @@ class Neigh_and_Bond_list
 
   public:
     ntype rmaxSq;
-    int Nshell, N, nTypes, nTypePairs;
-    vecflex<ntype> rcut[MAX_NSHELL], rcutSq[MAX_NSHELL];
-    vector< vecflex<ntype> > neigh[MAX_NSHELL]; // Nshells X nTypePairs X nNeighbours
-    vector<int> bond_list[MAX_NSHELL];  // stores all bonds encoded into an integer through ij2int()
+    int Nsphere, N, nTypes, nTypePairs;
+    vecflex<ntype> rcut[MAX_NSPHERE], rcutSq[MAX_NSPHERE];
+    vector< vecflex<ntype> > neigh[MAX_NSPHERE]; // Nspheres X nTypePairs X N
+    vecflex<ntype> neigh_anytype[MAX_NSPHERE]; // Nspheres X N (agnostic of types)
+    vector<int> bond_list[MAX_NSPHERE];  // stores all bonds (i,j), encoded into an integer through ij2int()
 
     Neigh_and_Bond_list(){
       myName = "NEIGH & BOND List";
@@ -74,7 +76,7 @@ class Neigh_and_Bond_list
       string line, x;
       if(debug) cout << "*** Reading RCUT from file "<<s_rcut<<" ***\n";
       fout.open(s_rcut, ios::in);
-      for(u=0;u<Nshell;u++)
+      for(u=0;u<Nsphere;u++)
       {
         for(ti=0;ti<nTypes;ti++)
         {
@@ -91,20 +93,20 @@ class Neigh_and_Bond_list
             }
             else if(  stof(x) != rcut[u][t] )
             {
-              cout << "[ ERROR: asymmetric cutoff for types ti="<<ti<<",tj="<<tj<<" in shell u="<<u<<" ]\n";
+              cout << "[ ERROR: asymmetric cutoff for types ti="<<ti<<",tj="<<tj<<" in sphere u="<<u<<" ]\n";
               exit(1);
             }
           }
           ss.str(std::string()); ss.clear(); // clear the string stream!
         }
-        if(u<Nshell-1) getline(fout,line); // empty line between blocks!
+        if(u<Nsphere-1) getline(fout,line); // empty line between blocks!
       }
       fout.close();
       if(debug) cout << "*** Reading RCUT file DONE ***\n";
       cout << "#-------- RCUT summary --------#\n";
-      for(u=0;u<Nshell;u++)
+      for(u=0;u<Nsphere;u++)
       {
-        cout << "SHELL u="<<u<<" : ";
+        cout << "SPHERE u="<<u<<" : ";
         rcut[u].show();
       }
       cout << "#------------------------------#\n";
@@ -115,11 +117,11 @@ class Neigh_and_Bond_list
       int i,u,ii;
       ss.str(std::string()); ss << log_file << tag; fout.open(ss.str(), ios::app);
       fout << "#---------------------- BOND SUMMARY --------------------------#\n";
-      for(u=0;u<Nshell;u++)
+      for(u=0;u<Nsphere;u++)
       {
         for(i=0;i<N;i++)
         {
-          fout << "  Shell u="<<u<<" of particle i="<<i<<" of type="<<ps[i].label<<" contains Nc="<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
+          fout << "  Sphere u="<<u<<" of particle i="<<i<<" of type="<<ps[i].label<<" contains Nc="<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
           for(ii=0;ii<ps[i].neigh_list[u].size();ii++) fout<<ps[i].neigh_list[u][ii]<<" ";
           fout << "\n   ";
           for(ii=0;ii<ps[i].neigh_list[u].size();ii++) fout<<sqrt(ps[i].rijSq_list[u][ii])<<" ";
@@ -171,15 +173,15 @@ class Neigh_and_Bond_list
       return;
     }
 
-    void init(string s_rcut, int Nshell_, int p1half_, int N_, int nTypes_, string log_file_, string tag_, bool debug)
+    void init(string s_rcut, int Nsphere_, int p1half_, int N_, int nTypes_, string log_file_, string tag_, bool debug)
     {
       log_file = log_file_;
       tag=tag_;
-      Nshell=Nshell_;
+      Nsphere=Nsphere_;
       N=N_;
       nTypes=nTypes_;
       nTypePairs=nTypes*(nTypes+1)/2;
-      for(int u=0;u<Nshell;u++)
+      for(int u=0;u<Nsphere;u++)
       {
         rcut[u].resize(nTypePairs);
         rcutSq[u].resize(nTypePairs);
@@ -189,11 +191,12 @@ class Neigh_and_Bond_list
       p2half = 2*p1half;
       p1 = 2*p1half;
       p2 = 2*p2half;
-      for(int u=0;u<Nshell;u++){
+      for(int u=0;u<Nsphere;u++){
         if(neigh[u].size()!=nTypePairs) neigh[u].resize(nTypePairs);
         for(int j=0;j<nTypePairs;j++){
           if(neigh[u][j].length()!=N) neigh[u][j].resize(N);
         }
+        if(neigh_anytype[u].length()!=N) neigh_anytype[u].resize(N);
       }
     }
 
@@ -202,11 +205,11 @@ class Neigh_and_Bond_list
       int u,i,j,t;
       vec rij, rij_mic;
       ntype rijSq, rijSq_mic;
-      vector<ntype> bond_list_rijSq[MAX_NSHELL];
+      vector<ntype> bond_list_rijSq[MAX_NSPHERE];
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
 
       //---- Reset counters and lists ----//
-      for(u=0;u<Nshell;u++)
+      for(u=0;u<Nsphere;u++)
       {
         bond_list[u].clear();
         bond_list_rijSq[u].clear();
@@ -214,7 +217,7 @@ class Neigh_and_Bond_list
 
       for(i=0;i<N;i++)
       {
-        for(u=0;u<Nshell;u++)
+        for(u=0;u<Nsphere;u++)
         {
           ps[i].neigh_list[u].clear();
           ps[i].rij_list[u].clear();
@@ -243,7 +246,7 @@ class Neigh_and_Bond_list
           //else if(rijSq_mic>rmaxSq) rmaxSq=rijSq_mic; // update rmaxSq with max(rijSq,rijSq_mic)
           if(rijSq>rmaxSq) rmaxSq=rijSq;
 
-          for(u=0;u<Nshell;u++)
+          for(u=0;u<Nsphere;u++)
           {
             if(rijSq <= rcutSq[u][t])
             {
@@ -265,13 +268,14 @@ class Neigh_and_Bond_list
       // sort neigh_list and rij_list according to rijSq_list, for each particle
       for(i=0;i<N;i++)
       {
-        for(u=0;u<Nshell;u++)
+        for(u=0;u<Nsphere;u++)
         {
           sort_by_distance_3vec( &ps[i].rijSq_list[u], &ps[i].neigh_list[u], &ps[i].rij_list[u] );
         }
       }
       // sort bond_list according to bond_list_rijSq
-      for(u=0;u<Nshell;u++) sort_by_distance_2vec( &bond_list_rijSq[u], &bond_list[u]);
+      for(u=0;u<Nsphere;u++) sort_by_distance_2vec( &bond_list_rijSq[u], &bond_list[u]);
+
       print_bond_summary(ps); // to the log file
       if(debug)
       {
@@ -281,7 +285,7 @@ class Neigh_and_Bond_list
       return;
     }
 
-    //----------------- Coordination Number (done on 1st shell) ------------//
+    //----------------- Coordination Number (done on 1st sphere) ------------//
     void init_coordnum(string string_cn_out_, string tag_, bool debug)
     {
       if(debug) cout<<"*** Initializing COORDNUM within "<<myName<<"***\n";
@@ -311,24 +315,28 @@ class Neigh_and_Bond_list
     void compute_coordnum(int timestep, vector<ptype> ps, bool debug)
     {
       if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " STARTED ***\n";
-      int i, j, k, t;
+      int i, j, k, t, u;
       ntype fval, rijSq;
       vec rij;
-      for(t=0;t<nTypePairs;t++)
-        for(i=0;i<N;i++)
-          neigh[0][t][i] = 0.; // start counters
       for(i=0;i<N;i++){
-        for(k=0;k<ps[i].neigh_list[0].size();k++){ // search in 1st shell neighbour list
-          j = ps[i].neigh_list[0][k];
+        for(t=0;t<nTypePairs;t++) neigh[0][t][i] = 0.; // start counters
+        neigh_anytype[0][i] = 0.; // start counters
+      }
+      u=0; // 1st sphere neighbours
+      for(i=0;i<N;i++){
+        for(k=0;k<ps[i].neigh_list[u].size();k++){ // search in neigh list
+          j = ps[i].neigh_list[u][k];
           if(j>i) continue; // avoid double counting!
+          rij = ps[i].rij_list[u][k];
+          rijSq = ps[i].rijSq_list[u][k];
+          // fval = fcut( rijSq/rcutSq[0][t] );         // smooth
+          fval = ( rijSq <= rcutSq[u][t] ? 1.0 : 0.0 ); // sharp
           t = types2int( ps[i].label, ps[j].label);
-          rij = ps[i].rij_list[0][k];
-          rijSq = ps[i].rijSq_list[0][k];
-          // fval = fcut( rijSq/rcutSq[0][t] );    // smooth
-          fval = ( rijSq <= rcutSq[0][t] ? 1.0 : 0.0 );         // sharp
-          neigh[0][t][i] += fval;
-          t = types2int(ps[j].label, ps[i].label);
-          neigh[0][t][j] += fval;
+          neigh[u][t][i] += fval;
+          neigh_anytype[u][i] += fval;
+          t = types2int(ps[j].label, ps[i].label); // take into account i<j
+          neigh[u][t][j] += fval;
+          neigh_anytype[u][j] += fval;
         }
       }
       ss.str(std::string()); ss << string_cn_out << tag << ".dat"; fout.open(ss.str(), ios::app);
@@ -341,8 +349,8 @@ class Neigh_and_Bond_list
       fout.close();
       ss.str(std::string()); ss << string_cn_out << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep;
-      for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t].mean();
-      for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t].std()/sqrt(N);
+      for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].mean();
+      for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].std()/sqrt(N);
       fout << endl;
       fout.close();
       if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " ENDED ***\n";

@@ -46,10 +46,10 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n STATISTICAL ANALYSIS:");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st shell. INPUT: bin_width (in terms of the cosine). OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
+  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st sphere. INPUT: bin_width (in terms of the cosine). OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
   fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension, with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
-  fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
+  fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st sphere, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width, max_distance. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
@@ -59,7 +59,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
-  fprintf(stderr, "\n -rcut \t File containing %d blocks of cutoff radii for each pair of atom types, in a symmetric matrix form. They will be used for cutoff functions in 1st,2nd,3rd shells [default %.2f,%.2f,%.2f for every pair].", MAX_NSHELL, cutoff[0][0], cutoff[1][0], cutoff[2][0]);
+  fprintf(stderr, "\n -rcut \t File containing %d blocks of cutoff radii for each pair of atom types, in a symmetric matrix form. They will be used for cutoff functions in 1st,2nd,3rd spheres [default %.2f,%.2f,%.2f for every pair].", MAX_NSPHERE, cutoff[0][0], cutoff[1][0], cutoff[2][0]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD and S(q,t). If negative, don't. [default %d].", period);
   fprintf(stderr, "\n");

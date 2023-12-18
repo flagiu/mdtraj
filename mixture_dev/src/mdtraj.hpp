@@ -39,8 +39,8 @@ public:
   bool out_box, out_xyz, out_alphanes;
   bool debug, verbose;
   //
-  int maxshell; // <= MAX_NSHELL
-  vecflex<ntype> cutoff[MAX_NSHELL], cutoffSq[MAX_NSHELL];
+  int maxsphere; // <= MAX_NSPHERE
+  vecflex<ntype> cutoff[MAX_NSPHERE], cutoffSq[MAX_NSPHERE];
   Neigh_and_Bond_list<ntype,ptype> *n_b_list;
   //
   int l;
@@ -202,11 +202,11 @@ public:
     }
     V=0.0;
     nTypes=nTypePairs=1;
-    cutoff[0].resize(1); // 1st shell
+    cutoff[0].resize(1); // 1st sphere
     cutoff[0][0] = 3.75; // Antimony: 3.6 in glass, 3.75-3.89 in xtal
-    cutoff[1].resize(1); // 2nd shell
+    cutoff[1].resize(1); // 2nd sphere
     cutoff[1][0] = 5.15;
-    cutoff[2].resize(1); // 3rd shell
+    cutoff[2].resize(1); // 3rd sphere
     cutoff[2][0] = 8.8;
     l = 4;
     p1half=6;
@@ -227,9 +227,9 @@ public:
     p2half = 2*p1half;
     p1 = 2*p1half;
     p2 = 2*p2half;
-    if(c_bondorient)             maxshell=MAX_NSHELL; // init all neigh shells
-    else if(c_coordnum || c_adf || c_rmin || c_rmax || c_altbc || c_edq) maxshell=1;       // init only first neigh shell
-    else                         maxshell=0;       // do not init any
+    if(c_bondorient)             maxsphere=MAX_NSPHERE; // init all neigh spheres
+    else if(c_coordnum || c_adf || c_rmin || c_rmax || c_altbc || c_edq) maxsphere=1;       // init only first neigh sphere
+    else                         maxsphere=0;       // do not init any
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
     if(l==0) cout << "[WARNING: bond orientation order parameter with l=0 is always equal to 1.0]\n";
@@ -367,10 +367,10 @@ public:
     if(out_box) init_box();
     if(out_xyz) init_out_xyz();
     if(out_alphanes) init_out_alphanes();
-    if(maxshell>0)
+    if(maxsphere>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(s_rcut, maxshell, p1half, N, nTypes, s_log, tag, debug);
+      n_b_list->init(s_rcut, maxsphere, p1half, N, nTypes, s_log, tag, debug);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
     if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);
@@ -419,7 +419,7 @@ public:
     if(out_xyz) print_out_xyz();
     if(out_alphanes) print_out_alphanes();
 
-    if(maxshell>0) n_b_list->build(timestep, ps, box,boxInv, debug);
+    if(maxsphere>0) n_b_list->build(timestep, ps, box,boxInv, debug);
     if(c_coordnum) n_b_list->compute_coordnum(timestep, ps, debug);
     if(c_rmin) n_b_list->compute_rmin(timestep, ps, debug);
     if(c_rmax) n_b_list->print_rmax(timestep, debug);
