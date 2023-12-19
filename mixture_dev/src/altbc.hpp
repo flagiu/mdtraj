@@ -53,6 +53,7 @@ class ALTBC_Calculator
       fout << endl; // end of block
       fout.close();
 
+      ntype NVfactor = ((ntype)N) *(((ntype)(N-1))/V) * (((ntype)(N-2))/V);
       for(i=0; i<nbins; i++)
       {
         shell1 = 4.0 * M_PI * bins[i]*bins[i] * binw;
@@ -60,13 +61,20 @@ class ALTBC_Calculator
         {
           shell2 = 4.0 * M_PI * bins[j]*bins[j] * binw;
           idx = nbins*i + j;
-          norm[idx] = shell1*shell2 * (N*(N-1)*(N-2))/(V*V); // prepare normalization
+          norm[idx] = shell1*shell2 * NVfactor; // prepare normalization
           ave[idx]=ave2[idx]=0.0; // reset averages
         }
       }
 
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# 1st block: radial distance; 2nd block: ALTBC 2D matrix; # deviation >= " << angle_th << " degrees\n";
+      fout.close();
+
+      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::out);
+      fout << "# r_1/r_2 (with r_1<=r_2) for each count; one line per frame\n";
+      fout.close();
+      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::out);
+      fout << "# Timestep | <r_1/r_2> (with r_1<=r_2) | fluctuations\n";
       fout.close();
     }
 
@@ -75,11 +83,13 @@ class ALTBC_Calculator
       const int N=ps.size();
       int i,j,k,k0,k1, a,b, bin0, bin1, counts;
       vec rij, rik;
-      ntype rijSq, rikSq, costheta, rijNorm, rikNorm;
+      ntype rijSq, rikSq, costheta, rijNorm, rikNorm, r1r2, r1r2_ave, r1r2_ave2;
       for(a=0; a<nbins2; a++) value[a] = 0.0;
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
 
       counts=0;
+      r1r2_ave=r1r2_ave2=0.0;
+      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++)
       {
         for(a=1;a<ps[i].neigh_list[0].size();a++)
@@ -106,10 +116,26 @@ class ALTBC_Calculator
               counts++;
               value[bin1 + nbins*bin0] += 1.0;
               counts++;
+              r1r2 = (rijNorm>rikNorm ? rikNorm/rijNorm: rijNorm/rikNorm);
+              fout << r1r2 << " "; // print r1/r2
+              r1r2_ave += r1r2;
+              r1r2_ave2 += r1r2*r1r2;
             }
           }
         }
       }
+      fout<<endl;
+      fout.close();
+      // print <r1/r2>
+      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::app);
+      if(counts>0)
+      {
+        r1r2_ave /= counts;
+        r1r2_ave2 /= counts;
+        if(counts>1) r1r2_ave2 = sqrt( (r1r2_ave2 - r1r2_ave*r1r2_ave)/(counts-1) );
+      }
+      fout << timestep << " " << r1r2_ave << " " << r1r2_ave2 << endl;
+      fout.close();
       // Print current histogram and add it to the average
       ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
       fout << endl; // start new block

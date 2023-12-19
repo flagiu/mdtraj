@@ -18,7 +18,7 @@ parser.add_argument('--l', type=int,
 )
 parser.add_argument('--infile',  type=str,
                      default="NONE", required=False,
-                     help="Input file with average q_l^dot (columns:t,q_l^dot,q_l^dot error). If NONE, it will be set to boc.lX.ave with X=l. [default: %(default)s]"
+                     help="Input file with q_l^dot (columns:t,particle_index,q_l^dot). If NONE, it will be set to boc.lX.dat with X=l. [default: %(default)s]"
 )
 parser.add_argument('--scale', type=str,
                      default='lin', required=False,
@@ -44,17 +44,17 @@ x_tolerance=1e-5
 
 #-------------------------------------#
 args = parser.parse_args()
-outname="boc_ave_hist.l%d"%args.l
+outname="boc_hist.l%d"%args.l
 if args.scale!='lin' and args.scale!='log':
     print("[ERROR: args.scale must be 'lin' or 'log']\n")
     sys.exit(1)
 if args.infile=="NONE":
-	args.infile = "boc.l%d.ave"%args.l
+	args.infile = "boc.l%d.dat"%args.l
 
-t,q,q_ = np.loadtxt(args.infile).T
+t,i,q = np.loadtxt(args.infile).T
 
 fig, ax = plt.subplots(dpi=300)
-ax.set_xlabel(r"$\langle q_{%d}^{dot} \rangle$"%args.l)
+ax.set_xlabel(r"$q_{%d}^{dot}$"%args.l)
 ax.set_ylabel("Density") if args.density else ax.set_ylabel("Counts")
 if args.scale=='log':
 	ax.set_yscale('log')
