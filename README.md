@@ -27,9 +27,8 @@ bash ./install_path.sh
 make
 ```
 where 'version' can be:
-- 'notype', 'notype_dev' (mono-species);
-- 'mixture', 'mixture_dev' (multi-species);
-the '_dev' versions are under developement.
+- 'notype' (mono-species);
+- 'mixture' (multi-species);
 
 ## Usage and examples
 

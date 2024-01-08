@@ -22,7 +22,7 @@ class ADF_Calculator
     }
     virtual ~ADF_Calculator(){}
 
-    void init(ntype binw_, string string_out_, string tag_)
+    void init(ntype binw_, ntype rcut1, string string_out_, string tag_)
     {
       string_out = string_out_;
       tag = tag_;
@@ -33,7 +33,7 @@ class ADF_Calculator
       ave.resize(nbins);
       ave2.resize(nbins);
       ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-      fout << "# First block: cos(angle); other blocks: ADF for each frame )\n";
+      fout << "# First block: cos(angle); other blocks: ADF for each frame. # cutoff = "<<rcut1<<endl;
       for( auto i=0; i<nbins; i++){
         bins[i] = -1.0 + (i+0.5)*binw; // take the center of the bin for histogram
         fout << bins[i] << endl;
@@ -41,7 +41,7 @@ class ADF_Calculator
       }
       fout.close();
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "# cos(angle), ADF, ADF error.\n";
+      fout << "# cos(angle), ADF, ADF error. # cutoff = "<<rcut1<<endl;
       fout.close();
     }
 
@@ -54,17 +54,21 @@ class ADF_Calculator
       for(a=0; a<nbins; a++) value[a] = 0.0;
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
       for(i=0;i<N;i++){
-        for(a=1;a<ps[i].neigh_list[0].size();a++){
+        if(debug) cout << "ADF: i="<<i<<endl;
+        for(a=0;a<ps[i].neigh_list[0].size();a++){
             j = ps[i].neigh_list[0][a];
-            if(j>i) continue; // avoid double counting!
+            if(debug) cout << "ADF:  a="<<a<<" --> j="<<j<<endl;
+            //if(j>i) continue; // avoid double counting! NONSENSE!!!!!!
             rij = ps[i].rij_list[0][a];
             rijSq = ps[i].rijSq_list[0][a];
-            for(b=0;b<a;b++){
+            for(b=a+1;b<ps[i].neigh_list[0].size();b++){
               k = ps[i].neigh_list[0][b]; //useless?
+              if(debug) cout << "ADF:   b="<<b<<" --> k="<<k<<endl;
               rik = ps[i].rij_list[0][b];
               rikSq = ps[i].rijSq_list[0][b];
               costheta = (rij*rik) / sqrt(rijSq*rikSq);
               bin = int(floor( (costheta+1.0)/binw)); // min value is -1.0 !
+              if(debug) cout << "ADF:     (j--i--k)=("<<j<<"--"<<i<<"--"<<k<<") --> cos(jik)="<<costheta<<" --> bin="<<bin<<" out of nbins="<<nbins<<endl;
               if(bin<nbins){
                 value[bin] += 1.0;
                 counts++;

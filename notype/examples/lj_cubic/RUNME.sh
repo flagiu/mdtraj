@@ -12,7 +12,10 @@ cd $back
 echo "Test Bond parameters:"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -bo -l 4 -rcut1 1.5 -rcut2 2.5 -rcut3 4.0
 printf "Exit $? \n\n"
-exit
+
+echo "Test E-D q parameter:"
+${PATH_TO_MDTRAJ}/bin/mdtraj -xyz traj.xyz.save -box1 8.67 -bo -rcut1 1.5 -edq
+printf "Exit $? \n\n"
 
 echo "Test liquid MSD:"
 ${PATH_TO_MDTRAJ}/bin/mdtraj -lammpstrj traj_long.lammpstrj.save -msd -period 10000

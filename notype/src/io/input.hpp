@@ -128,15 +128,26 @@ read_xyz_frame(fstream &i, bool resetN)
   read_xyz_cp2k_frame(fstream &i, bool resetN)
     {
       string line, a,b,c,d,e;
+      stringstream ss;
       getline(i,line); // first line
       istringstream(line) >> a;
       N = stoi(a);
-      if(debug) cout << "\n  Line 1: " << N << " atoms\n";
+      if(debug) cout << "\n  Line 1: N = " << N << " atoms\n";
       getline(i,line); // second line
-      istringstream(line) >> b >> c >> d >> e;
-      if(debug) cout << "d="<<d<<endl;
-      timestep = stoi(d);
-      if(debug) cout << "  Line 2: Timestep " << timestep << endl;
+      ss << line;
+      do {
+        try {
+          ss >> a;
+          timestep = stoi(a);
+          if(debug) cout << "   Matched ["<<a<<"] in 2nd line of frame\n";
+          break;
+        }
+        catch (...) {
+          if(debug) cout << "   Skipping ["<<a<<"] in 2nd line of frame\n";
+          continue;
+        }
+      } while(true);
+      if(debug) cout << "  Line 2: Timestep = " << timestep << endl;
       if(resetN) {
         ps.resize(N);
         nframes = nlines / (N+2);
@@ -418,6 +429,21 @@ read_lammpstrj_frame(fstream &i, bool resetN)
 
   xy=xz=yz=0.0;
   switch (ncols) {
+    case 3:
+      cout << "WARNING: dump file has non-periodic cubic box\n";
+      getline(i,line); istringstream(line) >> a >> b;
+      xlo = stof(a);
+      xhi = stof(b);
+
+      getline(i,line); istringstream(line) >> a >> b;
+      ylo = stof(a);
+      yhi = stof(b);
+
+      getline(i,line); istringstream(line) >> a >> b;
+      zlo = stof(a);
+      zhi = stof(b);
+      break;
+
     case 6:
       getline(i,line); istringstream(line) >> a >> b;
       xlo = stof(a);

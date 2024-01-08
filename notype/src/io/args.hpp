@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -l -msd -rdf -rmin -sq -sqt]"
+  				  " [-box1 -box3 .box6 -box9 -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut1 -rcut2 -rcut3 -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -46,9 +46,13 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension, with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
   fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Angular momentum is defined by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave,.xyz}, %s.l*.dat.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st shell, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
+  fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
+  fprintf(stderr, "\n -rmax \t Compute the maximum distance between atoms. OUTPUT: %s.dat.", s_rmax.c_str() );
+  fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
+  fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
   fprintf(stderr, "\n -rcut1 \t Cutoff radius for cutoff functions in 1st shell [default %.2f].", cutoff[0]);
@@ -56,8 +60,6 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -rcut3 \t Cutoff radius for cutoff functions in 3rd shell [default %.2f].", cutoff[2]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD and S(q,t). If negative, don't. [default %d].", period);
-  fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
-  fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
@@ -99,12 +101,15 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      c_adf = true;
 	      i++;
 	      if (i == argc) { fprintf(stderr, "ERROR: '-adf' must be followed by bin width!\n"); exit(-1); }
-	      adf_binw = atof(argv[i]);
+	      adf_binw = stof(argv[i]);
+        if(adf_binw<=0 || adf_binw>=1) { fprintf(stderr, "ERROR: adf bin width value must be in (0,1)!\n"); exit(1); }
 	    }
 	  else if ( !strcmp(argv[i], "-bo") )
 	      c_bondorient = true;
 	  else if ( !strcmp(argv[i], "-cn") )
 	      c_coordnum = true;
+	  else if ( !strcmp(argv[i], "-edq") )
+	      c_edq = true;
 	  else if ( !strcmp(argv[i], "-box1") )
 	    {
 		  i++;
@@ -225,6 +230,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    }
     else if ( !strcmp(argv[i], "-rmin") )
        c_rmin = true;
+     else if ( !strcmp(argv[i], "-rmax") )
+        c_rmax = true;
  	  else if ( !strcmp(argv[i], "-sq") )
  	    {
         c_sq = true;

@@ -14,6 +14,7 @@
 #include "all_headers.hpp"
 #include "altbc.hpp"
 #include "bond_parameters.hpp"
+#include "ed_bond_parameter.hpp"
 #include "msd_and_ngp.hpp"
 #include "neighbour_and_bond_list.hpp"
 #include "rdf.hpp"

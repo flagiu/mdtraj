@@ -1,5 +1,6 @@
 #ifndef _NEIGH_AND_BOND_LIST_H_
 #define _NEIGH_AND_BOND_LIST_H_
+#include<algorithm>
 using namespace std;
 
 //---- "init" functions: prepare arrays, averages and headers for output files
@@ -16,7 +17,7 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, string_rmin_out, myName, tag;
+    string string_cn_out, string_rmin_out, string_rmax_out, log_file, myName, tag;
     fstream fout;
     stringstream ss;
 
@@ -32,7 +33,7 @@ class Neigh_and_Bond_list
 
   public:
     int Nshell, N;
-    ntype rcut[MAX_NSHELL], rcutSq[MAX_NSHELL];
+    ntype rcut[MAX_NSHELL], rcutSq[MAX_NSHELL], rmaxSq;
     vecflex<ntype> neigh[MAX_NSHELL];
     vector<int> bond_list[MAX_NSHELL];  // stores all bonds encoded into an integer through ij2int()
 
@@ -51,20 +52,65 @@ class Neigh_and_Bond_list
     void print_bond_summary(vector<ptype> ps)
     {
       int i,u,ii;
+
+      ss.str(std::string()); ss << log_file << tag; fout.open(ss.str(), ios::app);
+      fout << "#---------------------- BOND SUMMARY --------------------------#\n";
       for(u=0;u<Nshell;u++)
       {
         for(i=0;i<N;i++)
         {
-          cout << "  Shell u="<<u<<" of particle i="<<i<<" contains "<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
-          for(ii=0;ii<ps[i].neigh_list[u].size();ii++) cout<<ps[i].neigh_list[u][ii]<<" ";
-          cout << endl;
+          fout << "Shell u="<<u<<" of particle i="<<i<<" contains "<<ps[i].neigh_list[u].size()<<" neighbours:\n   ";
+          for(ii=0;ii<ps[i].neigh_list[u].size();ii++) fout<<ps[i].neigh_list[u][ii]<<" ";
+          fout << endl;
         }
-        cout << "> System has "<<bond_list[u].size()<<" bonds within rcut="<<rcut[u]<<endl;
+        fout << "> System has "<<bond_list[u].size()<<" bonds within rcut="<<rcut[u]<<endl;
       }
+      fout << "#--------------------------------------------------------------#\n";
+      fout.close();
+      //cout << "Summary of neighbour and bond lists saved into log file: "<<log_file <<tag <<endl;
     }
 
-    void init(int Nshell_, ntype *rcut_, int p1half_, int N_)
+    void sort_by_distance_3vec(vector<ntype>* dist, vector<int>* a, vector<vec>* b)
     {
+      // assuming same length for all inputs!
+      vector<size_t> p(dist->size()); // vector of 0,1,...,size-1
+      for(auto i=0;i<dist->size();i++) p[i]=i;
+      // sort p according to rSq_list
+      std::sort(p.begin(), p.end(), [&](std::size_t i, std::size_t j){ return (*dist)[i] < (*dist)[j]; } );
+      // now p is a permutation vector!
+      vector<ntype> dist_copy = (*dist);
+      vector<int> a_copy = (*a);
+      vector<vec> b_copy = (*b);
+      for(auto i=0;i<dist->size();i++)
+      {
+        (*dist)[i] = dist_copy[p[i]];
+        (*a)[i] = a_copy[p[i]];
+        (*b)[i] = b_copy[p[i]];
+      }
+      return;
+    }
+    void sort_by_distance_2vec(vector<ntype>* dist, vector<int>* a)
+    {
+      // assuming same length for all inputs!
+      vector<size_t> p(dist->size()); // vector of 0,1,...,size-1
+      for(auto i=0;i<dist->size();i++) p[i]=i;
+      // sort p according to rSq_list
+      std::sort(p.begin(), p.end(), [&](std::size_t i, std::size_t j){ return (*dist)[i] < (*dist)[j]; } );
+      // now p is a permutation vector!
+      vector<ntype> dist_copy = (*dist);
+      vector<int> a_copy = (*a);
+      for(auto i=0;i<dist->size();i++)
+      {
+        (*dist)[i] = dist_copy[p[i]];
+        (*a)[i] = a_copy[p[i]];
+      }
+      return;
+    }
+
+    void init(int Nshell_, ntype *rcut_, int p1half_, int N_, string log_file_, string tag_)
+    {
+      log_file = log_file_;
+      tag = tag_;
       Nshell=Nshell_;
       N=N_;
       for(int u=0;u<Nshell;u++)
@@ -80,9 +126,10 @@ class Neigh_and_Bond_list
 
     void build(int timestep, vector<ptype>& ps, mat box, mat boxInv, bool debug)
     { // NOTA BENE: ps deve essere passato con &, perche' dobbiamo modificare le sue variabili
-      int u,i,j;
+      int u,i,j, a;
       vec rij, rij_mic;
       ntype rijSq, rijSq_mic;
+      vector<ntype> bond_list_rijSq[MAX_NSHELL];
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
 
       //---- Reset counters and lists ----//
@@ -90,6 +137,7 @@ class Neigh_and_Bond_list
       {
         if(neigh[u].length()!=N) neigh[u].resize(N);
         bond_list[u].clear();
+        bond_list_rijSq[u].clear();
       }
 
       for(i=0;i<N;i++)
@@ -104,7 +152,8 @@ class Neigh_and_Bond_list
       }
       if(debug) cout << " * Reset counters and lists DONE\n";
 
-      //---- Build neighbour list (and save rij vectors) ----//
+      //---- Build neighbour list (and save rij vectors) and compute rmax ----//
+      rmaxSq=0.0;
       for(i=0;i<N;i++)
       {
         for(j=i+1;j<N;j++)
@@ -116,12 +165,17 @@ class Neigh_and_Bond_list
           if(rijSq_mic < rijSq){ // if closer, choose first periodic image
             rijSq = rijSq_mic;
             rij = rij_mic;
+            //if(rijSq>rmaxSq) rmaxSq=rijSq;
           }
+          //else if(rijSq_mic>rmaxSq) rmaxSq=rijSq_mic; // update rmaxSq with max(rijSq,rijSq_mic)
+          if(rijSq>rmaxSq) rmaxSq=rijSq;
+
           for(u=0;u<Nshell;u++)
           {
             if(rijSq <= rcutSq[u])
             {
               bond_list[u].push_back( ij2int(i,j,N) );
+              bond_list_rijSq[u].push_back(rijSq); // this is just for ordering bond_list later
 
               ps[i].neigh_list[u].push_back(j);
               ps[j].neigh_list[u].push_back(i);
@@ -135,10 +189,37 @@ class Neigh_and_Bond_list
           }
         }
       }
+      // sort neigh_list and rij_list according to rijSq_list, for each particle
+      for(i=0;i<N;i++)
+      {
+        for(u=0;u<Nshell;u++)
+        {
+          /*
+          if(debug) {
+            cout << "\nUnsorted arrrays:\n  ";
+            for (auto x: ps[i].rijSq_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+            for (auto x: ps[i].neigh_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+          } */
+          sort_by_distance_3vec( &ps[i].rijSq_list[u], &ps[i].neigh_list[u], &ps[i].rij_list[u] );
+          /*
+          if(debug) {
+            cout << "\nSorted arrrays:\n  ";
+            for (auto x: ps[i].rijSq_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+            for (auto x: ps[i].neigh_list[u]) std::cout << x << ' ';
+            cout << "\n  ";
+          }
+          */
+        }
+      }
+      // sort bond_list according to bond_list_rijSq
+      for(u=0;u<Nshell;u++) sort_by_distance_2vec( &bond_list_rijSq[u], &bond_list[u]);
+      print_bond_summary(ps);
       if(debug)
       {
-        cout << " * Build neighbour and bond lists DONE\n";
-        print_bond_summary(ps);
+        cout << " * Build & Sort the Neighbour list & the Bond list DONE\n";
         cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       }
       return;
@@ -218,6 +299,26 @@ class Neigh_and_Bond_list
       fout << sqrt(rminSq) << endl;
       fout.close();
       if(debug) cout << "*** RMIN computation for timestep " << timestep << " ENDED ***\n";
+      return;
+    }
+
+    //-------------------- Maximum atomic distance --------------------------------------//
+    void init_rmax(string string_rmax_out_, string tag_, bool debug)
+    {
+      if(debug) cout<<"*** Initializing RMAX within "<<myName<<"***\n";
+      string_rmax_out = string_rmax_out_;
+      tag = tag_;
+      ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::out);
+      fout << "# Maximum atomic distance within PBC. # cutoff = " << rcut[0]<< endl;
+      fout.close();
+    }
+    void print_rmax(int timestep, bool debug)
+    {
+      if(debug) cout << "*** PRINT RMAX for timestep " << timestep << " STARTED ***\n";
+      ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::app);
+      fout << sqrt(rmaxSq) << endl;
+      fout.close();
+      if(debug) cout << "*** PRINT RMAX for timestep " << timestep << " ENDED ***\n";
       return;
     }
 };

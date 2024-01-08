@@ -8,6 +8,8 @@
 #include<vector>
 using namespace std;
 
+#define SQUARE(x) ((x)*(x))
+
 // Number of lines in a file
 static int getLineCount(string file)
 {

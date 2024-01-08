@@ -1,9 +1,0 @@
-This is part of a test for:
- - g(r) of a binary mixture
-
-1000 + 150 LJ atoms at temperature T=1, density=?, in a cubic box:
-
-in.lmp : input script for LAMMPS (not needed)
-dump.lammpstrj : LAMMPS trajectory in the mixed liquid phase
-
-It can be visualized with VMD: vmd dump.lammpstrj -e script.vmd

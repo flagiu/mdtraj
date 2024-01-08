@@ -21,18 +21,23 @@ class RDF_Calculator
     }
     virtual ~RDF_Calculator(){}
 
-    void init(ntype binw_, vec box_diagonal, int N, ntype V, string string_out_, string tag_)
+    void init(ntype binw_, mat box, int N, ntype V, string string_out_, string tag_)
     {
       string_out = string_out_;
       tag = tag_;
       binw = binw_;
-      nbins = int(floor( 0.5*box_diagonal.abs().min() / binw ));
+      // r_max = 1/2 * min( |ax+bx+cx|, |ay+by+cy|, |az+bz+cz| ) for minimum image convention
+      ntype rmax = 0.5* min( min( fabs(box[0][0]+box[0][1]+box[0][2]), fabs(box[1][0]+box[1][1]+box[1][2]) ), fabs(box[2][0]+box[2][1]+box[2][2]) );
+      nbins = int(floor( rmax / binw ));
       bins.resize(nbins);
       norm.resize(nbins);
       value.resize(nbins);
       ave.resize(nbins);
       ave2.resize(nbins);
       ntype r, shell1, shell2, normalization = (N-1)/V * 4.0*M_PI/3.0 * N/2.0;
+      // normalization:
+      //    N*(N-1)/2 / V = average density of pairs i<j
+      //    4*pi/3*((r_2)^3 - (r_1)^3) = volume of the shell
       shell1 = 0.0;
       ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
       fout << "# First block: radial distance; other blocks: g(r)\n";

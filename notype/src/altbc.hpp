@@ -52,7 +52,8 @@ class ALTBC_Calculator
       }
       fout << endl; // end of block
       fout.close();
-      
+
+      ntype NVfactor = ((ntype)N) *(((ntype)(N-1))/V) * (((ntype)(N-2))/V);
       for(i=0; i<nbins; i++)
       {
         shell1 = 4.0 * M_PI * bins[i]*bins[i] * binw;
@@ -60,7 +61,7 @@ class ALTBC_Calculator
         {
           shell2 = 4.0 * M_PI * bins[j]*bins[j] * binw;
           idx = nbins*i + j;
-          norm[idx] = shell1*shell2 * (N*(N-1)*(N-2))/(V*V); // prepare normalization
+          norm[idx] = shell1*shell2 * NVfactor ; // prepare normalization
           ave[idx]=ave2[idx]=0.0; // reset averages
         }
       }
@@ -104,6 +105,8 @@ class ALTBC_Calculator
             {
               value[bin0 + nbins*bin1] += 1.0;
               counts++;
+              value[bin1 + nbins*bin0] += 1.0;
+              counts++;
             }
           }
         }
@@ -143,7 +146,7 @@ class ALTBC_Calculator
           }
           fout << endl;
         }
-        /* // do NOT print errors... who does even look at them?
+        /* // do NOT print error bars... who does even look at them?
         fout << endl; // end of block
         for(k0=0; k0<nbins; k0++){
           for(k1=0; k1<nbins; k1++){
