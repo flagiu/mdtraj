@@ -28,7 +28,9 @@ make
 ```
 where 'version' can be:
 - 'notype' (mono-species);
-- 'mixture' (multi-species);
+- 'mixture' (mono- or multi-species);
+
+The maintained version is currently 'mixture'.
 
 ## Usage and examples
 

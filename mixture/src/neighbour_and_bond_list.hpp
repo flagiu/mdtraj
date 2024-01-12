@@ -20,6 +20,7 @@ class Neigh_and_Bond_list
     string string_cn_out, string_rmin_out, string_rmax_out, log_file, myName, tag;
     fstream fout;
     stringstream ss;
+    bool debug, verbose;
 
     ntype fcut_generic(ntype x, int pow1, int pow2)
     {
@@ -50,6 +51,15 @@ class Neigh_and_Bond_list
     }
     int int2i(int x, int N){ return x/N; }
     int int2j(int x, int N){ return x%N; }
+    int get_bond_index(int i, int j, int N, int shell) {
+      int bond_encoding = ij2int(i,j,N);
+      int bond_idx = indexOf<int>(&(bond_list[shell]), bond_encoding); // indexOf is defined in "utility.hpp"
+      if(bond_idx==-1) {
+        cout << "ERROR: bond not found with (i,j)=("<<i<<","<<j<<")\n";
+        exit(1);
+      }
+      return bond_idx;
+    }
     ntype fcut(ntype xSq) { return fcut_generic(xSq,p1half,p2half); }
     int types2int(int ti, int tj){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
       if (ti>tj) return types2int(tj,ti); // map to ti<=tj
@@ -70,31 +80,42 @@ class Neigh_and_Bond_list
       return;
     }
 
-    void read_rcut_from_file(string s_rcut, bool debug)
+    void read_rcut_from_file(string s_rcut, vecflex<ntype> cutoffDefault[MAX_NSPHERE])
     {
       int u,t;
       string line, x;
-      if(debug) cout << "*** Reading RCUT from file "<<s_rcut<<" ***\n";
-      fout.open(s_rcut, ios::in);
-      if(fout.fail()) // checks to see if file opended
-      {
-        cout << "ERROR: could not open RCUT file '"<<s_rcut<<"'\n\n";
-        exit(1);
-      }
-      for(u=0;u<Nsphere;u++)
-      {
-        getline(fout,line);
-        ss << line;
-        for(t=0;t<nTypePairs;t++)
-        {
-          ss >> x;
-          rcut[u][t] = stof(x);
-          rcutSq[u][t] = SQUARE(rcut[u][t]);
+      if(s_rcut=="__NOT_DEFINED__") {
+        cout << "*** Using default RCUT for all type pairs ***\n";
+        for(u=0;u<Nsphere;u++) {
+          for(t=0;t<nTypePairs;t++){
+            rcut[u][t]=cutoffDefault[u][0];
+            rcutSq[u][t]=SQUARE(rcut[u][t]);
+          }
         }
-        ss.str(std::string()); ss.clear(); // clear the string stream!
       }
-      fout.close();
-      if(debug) cout << "*** Reading RCUT file DONE ***\n";
+      else {
+        if(debug) cout << "*** Reading RCUT from file "<<s_rcut<<" ***\n";
+        fout.open(s_rcut, ios::in);
+        if(fout.fail()) // checks to see if file opended
+        {
+          cout << "ERROR: could not open RCUT file '"<<s_rcut<<"'\n\n";
+          exit(1);
+        }
+        for(u=0;u<Nsphere;u++)
+        {
+          getline(fout,line);
+          ss << line;
+          for(t=0;t<nTypePairs;t++)
+          {
+            ss >> x;
+            rcut[u][t] = stof(x);
+            rcutSq[u][t] = SQUARE(rcut[u][t]);
+          }
+          ss.str(std::string()); ss.clear(); // clear the string stream!
+        }
+        fout.close();
+        if(debug) cout << "*** Reading RCUT file DONE ***\n";
+      }
       cout << "#-------- RCUT summary --------#\n";
       for(u=0;u<Nsphere;u++)
       {
@@ -165,10 +186,13 @@ class Neigh_and_Bond_list
       return;
     }
 
-    void init(string s_rcut, int Nsphere_, int p1half_, int N_, int nTypes_, string log_file_, string tag_, bool debug)
+    void init(string s_rcut, vecflex<ntype> cutoffDefault[MAX_NSPHERE], int Nsphere_,
+      int p1half_, int N_, int nTypes_, string log_file_, string tag_, bool debug_, bool verbose_)
     {
       log_file = log_file_;
       tag=tag_;
+      debug=debug_;
+      verbose=verbose_;
       Nsphere=Nsphere_;
       N=N_;
       nTypes=nTypes_;
@@ -178,7 +202,7 @@ class Neigh_and_Bond_list
         rcut[u].resize(nTypePairs);
         rcutSq[u].resize(nTypePairs);
       }
-      read_rcut_from_file(s_rcut, debug);
+      read_rcut_from_file(s_rcut, cutoffDefault);
       p1half=p1half_;
       p2half = 2*p1half;
       p1 = 2*p1half;
@@ -192,7 +216,7 @@ class Neigh_and_Bond_list
       }
     }
 
-    void build(int timestep, vector<ptype>& ps, mat box, mat boxInv, bool debug)
+    void build(int timestep, vector<ptype>& ps, mat box, mat boxInv)
     { // NOTA BENE: ps deve essere passato con &, perche' dobbiamo modificare le sue variabili
       int u,i,j,t;
       vec rij, rij_mic;
@@ -268,7 +292,7 @@ class Neigh_and_Bond_list
       // sort bond_list according to bond_list_rijSq
       for(u=0;u<Nsphere;u++) sort_by_distance_2vec( &bond_list_rijSq[u], &bond_list[u]);
 
-      print_bond_summary(ps); // to the log file
+      if(debug || verbose) print_bond_summary(ps); // to the log file
       if(debug)
       {
         cout << " * Build neighbour and bond lists DONE\n";
@@ -278,16 +302,18 @@ class Neigh_and_Bond_list
     }
 
     //----------------- Coordination Number (done on 1st sphere) ------------//
-    void init_coordnum(string string_cn_out_, string tag_, bool debug)
+    void init_coordnum(string string_cn_out_)
     {
       if(debug) cout<<"*** Initializing COORDNUM within "<<myName<<"***\n";
       string_cn_out = string_cn_out_;
-      tag = tag_;
-      ss.str(std::string()); ss << string_cn_out << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep | Particle idx | Coordination number for each type pair: 00 | 01 | 02 ... . # cutoffs = ";
-      for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
-      fout<<endl;
-      fout.close();
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_cn_out << tag << ".dat"; fout.open(ss.str(), ios::out);
+        fout << "#Timestep | Particle idx | Coordination number for each type pair: 00 | 01 | 02 ... . # cutoffs = ";
+        for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
+        fout<<endl;
+        fout.close();
+      }
 
       ss.str(std::string()); ss << string_cn_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep | <coordination number> for each type pair | Fluctuations for each. # cutoffs = ";
@@ -304,16 +330,18 @@ class Neigh_and_Bond_list
       if(debug) cout<<"*** Initialization completed ***\n";
     }
 
-    void compute_coordnum(int timestep, vector<ptype> ps, bool debug)
+    void compute_coordnum(int timestep, vector<ptype> ps)
     {
       if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " STARTED ***\n";
       int i, j, k, t, u;
       ntype fval, rijSq;
       vec rij;
+
       for(i=0;i<N;i++){
         for(t=0;t<nTypePairs;t++) neigh[0][t][i] = 0.; // start counters
         neigh_anytype[0][i] = 0.; // start counters
       }
+
       u=0; // 1st sphere neighbours
       for(i=0;i<N;i++){
         for(k=0;k<ps[i].neigh_list[u].size();k++){ // search in neigh list
@@ -331,14 +359,19 @@ class Neigh_and_Bond_list
           neigh_anytype[u][j] += fval;
         }
       }
-      ss.str(std::string()); ss << string_cn_out << tag << ".dat"; fout.open(ss.str(), ios::app);
-      for(i=0;i<N;i++)
+
+      if(verbose)
       {
-        fout << timestep << " " << i;
-        for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t][i];
-        fout << endl;
+        ss.str(std::string()); ss << string_cn_out << tag << ".dat"; fout.open(ss.str(), ios::app);
+        for(i=0;i<N;i++)
+        {
+          fout << timestep << " " << i;
+          for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t][i];
+          fout << endl;
+        }
+        fout.close();
       }
-      fout.close();
+
       ss.str(std::string()); ss << string_cn_out << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep;
       for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].mean();
@@ -349,11 +382,10 @@ class Neigh_and_Bond_list
     }
 
     //---------------------- Minimum atomic distance ---------------------------------//
-    void init_rmin(string string_rmin_out_, string tag_, bool debug)
+    void init_rmin(string string_rmin_out_)
     {
       if(debug) cout<<"*** Initializing RMIN within "<<myName<<"***\n";
       string_rmin_out = string_rmin_out_;
-      tag = tag_;
       ss.str(std::string()); ss << string_rmin_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "# Minimum atomic distance. # cutoffs = ";
       for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
@@ -361,7 +393,7 @@ class Neigh_and_Bond_list
       fout.close();
     }
 
-    void compute_rmin(int timestep, vector<ptype> ps, bool debug)
+    void compute_rmin(int timestep, vector<ptype> ps)
     {
       ntype rSq, rminSq = rcut[0].max();
       int i,j, k;
@@ -382,18 +414,17 @@ class Neigh_and_Bond_list
     }
 
     //-------------------- Maximum atomic distance --------------------------------------//
-    void init_rmax(string string_rmax_out_, string tag_, bool debug)
+    void init_rmax(string string_rmax_out_)
     {
       if(debug) cout<<"*** Initializing RMAX within "<<myName<<"***\n";
       string_rmax_out = string_rmax_out_;
-      tag = tag_;
       ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "# Maximum atomic distance within PBC. # cutoffs = ";
       for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
       fout<<endl;
       fout.close();
     }
-    void print_rmax(int timestep, bool debug)
+    void print_rmax(int timestep)
     {
       if(debug) cout << "*** PRINT RMAX for timestep " << timestep << " STARTED ***\n";
       ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::app);

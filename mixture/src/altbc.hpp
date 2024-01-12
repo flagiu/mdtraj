@@ -16,18 +16,22 @@ class ALTBC_Calculator
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
+    bool debug, verbose;
   public:
     ALTBC_Calculator(){
       myName = "ALTBC";
     }
     virtual ~ALTBC_Calculator(){}
 
-    void init(ntype r_min_, ntype binw_, ntype r_max_, ntype angle_th_, int N, ntype V, string string_out_, string tag_, bool debug)
+    void init(ntype r_min_, ntype binw_, ntype r_max_, ntype angle_th_,
+      int N, ntype V, string string_out_, string tag_, bool debug_, bool verbose_)
     {
       int i,j, idx;
       ntype shell1, shell2;
       string_out = string_out_;
       tag = tag_;
+      debug = debug_;
+      verbose = verbose_;
       r_min = r_min_;
       binw = binw_;
       r_max = r_max_;
@@ -43,15 +47,21 @@ class ALTBC_Calculator
       ave.resize(nbins2);
       ave2.resize(nbins2);
 
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-      fout << "# 1st block: radial distance; other blocks: ALTBC 2D matrix for each frame; # deviation >= " << angle_th << " degrees\n";
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
+        fout << "# 1st block: radial distance; other blocks: ALTBC 2D matrix for each frame; # deviation >= " << angle_th << " degrees\n";
+      }
       for(i=0; i<nbins; i++)
       {
         bins[i] = r_min + (i+0.5)*binw; // take the center of the bin for histogram
-        fout << bins[i] << endl;
+        if(verbose) fout << bins[i] << endl;
       }
-      fout << endl; // end of block
-      fout.close();
+      if(verbose)
+      {
+        fout << endl; // end of block
+        fout.close();
+      }
 
       ntype NVfactor = ((ntype)N) *(((ntype)(N-1))/V) * (((ntype)(N-2))/V);
       for(i=0; i<nbins; i++)
@@ -70,15 +80,18 @@ class ALTBC_Calculator
       fout << "# 1st block: radial distance; 2nd block: ALTBC 2D matrix; # deviation >= " << angle_th << " degrees\n";
       fout.close();
 
-      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::out);
-      fout << "# r_1/r_2 (with r_1<=r_2) for each count; one line per frame\n";
-      fout.close();
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::out);
+        fout << "# r_1/r_2 (with r_1<=r_2) for each count; one line per frame\n";
+        fout.close();
+      }
       ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# Timestep | <r_1/r_2> (with r_1<=r_2) | fluctuations\n";
       fout.close();
     }
 
-    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, bool debug)
+    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
     {
       const int N=ps.size();
       int i,j,k,k0,k1, a,b, bin0, bin1, counts;
@@ -89,7 +102,7 @@ class ALTBC_Calculator
 
       counts=0;
       r1r2_ave=r1r2_ave2=0.0;
-      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::app);
+      if(verbose) ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++)
       {
         for(a=1;a<ps[i].neigh_list[0].size();a++)
@@ -117,15 +130,18 @@ class ALTBC_Calculator
               value[bin1 + nbins*bin0] += 1.0;
               counts++;
               r1r2 = (rijNorm>rikNorm ? rikNorm/rijNorm: rijNorm/rikNorm);
-              fout << r1r2 << " "; // print r1/r2
+              if(verbose) fout << r1r2 << " "; // print r1/r2
               r1r2_ave += r1r2;
               r1r2_ave2 += r1r2*r1r2;
             }
           }
         }
       }
-      fout<<endl;
-      fout.close();
+      if(verbose)
+      {
+        fout<<endl;
+        fout.close();
+      }
       // print <r1/r2>
       ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::app);
       if(counts>0)
@@ -137,8 +153,11 @@ class ALTBC_Calculator
       fout << timestep << " " << r1r2_ave << " " << r1r2_ave2 << endl;
       fout.close();
       // Print current histogram and add it to the average
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
-      fout << endl; // start new block
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
+        fout << endl; // start new block
+      }
       for(k0=0; k0<nbins; k0++)
       {
         for(k1=0; k1<nbins; k1++)
@@ -146,14 +165,17 @@ class ALTBC_Calculator
           k = k0 + nbins*k1;
           if(counts>0) value[k] /= (counts*binw*binw); // ci sta l'area del bin??
           value[k] /= norm[k];
-          fout << value[k] << " "; // 2D matrix
+          if(verbose) fout << value[k] << " "; // 2D matrix
           ave[k] += value[k];
           ave2[k] += value[k]*value[k];
         }
-        fout << endl;
+        if(verbose) fout << endl;
       }
-      fout << endl; // end of block
-      fout.close();
+      if(verbose)
+      {
+        fout << endl; // end of block
+        fout.close();
+      }
 
       if(frameidx == (nframes-1)) // if last frame: print final results
       {

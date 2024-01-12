@@ -18,8 +18,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, " !!! WARNING: maybe I forgot to convert some functions from notype to mixture !!!\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "\n -h/--help \t Print this summary.");
-  fprintf(stderr, "\n -d/--debug \t Open in debug mode.");
-  fprintf(stderr, "\n -v/--verbose \t Print a lot of outputs during execution.");
+  fprintf(stderr, "\n -d/--debug \t Run in debug mode.");
+  fprintf(stderr, "\n -v/--verbose \t Print a lot of outputs during execution (both on-screen-text, log file and data files).");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n INPUT FILES (only one of the following must be selected, followed by the file name):");
   fprintf(stderr, "\n");
@@ -60,7 +60,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
   fprintf(stderr, "\n -rcut \t File containing <=%d lines of cutoff radii for each pair of atom types, each line ordered by type pair (e.g. for 3 types: r00 r01 r02 r11 r12 r22).", MAX_NSPHERE);
-  fprintf(stderr, "\n       \t They will be used for cutoff functions in neighbour-spheres. No need to specify higher order spheres if not required for calculation. [default %.2f;%.2f;%.2f for every pair].", cutoff[0][0], cutoff[1][0], cutoff[2][0]);
+  fprintf(stderr, "\n       \t They will be used for cutoff functions in neighbour-spheres. No need to specify higher order spheres if not required for calculation. [default %.2f;%.2f;%.2f for every pair].", defaultCutoff[0][0], defaultCutoff[1][0], defaultCutoff[2][0]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units) when computing MSD and S(q,t). If negative, don't. [default %d].", period);
   fprintf(stderr, "\n");

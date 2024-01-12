@@ -25,10 +25,10 @@ static int getLineCount(string file)
 
 // Find index of a given element (first one, if it is repeated)
 template<class T>
-int indexOf(vector<T>& vec, T element)
+int indexOf(vector<T>* vec, T element)
 {
-  for(int i=0, size=vec.size(); i<size; i++)
-    if(vec[i]==element) return i;
+  for(int i=0, size=vec->size(); i<size; i++)
+    if((*vec)[i]==element) return i;
   return -1; // not found
 }
 

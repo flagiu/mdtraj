@@ -17,6 +17,7 @@ class ADF_Calculator
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
+    bool debug, verbose;
 
     int types2int(int ti, int tj){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
       if (ti>tj) return types2int(tj,ti); // map to ti<=tj
@@ -30,12 +31,14 @@ class ADF_Calculator
     }
     virtual ~ADF_Calculator(){}
 
-    void init(ntype binw_, int nTypes_, string string_out_, string tag_)
+    void init(ntype binw_, int nTypes_, string string_out_, string tag_, bool debug_, bool verbose_)
     {
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
       string_out = string_out_;
       tag = tag_;
+      debug = debug_;
+      verbose = verbose_;
       binw = binw_;
       nbins = int(floor( 2.0 / binw )); // -1 < cos(angle) < 1
       bins.resize(nbins);
@@ -43,13 +46,17 @@ class ADF_Calculator
       value.resize(nTypes);
       ave.resize(nTypes);
       ave2.resize(nTypes);
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-      fout << "# First block: cos(angle); other blocks: ADF for each frame )\n";
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
+        fout << "# First block: cos(angle); other blocks: ADF for each frame )\n";
+      }
       for(i=0; i<nbins; i++)
       {
         bins[i] = -1.0 + (i+0.5)*binw; // take the center of the bin for histogram
-        fout << bins[i] << endl;
+        if(verbose) fout << bins[i] << endl;
       }
+      if(verbose) fout.close();
 
       for(t1=0;t1<nTypes;t1++)
       {
@@ -68,13 +75,13 @@ class ADF_Calculator
           }
         }
       }
-      fout.close();
+
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# cos(angle) | ADF's: 0-0-0 0-0-1 0-0-2 ... 1-0-1 1-0-2 ... 0-1-0 0-1-1 ... | ADF errors.\n";
       fout.close();
     }
 
-    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, bool debug)
+    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
     {
       const int N=ps.size();
       int i,j,k, a,b, bin, counts=0, ti,tj,tk,tp;
@@ -112,21 +119,27 @@ class ADF_Calculator
             }
         }
       }
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
-      fout << endl; // start new block
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
+        fout << endl; // start new block
+      }
       for(k=0; k<nbins; k++){
         for(ti=0;ti<nTypes;ti++){
           for(tp=0;tp<nTypePairs;tp++){
             if(counts>0) value[ti][tp][k] /= (counts*binw); // ci sta la larghezza del bin?
-            fout << value[ti][tp][k];
             ave[ti][tp][k] += value[ti][tp][k];
             ave2[ti][tp][k] += value[ti][tp][k]*value[ti][tp][k];
-            if(ti==nTypes-1 && tp==nTypePairs-1) fout << endl;
-            else fout << " ";
+            if(verbose)
+            {
+              fout << value[ti][tp][k];
+              if(ti==nTypes-1 && tp==nTypePairs-1) fout << endl;
+              else fout << " ";
+            }
           }
         }
       }
-      fout.close();
+      if(verbose) fout.close();
 
       if(frameidx == (nframes-1))
       {

@@ -40,7 +40,7 @@ public:
   bool debug, verbose;
   //
   int maxsphere; // <= MAX_NSPHERE
-  vecflex<ntype> cutoff[MAX_NSPHERE], cutoffSq[MAX_NSPHERE];
+  vecflex<ntype> defaultCutoff[MAX_NSPHERE];
   Neigh_and_Bond_list<ntype,ptype> *n_b_list;
   //
   int l;
@@ -183,6 +183,7 @@ public:
     s_out="traj";
     s_log="log";
     s_atom_label="labels";
+    s_rcut="__NOT_DEFINED__";
     ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::out);
     fout << "LOG SUMMARY"<<endl;
     fout.close();
@@ -202,12 +203,12 @@ public:
     }
     V=0.0;
     nTypes=nTypePairs=1;
-    cutoff[0].resize(1); // 1st sphere
-    cutoff[0][0] = 3.75; // Antimony: 3.6 in glass, 3.75-3.89 in xtal
-    cutoff[1].resize(1); // 2nd sphere
-    cutoff[1][0] = 5.15;
-    cutoff[2].resize(1); // 3rd sphere
-    cutoff[2][0] = 8.8;
+    defaultCutoff[0].resize(1); // 1st sphere
+    defaultCutoff[0][0] = 3.75; // Antimony: 3.6 in glass, 3.75-3.89 in xtal
+    defaultCutoff[1].resize(1); // 2nd sphere
+    defaultCutoff[1][0] = 5.15;
+    defaultCutoff[2].resize(1); // 3rd sphere
+    defaultCutoff[2][0] = 8.8;
     l = 4;
     p1half=6;
     qldot_th = 0.65;
@@ -370,20 +371,20 @@ public:
     if(maxsphere>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(s_rcut, maxsphere, p1half, N, nTypes, s_log, tag, debug);
+      n_b_list->init(s_rcut, defaultCutoff, maxsphere, p1half, N, nTypes, s_log, tag, debug, verbose);
     }
-    if(c_coordnum) n_b_list->init_coordnum(s_coordnum, tag, debug);
-    if(c_rmin) n_b_list->init_rmin(s_rmin, tag, debug);
-    if(c_rmax) n_b_list->init_rmax(s_rmax, tag, debug);
+    if(c_coordnum) n_b_list->init_coordnum(s_coordnum);
+    if(c_rmin) n_b_list->init_rmin(s_rmin);
+    if(c_rmax) n_b_list->init_rmax(s_rmax);
     if(c_bondorient)
     {
       bond_parameters = new Bond_Parameters<ntype,ptype>();
-      bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr, s_nxtal, tag);
+      bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr, s_nxtal, tag, debug, verbose);
     }
     if(c_edq)
     {
       ed_q_calculator = new ED_Bond_Parameter<ntype,ptype>();
-      ed_q_calculator->init(n_b_list, s_edq, tag);
+      ed_q_calculator->init(n_b_list, s_edq, tag, debug, verbose);
     }
     if(c_msd) {
       msd_calculator = new MSD_Calculator<ntype,ptype>();
@@ -391,25 +392,25 @@ public:
     }
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
-      rdf_calculator->init(rdf_binw, rdf_rmax, box, N, V, nTypes, Nt, s_rdf, tag);
+      rdf_calculator->init(rdf_binw, rdf_rmax, box, N, V, nTypes, Nt, s_rdf, tag, debug, verbose);
       pbc = new PBC<ntype>();
       pbc->init(image_convention,rdf_calculator->rmax,box,debug);
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();
-      adf_calculator->init(adf_binw, nTypes, s_adf, tag);
+      adf_calculator->init(adf_binw, nTypes, s_adf, tag, debug, verbose);
     }
     if(c_altbc) {
       altbc_calculator = new ALTBC_Calculator<ntype,ptype>();
-      altbc_calculator->init(altbc_rmin, altbc_binw, n_b_list->rcut[0][0], altbc_angle_th, N, V, s_altbc, tag, debug);
+      altbc_calculator->init(altbc_rmin, altbc_binw, n_b_list->rcut[0][0], altbc_angle_th, N, V, s_altbc, tag, debug, verbose);
     }
     if(c_sq) {
       sq_calculator = new SQ_Calculator<ntype,ptype>();
-      sq_calculator->init(qmodmin, qmodmax, qmodstep, L, s_sq, tag);
+      sq_calculator->init(qmodmin, qmodmax, qmodstep, L, s_sq, tag, debug, verbose);
     }
     if(c_sqt) {
       sqt_calculator = new SQT_Calculator<ntype,ptype>();
-      sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe,nframes,period, L, s_sqt, tag, debug); // init_rdf();
+      sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe,nframes,period, L, s_sqt, tag, debug, verbose); // init_rdf();
     }
   }
 
@@ -419,23 +420,23 @@ public:
     if(out_xyz) print_out_xyz();
     if(out_alphanes) print_out_alphanes();
 
-    if(maxsphere>0) n_b_list->build(timestep, ps, box,boxInv, debug);
-    if(c_coordnum) n_b_list->compute_coordnum(timestep, ps, debug);
-    if(c_rmin) n_b_list->compute_rmin(timestep, ps, debug);
-    if(c_rmax) n_b_list->print_rmax(timestep, debug);
-    if(c_bondorient) bond_parameters->compute(timestep, ps, debug);
-    if(c_edq) ed_q_calculator->compute(timestep, ps, debug);
+    if(maxsphere>0) n_b_list->build(timestep, ps, box,boxInv);
+    if(c_coordnum) n_b_list->compute_coordnum(timestep, ps);
+    if(c_rmin) n_b_list->compute_rmin(timestep, ps);
+    if(c_rmax) n_b_list->print_rmax(timestep);
+    if(c_bondorient) bond_parameters->compute(timestep, ps);
+    if(c_edq) ed_q_calculator->compute(timestep, ps);
     if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
-    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,pbc,debug);
-    if(c_adf) adf_calculator->compute(i,nframes,timestep,ps,debug);
-    if(c_altbc) altbc_calculator->compute(i,nframes,timestep,ps,debug);
+    if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,pbc);
+    if(c_adf) adf_calculator->compute(i,nframes,timestep,ps);
+    if(c_altbc) altbc_calculator->compute(i,nframes,timestep,ps);
     if(c_sq)
     {
       if(timings) sq_timer.go();
-      sq_calculator->compute(i,nframes,timestep,ps,debug);
+      sq_calculator->compute(i,nframes,timestep,ps);
       if(timings) timing_log( "sq_timing(ms): ", sq_timer.lap() );
     }
-    if(c_sqt) sqt_calculator->compute(i,nframes,timestep,ps,debug);
+    if(c_sqt) sqt_calculator->compute(i,nframes,timestep,ps);
   }
 
   void print_final_computations() {

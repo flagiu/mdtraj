@@ -17,6 +17,7 @@ class RDF_Calculator
     string string_out, myName, tag;
     fstream fout;\
     stringstream ss;
+    bool debug, verbose;
 
     int types2int(int ti, int tj){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
       if (ti>tj) return types2int(tj,ti); // map to ti<=tj
@@ -45,10 +46,12 @@ class RDF_Calculator
     }
     virtual ~RDF_Calculator(){}
 
-    void init(ntype binw_, ntype rmax_, mat box, int N, ntype V, int nTypes_, int* Nt_, string string_out_, string tag_)
+    void init(ntype binw_, ntype rmax_, mat box, int N, ntype V, int nTypes_, int* Nt_, string string_out_, string tag_, bool debug_, bool verbose_)
     {
       string_out = string_out_;
       tag = tag_;
+      debug =debug_;
+      verbose = verbose_;
       binw = binw_;
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
@@ -70,11 +73,12 @@ class RDF_Calculator
 
       shell1 = 0.0;
       ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-      fout << "# First block: r; Other blocks: g_00(r), g_01(r), ... for each frame.\n";
+      if(verbose) fout << "# First block: r; Other blocks: g_00(r), g_01(r), ... for each frame.\n";
       for( k=0; k<nbins; k++){
         bins[k] = (k+0.5)*binw; // take the center of the bin for histogram
-        fout << bins[k] << endl;
+        if(verbose) fout << bins[k] << endl;
       }
+      if(verbose) fout.close();
 
       norm.resize(nTypePairs);
       value.resize(nTypePairs);
@@ -114,13 +118,13 @@ class RDF_Calculator
           }
         }
       }
-      fout.close();
+
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# r | g_00(r), g_01(r), ... | error for each g(r).\n";
       fout.close();
     }
 
-    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, PBC<ntype> *pbc, bool debug)
+    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, PBC<ntype> *pbc)
     {
       int i,j, k, tp, ti,tj, num_images,img;
       const int N=ps.size();
@@ -156,21 +160,28 @@ class RDF_Calculator
           }
         }
       }
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
-      fout << endl; // start new block
+
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
+        fout << endl; // start new block
+      }
       for(k=0; k<nbins; k++)
       {
         for(tp=0;tp<nTypePairs;tp++)
         {
           value[tp][k] /= norm[tp][k];
-          fout << value[tp][k];
           ave[tp][k] += value[tp][k];
           ave2[tp][k] += value[tp][k]*value[tp][k];
-          if(tp<nTypePairs-1) fout << " ";
-          else fout << endl;
+          if(verbose)
+          {
+            fout << value[tp][k];
+            if(tp<nTypePairs-1) fout << " ";
+            else fout << endl;
+          }
         }
       }
-      fout.close();
+      if(verbose) fout.close();
 
       if(frameidx == (nframes-1)){
           ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);

@@ -17,6 +17,7 @@ class ED_Bond_Parameter
     stringstream ss;
     ntype class_boundaries[6] = {1./6., 5./12., 9./16., 11./16., 13./16., 15./16.};
     int class_labels[7] = { -7, -6, -4, -3, -1, -2, -5 };
+    bool debug, verbose;
 
   public:
     ED_Bond_Parameter(){
@@ -24,10 +25,13 @@ class ED_Bond_Parameter
     }
     virtual ~ED_Bond_Parameter(){}
 
-    void init(Neigh_and_Bond_list<ntype,ptype> *nb_list_, string string_out_, string tag_)
+    void init(Neigh_and_Bond_list<ntype,ptype> *nb_list_, string string_out_,
+      string tag_, bool debug_, bool verbose_)
     {
       string_out = string_out_;
       tag = tag_;
+      debug = debug_;
+      verbose = verbose_;
       nb_list = nb_list_;
       const int N=nb_list->N;
       q.resize(N);
@@ -44,7 +48,7 @@ class ED_Bond_Parameter
       */
     }
 
-    void compute(int timestep, vector<ptype> ps, bool debug)
+    void compute(int timestep, vector<ptype> ps)
     {
       const int N=nb_list->N;
       const int u=0; // first shell bonds

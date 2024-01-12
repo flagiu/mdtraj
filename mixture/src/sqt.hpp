@@ -19,17 +19,22 @@ class SQT_Calculator
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
+    bool debug, verbose;
   public:
     SQT_Calculator(){
       myName = "SQT";
     }
     virtual ~SQT_Calculator(){}
 
-    void init(int q_mod_min, int q_mod_max, int q_mod_step, int dtframe, int nframes, int period_in_real_units, vec box_diagonal, string string_out_, string tag_, bool debug)
+    void init(int q_mod_min, int q_mod_max, int q_mod_step, int dtframe,
+      int nframes, int period_in_real_units, vec box_diagonal, string string_out_,
+      string tag_, bool debug_, bool verbose_)
     {
       int i,j,idx;
       string_out = string_out_;
       tag = tag_;
+      debug = debug_;
+      verbose = verbose_;
       qm = q_mod_min;
       qM = q_mod_max;
       dq = q_mod_step;
@@ -40,7 +45,7 @@ class SQT_Calculator
       }
       num_periods = nframes/period_in_dt_units;
       if(debug) cout << myName<<": Set period_in_dt_units = " << period_in_dt_units << ", num_periods = " << num_periods << endl;
-      
+
       nbins = int(floor( (qM-qm)/dq )) + 1;
       binw = M_PI / box_diagonal[0]; // half mesh: it is in units of pi/L
       bins.resize(nbins);
@@ -49,17 +54,21 @@ class SQT_Calculator
       ave.resize(nbins * period_in_dt_units);
       ave2.resize(nbins * period_in_dt_units);
 
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-      fout << "# 1st block: q-wave-vectors; 2nd block: Delta timestep; Other blocks: S(q,t;t0) trajectory for each frame\n";
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
+        fout << "# 1st block: q-wave-vectors; 2nd block: Delta timestep; Other blocks: S(q,t;t0) trajectory for each frame\n";
+      }
       for(i=0; i<nbins; i++)
       {
         bins[i] = (1+qm+i*dq)*binw; // q-wave-vector values
-        fout << bins[i] << endl;
+        if(verbose) fout << bins[i] << endl;
       }
-      fout<<endl; // new block
+      if(verbose) fout<<endl; // new block
       for(i=0;i<period_in_dt_units;i++)
-        fout << i*dtframe << endl; // Delta timestep values
-      fout.close();
+        if(verbose) fout << i*dtframe << endl; // Delta timestep values
+      if(verbose) fout.close();
+
       // reset rho, <S(q,t)>, <S(q,t)^2> for each q=qmin,qmin+dq,...,qmax and for each dt=0,1,...,period_in_dt_units-1
       for(i=0; i<nbins; i++)
       {
@@ -77,7 +86,7 @@ class SQT_Calculator
       fout.close();
     }
 
-    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, bool debug)
+    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
     {
       const int N=ps.size();
       const ntype invN=1.0/(ntype)N;
@@ -180,15 +189,18 @@ class SQT_Calculator
         ave2_t0[k] = sqrt( (ave2_t0[k]-ave_t0[k]*ave_t0[k])/(qcount-1) ); // fluctuations of S(q;t0) over q orientation
         if(debug) cout << "  Total "<<qcount<<" triplets of wavenumbers.\n";
       }
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
-      fout << endl; // start new block
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
+        fout << endl; // start new block
+      }
       for(k=0; k<nbins; k++){
-        fout << ave_t0[k] << endl;
+        if(verbose) fout << ave_t0[k] << endl;
         idx = period_in_dt_units*k + dframe;
         ave[idx] += ave_t0[k]; // average over t0 at fixed q,t
         ave2[idx] += ave_t0[k]*ave_t0[k];
       }
-      fout.close();
+      if(verbose) fout.close();
 
       if(frameidx == (nframes-1))
       {

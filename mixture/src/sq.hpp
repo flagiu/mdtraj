@@ -16,19 +16,23 @@ class SQ_Calculator
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
+    bool debug, verbose;
   public:
     SQ_Calculator(){
       myName = "SQ";
     }
     virtual ~SQ_Calculator(){}
 
-    void init(int q_mod_min, int q_mod_max, int q_mod_step, vec box_diagonal, string string_out_, string tag_)
+    void init(int q_mod_min, int q_mod_max, int q_mod_step, vec box_diagonal,
+      string string_out_, string tag_, bool debug_, bool verbose_)
     {
       qm = q_mod_min;
       qM = q_mod_max;
       dq = q_mod_step;
       string_out = string_out_;
       tag = tag_;
+      debug = debug_;
+      verbose = verbose_;
 
       nbins = int(floor( (qM-qm)/dq )) + 1;
       binw = M_PI / box_diagonal[0]; // half mesh: it is in units of pi/L
@@ -38,21 +42,24 @@ class SQ_Calculator
       ave.resize(nbins);
       ave2.resize(nbins);
 
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-      fout << "# First block: q-wave-vectors; other blocks: S(q)\n";
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
+        fout << "# First block: q-wave-vectors; other blocks: S(q)\n";
+      }
       for( auto i=0; i<nbins; i++){
         bins[i] = (1+qm+i*dq)*binw; // q-wave-vector values
-        fout << bins[i] << endl;
+        if(verbose) fout << bins[i] << endl;
         ave[i] = 0.0;
         ave2[i] = 0.0;
       }
-      fout.close();
+      if(verbose) fout.close();
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# q-wave-vector, <S(q)>, <S(q)> error.\n";
       fout.close();
     }
 
-    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, bool debug)
+    void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
     {
       const int N=ps.size();
       int i,k,qmod, qx,qy,qz, qcount, j,idx;
@@ -88,6 +95,7 @@ class SQ_Calculator
         if(debug) cout << "  k="<<k<<", qmod="<<qmod<<endl;
         ss.str(std::string()); ss << qvectors_path << "/qvector." << setw(3) << setfill('0') << qmod; fout.open(ss.str(), ios::in);
         if(debug) cout << "  opening qvectors: " << ss.str() << endl;
+
         qcount=0;
         value[k]=value2[k]=0.0;
         while( getline(fout,line) )
@@ -130,14 +138,19 @@ class SQ_Calculator
         if(debug) cout << "  Total "<<qcount<<" triplets of wavenumbers.\n";
         fout.close();
       }
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
-      fout << endl; // start new block
+
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
+        fout << endl; // start new block
+      }
       for(k=0; k<nbins; k++){
-        fout << value[k] << endl;
+        if(verbose) fout << value[k] << endl;
         ave[k] += value[k];
         ave2[k] += value[k]*value[k];
       }
-      fout.close();
+      if(verbose) fout.close();
+
       if(frameidx == (nframes-1)){
           ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
           for(k=0; k<nbins; k++){
