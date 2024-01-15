@@ -55,7 +55,7 @@ class ALTBC_Calculator
       for(i=0; i<nbins; i++)
       {
         bins[i] = r_min + (i+0.5)*binw; // take the center of the bin for histogram
-        if(verbose) fout << bins[i] << endl;
+        if(verbose){ fout << bins[i] << endl;}
       }
       if(verbose)
       {
@@ -86,6 +86,7 @@ class ALTBC_Calculator
         fout << "# r_1/r_2 (with r_1<=r_2) for each count; one line per frame\n";
         fout.close();
       }
+
       ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# Timestep | <r_1/r_2> (with r_1<=r_2) | fluctuations\n";
       fout.close();
@@ -102,7 +103,7 @@ class ALTBC_Calculator
 
       counts=0;
       r1r2_ave=r1r2_ave2=0.0;
-      if(verbose) ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::app);
+      if(verbose){ ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::app); }
       for(i=0;i<N;i++)
       {
         for(a=1;a<ps[i].neigh_list[0].size();a++)
@@ -130,7 +131,7 @@ class ALTBC_Calculator
               value[bin1 + nbins*bin0] += 1.0;
               counts++;
               r1r2 = (rijNorm>rikNorm ? rikNorm/rijNorm: rijNorm/rikNorm);
-              if(verbose) fout << r1r2 << " "; // print r1/r2
+              if(verbose){ fout << r1r2 << " "; } // print r1/r2
               r1r2_ave += r1r2;
               r1r2_ave2 += r1r2*r1r2;
             }
@@ -165,11 +166,11 @@ class ALTBC_Calculator
           k = k0 + nbins*k1;
           if(counts>0) value[k] /= (counts*binw*binw); // ci sta l'area del bin??
           value[k] /= norm[k];
-          if(verbose) fout << value[k] << " "; // 2D matrix
+          if(verbose){ fout << value[k] << " "; } // 2D matrix
           ave[k] += value[k];
           ave2[k] += value[k]*value[k];
         }
-        if(verbose) fout << endl;
+        if(verbose) { fout << endl; }
       }
       if(verbose)
       {

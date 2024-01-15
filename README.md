@@ -8,7 +8,7 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 	- S(q) for cubic boxes only (?).
 
 - Bugs to be corrected:
-	- q_l order parameters seems to be offset by ~sqrt(2).
+	- some empty files are created during 'altbc' and 'bond_order'
 	- Check again the NGP.
 	- S(q,0) is wrong by some period-dependent factor.
 
@@ -30,7 +30,7 @@ where 'version' can be:
 - 'notype' (mono-species);
 - 'mixture' (mono- or multi-species);
 
-The maintained version is currently 'mixture'.
+The best maintained version is currently 'mixture'.
 
 ## Usage and examples
 
