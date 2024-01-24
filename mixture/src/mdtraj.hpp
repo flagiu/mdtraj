@@ -346,6 +346,10 @@ public:
   }
 
   void print_types() {
+    if(nTypes<=0) {
+      cout << "ERROR: nTypes = "<<nTypes<<" is not admitted.\n";
+      exit(1);
+    }
     nTypePairs = nTypes*(nTypes+1)/2;
     if(debug) cout << " Found nTypes =" << nTypes << ", nTypePairs =" << nTypePairs << endl;
     if(debug)

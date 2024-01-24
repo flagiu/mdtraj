@@ -573,27 +573,63 @@ read_jmd_frame(fstream &i, bool resetN)
 {
     string line, x;
     stringstream ss;
-    int ncols=0;
+    int ncols, ncol;
+
+    nTypes = 1; // ONLY MONO-SPECIES IMPLEMENTED!!!
 
     getline(i,line);
     if(debug) cout << "\n  Line 1: " << line << endl;
 
     ss << line;
-    while( ss >> x )
+    // count the number of columns
+    ncols=0;
+    while( ss >> x ) {ncols++;};
+    ss.str(std::string()); ss.clear(); // clear the string stream!
+    ss << line; // reset the string string stream
+
+    if(ncols==5) // box is written as Lx Ly Lz
     {
-      if     (ncols==0) timestep = stoi(x);
-      else if(ncols==1) N = stoi(x);
-      else if(ncols==2) box[0][0] = stof(x); // Lx
-      else if(ncols==3) box[1][1] = stof(x); // Ly
-      else if(ncols==4) box[2][2] = stof(x); // Lz
-      ncols++;
+      ncol=0;
+      while( ss >> x )
+      {
+        if     (ncol==0) timestep = stoi(x);
+        else if(ncol==1) N = stoi(x);
+        else if(ncol==2) box[0][0] = stof(x); // Lx
+        else if(ncol==3) box[1][1] = stof(x); // Ly
+        else if(ncol==4) box[2][2] = stof(x); // Lz
+        ncol++;
+      }
+      box[0][1]=box[0][2]=box[1][0]=box[1][2]=box[2][0]=box[2][1] = 0.0;
     }
-    box[0][1]=box[0][2]=box[1][0]=box[1][2]=box[2][0]=box[2][1] = 0.0; // orthorombic
+    else if(ncols==8) // box is written as Ax Bx, Cx, By, Cy, Cz
+    {
+      ncol=0;
+      while( ss >> x )
+      {
+        if     (ncol==0) timestep = stoi(x);
+        else if(ncol==1) N = stoi(x);
+        else if(ncol==2) box[0][0] = stof(x); // Ax
+        else if(ncol==3) box[0][1] = stof(x); // Bx
+        else if(ncol==4) box[0][2] = stof(x); // Cx
+        else if(ncol==5) box[1][1] = stof(x); // By
+        else if(ncol==6) box[1][2] = stof(x); // Cy
+        else if(ncol==7) box[2][2] = stof(x); // Cz
+        ncol++;
+      }
+      box[1][0]=box[2][0]=box[2][1] = 0.0; // Ay,Az,Bz=0
+    }
+    else if(ncols>0)
+    {
+      cout << "ERROR: ncols="<<ncols<<" not accepted for line 1 of JMD-formatted frame.\n";
+      exit(1);
+    }
+
     set_L_from_box();
 
     if(resetN) {
       ps.resize(N);
       nframes = nlines / (N+1);
+      Nt[0]=N; // ONLY MONOSPECIES IMPLEMENTED
     }
     for(auto &p: ps) p.read_3cols(i); // N particle lines
 }

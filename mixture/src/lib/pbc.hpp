@@ -1,7 +1,7 @@
 #ifndef _PBC_H_
 #define _PBC_H_
 using namespace std;
-//------------------------------- Radial Distribution Function ----------------------------------//
+
 #define MAX_N_IMAGES 300
 
 template <class ntype>
@@ -17,36 +17,36 @@ class PBC
     vec ds_within_rmax[MAX_N_IMAGES];
     const string myName="PBC";
 
-    // apply Minimum Image Convention for general periodic boxes
-      vec mic(vec& r)
-      {
-        vec r_mic = r - box * round(boxInv*r);
-        return r_mic.norm()<r.norm() ? r_mic : r;
-      }
+    // Minimum Image Convention for general periodic boxes
+    vec mic(vec& r)
+    {
+      vec r_mic = r - box * round(boxInv*r);
+      return r_mic.norm()<r.norm() ? r_mic : r;
+    }
 
-      int all_images(vec r, vec* r_images)
+    int all_images(vec r, vec* r_images)
+    {
+      int x,y,z, count=0;
+      vec s, ds, trial;
+      s = boxInv*r;
+      for(x=-xmax;x<=xmax && count<MAX_N_IMAGES;x++)
       {
-        int x,y,z, count=0;
-        vec s, ds, trial;
-        s = boxInv*r;
-        for(x=-xmax;x<=xmax && count<MAX_N_IMAGES;x++)
+        for(y=-ymax;y<=ymax && count<MAX_N_IMAGES;y++)
         {
-          for(y=-ymax;y<=ymax && count<MAX_N_IMAGES;y++)
+          for(z=-zmax;z<=zmax && count<MAX_N_IMAGES;z++)
           {
-            for(z=-zmax;z<=zmax && count<MAX_N_IMAGES;z++)
+            ds << x,y,z;
+            trial = box*(s+ds);
+            if(trial.norm()<rmax)
             {
-              ds << x,y,z;
-              trial = box*(s+ds);
-              if(trial.norm()<rmax)
-              {
-                *(r_images+count) = trial;
-                count++;
-              }
+              *(r_images+count) = trial;
+              count++;
             }
           }
         }
-        return count;
       }
+      return count;
+    }
 
   public:
     PBC(){}

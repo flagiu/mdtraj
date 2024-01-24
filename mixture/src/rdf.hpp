@@ -72,8 +72,10 @@ class RDF_Calculator
       bins.resize(nbins);
 
       shell1 = 0.0;
-      ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-      if(verbose) fout << "# First block: r; Other blocks: g_00(r), g_01(r), ... for each frame.\n";
+      if(verbose) {
+          ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
+          fout << "# First block: r; Other blocks: g_00(r), g_01(r), ... for each frame.\n";
+      }
       for( k=0; k<nbins; k++){
         bins[k] = (k+0.5)*binw; // take the center of the bin for histogram
         if(verbose) fout << bins[k] << endl;
