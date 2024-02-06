@@ -36,7 +36,7 @@ using namespace std;
 // Otherwise, you can observe the average of q_l^dot(i) around any particle i,
 // within a large cutoff radius rcut3 (3rd sphere).
 //----------------------------------------------------------------------------//
-#define PRINT_CUTOFFS_HEADER(Nsph,nbl,fout) for(auto  u=0;u<Nsph;u++){ for(int t=0;t<nbl->nTypePairs;t++) {fout << nbl->rcut[u][t]<<" ";} fout << "; "; } fout << endl;
+#define PRINT_CUTOFFS_HEADER(Nsph,nbl,fout) {for(auto  u=0;u<Nsph;u++){ for(int t=0;t<nbl->nTypePairs;t++) {fout << nbl->rcut[u][t]<<" ";} fout << "; "; }; fout << endl;}
 
 template <class ntype, class ptype>
 class Bond_Parameters
@@ -92,39 +92,39 @@ class Bond_Parameters
       {
         ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
         fout << "#Timestep, Particle index, Bond order orientation parameter q_l. # l = " << l << ", cutoffs = ";
-        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
         fout.close();
         ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
         fout << "#Timestep, <q_l>, fluctuations. # l = " << l << ", cutoffs = ";
-        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
         fout.close();
 
         ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
         fout << "#Timestep, Particle index, bar{q_l}: Local average of q_l within 1st-neigh-sphere. # l = " << l << ", cutoffs = ";
-        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
         fout.close();
         ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
         fout << "#Timestep, <bar{q_l}>, fluctuations. # l = " << l << ", cutoffs = ";
-        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
         fout.close();
       }
 
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Particle index, Bond order correlation parameter q_l_dot. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
       fout.close();
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, <q_l_dot>, fluctuations. # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
       fout.close();
 
       ss.str(std::string()); ss << string_nxtal_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, Nc = number of crystalline particles # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
       fout.close();
       ss.str(std::string()); ss << string_nxtal_out << ".l" << l << tag << ".indexes"; fout.open(ss.str(), ios::out);
       fout << "#Timestep | Indexes of crystalline particles (if any) # l = " << l << ", cutoffs = ";
-      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);;
+      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
       fout.close();
 
       if(verbose)
@@ -230,7 +230,9 @@ class Bond_Parameters
       //---- Compute ql~qlm(i)*qlm(i) ----//
       Q = 0.0; //  <ql>
       Q2 = 0.0; // <ql^2>
-      if(verbose) ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      if(verbose) {
+        ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      }
       for(i=0;i<N;i++)
       {
         for(a=0;a<l_deg; a++) {
@@ -255,7 +257,9 @@ class Bond_Parameters
       //---- Compute ql_ave~qlm_ave(i)*qlm_ave(i) ----//
       Q = 0.0; //  <ql>
       Q2 = 0.0; // <ql^2>
-      if(verbose) ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      if(verbose) {
+        ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      }
       for(i=0;i<N;i++)
       {
         for(a=0;a<l_deg; a++) {
