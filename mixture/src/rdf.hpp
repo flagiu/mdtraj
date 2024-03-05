@@ -15,7 +15,7 @@ class RDF_Calculator
     vecflex<ntype> bins;
     vector< vecflex<ntype> > norm, value, ave, ave2;
     string string_out, myName, tag;
-    fstream fout;\
+    fstream fout;
     stringstream ss;
     bool debug, verbose;
 

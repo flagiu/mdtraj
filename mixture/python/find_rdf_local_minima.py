@@ -2,7 +2,7 @@
 
 import sys
 import numpy as np
-from scipy.signal import argrelextrema
+from scipy.signal import argrelextrema, find_peaks
 
 def smooth(x,window_len=11,window='hanning'):
     """smooth the data using a window with requested size.
@@ -83,14 +83,16 @@ def main(rdf_file: str, output_file: str, w: str, n: int, delta: float, debug: b
             ys = smooth(y,n,w)
             
             if debug: plt.plot(xs,ys,label="pair %d , n=%d"%(ip+1,n), alpha=0.5)
-            # find local minima
-            imin = argrelextrema(ys, np.less)
+            # find local minima and maxima
+            imax,_ = find_peaks( ys, prominence=0.01*max(ys))
+            imin,_ = find_peaks(-ys, prominence=0.01*max(ys))
             xmin = xs[imin]
-            imax = argrelextrema(ys, np.greater)
             xmax = xs[imax]
-            
-            # criterion: must resolve the minima
-            ok = ( (xmin[1]-xmin[0])>delta )
+            ymin = ys[imin]
+            ymax = ys[imax]
+            # criterion: must resolve at least 2 minima
+            ok=len(xmin)>=2
+            if ok: ok=ok&((xmin[1]-xmin[0])>delta)
             if len(xmin)>2: ok=ok&((xmin[2]-xmin[1])>delta)
             # this may be False if g(r) is noisy --> increase smoothing
             n+=2
@@ -101,8 +103,8 @@ def main(rdf_file: str, output_file: str, w: str, n: int, delta: float, debug: b
         rcut[2,ip] = (xmin[2] if len(xmin)>2 else xmin[1])
 
     if debug:
-        for i in range(min(3,len(xmin))): plt.axvline(xmin[i], linestyle='--',alpha=0.7)
-        for i in range(min(3,len(xmax))): plt.axvline(xmax[i], linestyle=':',alpha=0.7)
+        plt.scatter(xmin,ymin, marker='x',color='red',alpha=0.7, label='minima')
+        plt.scatter(xmax,ymax, marker='o',color='green',alpha=0.7, label='maxima')
         plt.legend()
         plt.show()
 

@@ -54,6 +54,7 @@ class PBC
 
     void init(int img_conv, ntype rmax_, mat box_, bool debug)
     {
+    if(debug) cout << myName << " Initialization STARTED\n";
       image_convention = img_conv;
       rmax = rmax_;
       box = box_;
@@ -67,6 +68,7 @@ class PBC
         zmax = round(rmax/fabs(box[2][0]+box[2][1]+box[2][2]));
         if(debug) cout << "ALL_IMAGES\n xmax="<<xmax<<"\n ymax="<<ymax<<"\n zmax="<<zmax<<endl;
       }
+      if(debug) cout << myName << " Initialization COMPLETED\n";
       return;
     }
 

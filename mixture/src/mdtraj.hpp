@@ -58,7 +58,7 @@ public:
   ntype adf_binw;
   ADF_Calculator<ntype,ptype> *adf_calculator;
   //
-  int period;
+  int period; // this is in timestep units, not in number of frames
   bool msdAverageOverTime0;
   MSD_Calculator<ntype,ptype> *msd_calculator;
   //
@@ -129,7 +129,7 @@ public:
     cout << " L (length of each box vector) = \t "; L.show();
     cout << " p1 = \t " << p1 << endl;
     cout << " p2 = \t " << p2 << endl;
-    cout << " MSD period = \t " << period << endl;
+    cout << " period for MSD & NGP & S(q,t) = \t " << period << endl;
     cout << " rdf_binw = \t " << rdf_binw << endl;
     cout << " rdf_rmax = \t " << rdf_rmax << endl;
     cout << " adf_binw = \t " << adf_binw << endl;
@@ -293,7 +293,7 @@ public:
     //---------- Read 1st frame -------------//
     read_frame(fin, true, 0);
     t0frame = timestep;
-    if(debug) cout << "Read first frame. Set N = " << N << " (assumed to beconstant), t0frame = " << t0frame << ".\n";
+    if(debug) cout << "Read first frame. Set N = " << N << " (assumed to be constant), t0frame = " << t0frame << ".\n";
     if(debug) cout << "Deduced nframes = " << nframes << ".\n";
     print_types();
 
@@ -311,10 +311,11 @@ public:
       if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
     } catch (...) {
       cout << "WARNING: only 1 frame in trajectory.\n";
-      dtframe=1; // meaningless, but avoids nonsense later
+      dtframe=1; // this is meaningless, but it avoids nonsense later
     }
+    if(debug) cout << "Initialization of Computations STARTED\n";
     init_computations();
-    if(debug) cout << "Initialized arrays for computations.\n";
+    if(debug) cout << "Initialization of Computations COMPLETED\n";
     fin.close();
 
     // Restart reading
@@ -372,6 +373,14 @@ public:
     if(out_box) init_box();
     if(out_xyz) init_out_xyz();
     if(out_alphanes) init_out_alphanes();
+
+    if(maxsphere>0 || c_rdf || c_msd)
+    {
+      pbc = new PBC<ntype>();
+      // rmax>0 is currently implemented only for g(r)
+      if(c_rdf) pbc->init(image_convention,rdf_rmax,box,debug);
+      else      pbc->init(image_convention,      -1,box,debug);
+    }
     if(maxsphere>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
@@ -392,13 +401,11 @@ public:
     }
     if(c_msd) {
       msd_calculator = new MSD_Calculator<ntype,ptype>();
-      msd_calculator->init(dtframe,nframes,period, N, s_msd,s_ngp,tag,debug);
+      msd_calculator->init(dtframe,nframes,period, N,nTypes,Nt, s_msd,s_ngp,tag,debug,verbose);
     }
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
       rdf_calculator->init(rdf_binw, rdf_rmax, box, N, V, nTypes, Nt, s_rdf, tag, debug, verbose);
-      pbc = new PBC<ntype>();
-      pbc->init(image_convention,rdf_calculator->rmax,box,debug);
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();
@@ -430,7 +437,7 @@ public:
     if(c_rmax) n_b_list->print_rmax(timestep);
     if(c_bondorient) bond_parameters->compute(timestep, ps);
     if(c_edq) ed_q_calculator->compute(timestep, ps);
-    if(c_msd) msd_calculator->compute(i,timestep,ps,box,boxInv,debug);
+    if(c_msd) msd_calculator->compute(i,timestep,ps,pbc);
     if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,pbc);
     if(c_adf) adf_calculator->compute(i,nframes,timestep,ps);
     if(c_altbc) altbc_calculator->compute(i,nframes,timestep,ps);
@@ -444,7 +451,7 @@ public:
   }
 
   void print_final_computations() {
-    if(c_msd) msd_calculator->print(dtframe,N,debug);
+    if(c_msd) msd_calculator->print(dtframe);
   }
 
   void timing_log(string comment, float time)

@@ -21,10 +21,9 @@ parser.add_argument('--inavg',  type=argparse.FileType('r'),
                      help="Input file with average trajectory (1st block: wave vector bis; 2nd block: Delta timestep bins; 3rd block: 2d matrix of <S(q,t)>; 4th block; 2d matrix of its error. [default: %(default)s]"
 )
 parser.add_argument('--dt',  type=float, default=0.002, required=False,
-                     help="Integration time step (picoseconds)"
+                     help="Integration time step (picoseconds). [default: %(default)s]"
 )
-outpng="sqt.png"
-outpdf="sqt.pdf"
+outname="sqt"
 
 #-------------------------------------#
 args = parser.parse_args()
@@ -89,7 +88,7 @@ colors = cmap(norm(t))
 for i in range(Nt):
     lab = r"$t=%.1f$ $ps$"%t[i]
     col = colors[i]
-    ax.errorbar(q, sqt[:,i], sqt_[:,i], color=col, label=lab, alpha=0.7)
+    ax.errorbar(q, sqt[:,i], sqt_[:,i], fmt='.-', color=col, label=lab, alpha=0.5)
 ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major')
 fig.colorbar( mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][0], orientation="horizontal", label="t [ps]")
@@ -105,14 +104,14 @@ for i in range(Nq):
     col = colors[i]
     y = sqt[i] / sqt[i,0]
     y_ = y * np.sqrt( (sqt_[i]/sqt[i])**2 + (sqt_[i,0]/sqt[i,0])**2 ) # gaussian error propagation
-    ax.errorbar(t,y,y_, color=col, label=lab, alpha=0.7)
+    ax.errorbar(t,y,y_, fmt='.-', color=col, label=lab, alpha=0.5)
 ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major')
 fig.colorbar( mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][1], orientation="horizontal", label=r"q [$\AA^{-1}$]")
 
 plt.tight_layout()
 
-fig.savefig(outpng)
-fig.savefig(outpdf)
-print("Figure saved on %s , %s\n"%(outpng, outpdf))
+fig.savefig(outname+".png")
+fig.savefig(outname+".pdf")
+print("Figure saved on %s.png , %s.pdf\n"%(outname, outname))
 #plt.show()

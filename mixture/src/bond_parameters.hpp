@@ -12,7 +12,7 @@ using namespace std;
 //   Note: here we use a smoothed version where the Sum_j is weighted by a
 //     smooth cutoff function f(r_ij/rcut1).
 //   This is saved into ${string_bondorient_out}.dat
-// q_l(i) is a local rotationally invariant descriptor of the environment (Steinhardt parameter)
+// q_l(i) is a local rotationally invariant descriptor of the environment (similar to Steinhardt parameter)
 //   q_l(i) = { 4*pi/(2*l+1) * Sum_m |q_lm(i)|^2 }^(1/2)
 //          = {4*pi/(2*l+1)}^(1/2) * Norm(q_lm(i))
 //   Note: it is proportional to the norm of the vector q_lm(i) with index m.
@@ -94,25 +94,28 @@ class Bond_Parameters
         fout << "#Timestep, Particle index, Bond order orientation parameter q_l. # l = " << l << ", cutoffs = ";
         PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
         fout.close();
-        ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
-        fout << "#Timestep, <q_l>, fluctuations. # l = " << l << ", cutoffs = ";
-        PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
-        fout.close();
 
         ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
         fout << "#Timestep, Particle index, bar{q_l}: Local average of q_l within 1st-neigh-sphere. # l = " << l << ", cutoffs = ";
         PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
         fout.close();
-        ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
-        fout << "#Timestep, <bar{q_l}>, fluctuations. # l = " << l << ", cutoffs = ";
+
+        ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
+        fout << "#Timestep, Particle index, Bond order correlation parameter q_l_dot. # l = " << l << ", cutoffs = ";
         PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
         fout.close();
       }
 
-      ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep, Particle index, Bond order correlation parameter q_l_dot. # l = " << l << ", cutoffs = ";
+      ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
+      fout << "#Timestep, <q_l>, fluctuations. # l = " << l << ", cutoffs = ";
       PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
       fout.close();
+
+      ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
+      fout << "#Timestep, <bar{q_l}>, fluctuations. # l = " << l << ", cutoffs = ";
+      PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
+      fout.close();
+
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Timestep, <q_l_dot>, fluctuations. # l = " << l << ", cutoffs = ";
       PRINT_CUTOFFS_HEADER(Nsphere,nb_list,fout);
@@ -246,12 +249,9 @@ class Bond_Parameters
         Q2 += ql[i]*ql[i] / N;
       }
       if(verbose) fout.close();
-      if(verbose)
-      {
-        ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
-        fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
-        fout.close();
-      }
+      ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
+      fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
+      fout.close();
       if(debug) cout << " * Compute ql(i) (BOO) DONE\n";
 
       //---- Compute ql_ave~qlm_ave(i)*qlm_ave(i) ----//
@@ -273,12 +273,9 @@ class Bond_Parameters
         Q2 += ql_ave[i]*ql_ave[i] / N;
       }
       if(verbose) fout.close();
-      if(verbose)
-      {
-        ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
-        fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
-        fout.close();
-      }
+      ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
+      fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
+      fout.close();
       if(debug) cout << " * Compute ql(i)_ave (averaged BOO) DONE\n";
 
       //---- Compute Cl_ij~qlm(i)*qlm(j) (I take the real part) ----//
@@ -315,15 +312,17 @@ class Bond_Parameters
       if(debug) cout << " * Compute ql_dot(i) (BOC) DONE\n";
 
       //---- Compute global average of ql_dot(i) ----//
-      ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      if(verbose) {
+        ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
+      }
       Q = 0.0; //  <ql_dot>
       Q2 = 0.0; // <ql_dot^2>
       for(i=0;i<N;i++){
-        fout << timestep << " " << i << " " << ql_dot[i] << endl;
+        if(verbose) { fout << timestep << " " << i << " " << ql_dot[i] << endl; }
         Q += ql_dot[i] / N;
         Q2 += ql_dot[i]*ql_dot[i] / N;
       }
-      fout.close();
+      if(verbose) { fout.close(); }
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
       fout.close();
