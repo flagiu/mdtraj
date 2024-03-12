@@ -91,16 +91,16 @@ def main(rdf_file: str, output_file: str, w: str, n: int, delta: float, debug: b
             ymin = ys[imin]
             ymax = ys[imax]
             # criterion: must resolve at least 2 minima
-            ok=len(xmin)>=2
-            if ok: ok=ok&((xmin[1]-xmin[0])>delta)
+            ok=(len(xmin)>=1)
+            if len(xmin)>1: ok=ok&((xmin[1]-xmin[0])>delta)
             if len(xmin)>2: ok=ok&((xmin[2]-xmin[1])>delta)
             # this may be False if g(r) is noisy --> increase smoothing
             n+=2
 
         print("Finding g(r) minima: DONE type pair [ %d / %d ]\n"%(ip+1,p))
         rcut[0,ip] = xmin[0]
-        rcut[1,ip] = xmin[1]
-        rcut[2,ip] = (xmin[2] if len(xmin)>2 else xmin[1])
+        rcut[1,ip] = (xmin[1] if len(xmin)>1 else rcut[0,ip])
+        rcut[2,ip] = (xmin[2] if len(xmin)>2 else rcut[1,ip])
 
     if debug:
         plt.scatter(xmin,ymin, marker='x',color='red',alpha=0.7, label='minima')
@@ -126,7 +126,7 @@ if __name__=='__main__':
         print("    r | g_00(r), g_01(r), ... | error for each g(r)")
         print()
         print("  I will smooth each g(r) using a moving the given window")
-        print("  of n points, then find the position of the first 3")
+        print("  of n points, then find the position of the first (<=3)")
         print("  local minima using `scipy.signal.argrelextrema` and")
         print("  save them as a (3 x n) matrix to the output file.")
         print()
@@ -138,5 +138,9 @@ if __name__=='__main__':
     if len(sys.argv)>3: w = sys.argv[3]
     if len(sys.argv)>4: n = int(sys.argv[4])
     if len(sys.argv)>5: delta = float(sys.argv[5])
-    if len(sys.argv)>6: debug = bool(sys.argv[6])
+    if len(sys.argv)>6:
+        _=int(sys.argv[6])
+        if _==0: debug=False
+        elif _==1: debug=True
+        else: print("\nERROR: debug must be 0 or 1, not %d\n"%_); sys.exit(1)
     main(sys.argv[1], sys.argv[2], w, n, delta, debug)

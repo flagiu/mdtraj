@@ -901,7 +901,7 @@ read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame)
   box[1][0] = stof(b);
   box[2][0] = stof(c);
 
-  getline(i,line); // lattice vector 'ab
+  getline(i,line); // lattice vector 'b'
   istringstream(line) >> a >> b >> c;
   box[0][1] = stof(a);
   box[1][1] = stof(b);
