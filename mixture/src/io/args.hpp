@@ -15,7 +15,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "  Computes some statistical quantities over the MD trajectory of a multi-species system.\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
-  fprintf(stderr, " !!! WARNING: maybe I forgot to convert some functions from notype to mixture !!!\n");
+  fprintf(stderr, " !!! WARNING: maybe I forgot to convert some functions from monospecies to multispecies !!!\n");
   fprintf(stderr, "#---------------------------------------------------------------------------------------#.\n");
   fprintf(stderr, "\n -h/--help \t Print this summary.");
   fprintf(stderr, "\n -d/--debug \t Run in debug mode.");
@@ -23,11 +23,11 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n INPUT FILES (only one of the following must be selected, followed by the file name):");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file (one row for each timestep; 6 columns for box + 3N columns for coordinates).");
-  fprintf(stderr, "\n -alphanes9 \t like -alphanes but with 9 columns for box.");
+  fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file (one row for each timestep; 6 columns for box + 3N columns for coordinates). ONLY MONOSPECIES.");
+  fprintf(stderr, "\n -alphanes9 \t like -alphanes but with 9 columns for box. ONLY MONOSPECIES.");
   fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
   fprintf(stderr, "\n -poscar \t Concatenation of POSCAR files.");
-  fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat).");
+  fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat). ONLY MONOSPECIES.");
   fprintf(stderr, "\n -lammpstrj \t LAMMPS format. It expects the output of a 'dump atom' command.");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
@@ -37,8 +37,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n BOX (Note: it will be overwritten if present in the input file):");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -box1 \t INPUT: L. Size of the cubic box [this is the default, with L=%.2f].",L[0]);
-  fprintf(stderr, "\n -box3 \t INPUT: Lx,Ly,Lz. Sizes of the orthorombic box");
+  fprintf(stderr, "\n -box1 \t INPUT: L. Size of a cubic box [this is the default, with L=%.2f].",L[0]);
+  fprintf(stderr, "\n -box3 \t INPUT: Lx,Ly,Lz. Sizes of an orthorombic box");
   fprintf(stderr, "\n -box6 \t INPUT: Ax,Bx,Cx,By,Cy,Cz. Components of an upper-diagonalized box");
   fprintf(stderr, "\n -box9 \t INPUT: Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz. Components of a general box");
   fprintf(stderr, "\n -image_convention \t How many box images? [ONLY FOR g(r)]. 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff). [default 1].");
@@ -56,7 +56,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n -rmax \t Compute the maximum distance between atoms. OUTPUT: %s.dat.", s_rmax.c_str() );
   fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
-  fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
+  fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. TO BE DEBUGGED. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
   fprintf(stderr, "\n -rcut \t File containing <=%d lines of cutoff radii for each pair of atom types, each line ordered by type pair (e.g. for 3 types: r00 r01 r02 r11 r12 r22).", MAX_NSPHERE);
@@ -75,8 +75,9 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n TIPS:");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n - Convert a .traj file to a column file with mdtraj/shell/traj2nxy.sh; then plot it with mdtraj/*/python/{rdf,msd,...}.traj.py");
-  fprintf(stderr, "\n - Plot the ALTBC with mdtraj/*/python/plot.altbc.py");
+  fprintf(stderr, "\n - Convert a .traj file to a column file with mdtraj/shell/traj2nxy.sh; then plot it with mdtraj/*/python/plot_{rdf,adf,msd,...}_trajectory.py");
+  fprintf(stderr, "\n - Plot a statistical average for all type pairs with mdtraj/.../python/plot_{rdf,adf,msd,...}_average.py");
+  fprintf(stderr, "\n - Plot the ALTBC with mdtraj/.../python/plot_altbc.py");
   fprintf(stderr, "\n\n");
   }
 

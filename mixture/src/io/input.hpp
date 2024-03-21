@@ -524,6 +524,9 @@ read_alphanes_frame(fstream &i, bool resetN)
     if(resetN) {
       ps.resize(N);
       nframes = nlines;
+      nTypes=1;
+      Nt[0]=N;
+      cout << "WARNING: only monospecies input is implemented for alphanes format.\n";
     }
 }
 
@@ -564,6 +567,8 @@ read_alphanes9_frame(fstream &i, bool resetN)
     if(resetN) {
       ps.resize(N);
       nframes = nlines;
+      nTypes=1;
+      Nt[0]=N;
     }
 }
 
