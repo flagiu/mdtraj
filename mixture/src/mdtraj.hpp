@@ -16,7 +16,7 @@ using namespace std;
 const string root_path="/home/flavio/programmi/mdtraj/mixture_dev";
 #define MAX_N_TYPES 5
 enum class FileType {
-  XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
+  NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
 };
 
 template<class ntype, class ptype>
@@ -162,7 +162,10 @@ public:
     c_sq = false;
     c_sqt = false;
     c_edq = false;
-    filetype=FileType::XYZ;
+
+    filetype=FileType::NONE;
+    s_in="__NOT_DEFINED__";
+
     s_ndens="ndens";
     s_box="box";
     s_coordnum="coordnum";
@@ -187,6 +190,7 @@ public:
     ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::out);
     fout << "LOG SUMMARY"<<endl;
     fout.close();
+
     period = -1; // default: don't average over t0 for MSD
     image_convention = 1; // Minimum Image Convention
     remove_rot_dof = false;
@@ -222,8 +226,10 @@ public:
     altbc_rmin=0.0;
     altbc_angle_th=-1.0;
     fskip0=fskip1=0.0;
+
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
+
     // Compute non-primitive parameters:
     p2half = 2*p1half;
     p1 = 2*p1half;
@@ -233,7 +239,11 @@ public:
     else                         maxsphere=0;       // do not init any
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
-    if(l==0) cout << "[WARNING: bond orientation order parameter with l=0 is always equal to 1.0]\n";
+
+    if(filetype==FileType::NONE) {
+      cout << "ERROR: input file was not defined. Use -h for help\n";
+      exit(1);
+    }
   }
 
   void set_box_from_L() {
