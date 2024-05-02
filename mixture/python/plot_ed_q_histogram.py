@@ -79,6 +79,8 @@ parser.add_argument('--density', type=bool,
 
 args = parser.parse_args()
 
+print("Plotting q_ED histograms ...")
+
 header=args.indat.readline()
 rcuts_str = header.split("# cutoffs =")[1].strip('\n').split()
 rcuts = [float(rc) for rc in rcuts_str]
@@ -94,10 +96,12 @@ for i,line in enumerate(lines):
     Nt.append(int(nt))
     lab2idx[lab] = i
 Nt=np.array(Nt)
-print(sys.argv[0]+": Atom types:",labels,". Occurrence:",Nt,". Fraction:",Nt/np.sum(Nt))
+print("  Atom types:",labels)
+print("  Occurrence:",Nt)
+print("  Fraction:",Nt/np.sum(Nt))
 ign_labels=np.array(args.ignore, dtype=str)
 ign_types=np.zeros(len(ign_labels), dtype=int)
-print(sys.argv[0]+": List of types to be ignored:",ign_labels)
+print("  List of types to be ignored:",ign_labels)
 #---------------------------------------------------------------------------------------------------------#
 
 x = np.loadtxt(args.indat)
@@ -173,7 +177,7 @@ for ls in localStructures:
         f.write(f"{labels[typ]}\t{count}\t{perc:.2f}\n")
 f.write("|-----------------------------------------------|\n")
 f.close()
-print("%s: Analysis printed to ed_q_structures.txt \n"%(sys.argv[0]))
+print("  Analysis printed to ed_q_structures.txt")
 #---------------------------------------------------------#
 # plot
 fig, axes = plt.subplots(len(coordnum_u), len(types_u), figsize=(len(types_u)*5, len(coordnum_u)*3) )
@@ -236,5 +240,5 @@ plt.tight_layout()
 
 plt.savefig(outname+".png")
 plt.savefig(outname+".pdf")
-print("%s: Figure saved on %s.png , %s.pdf\n"%(sys.argv[0],outname,outname))
+print("Figure saved on %s.png , %s.pdf\n"%(outname,outname))
 #plt.show()

@@ -34,12 +34,15 @@ public:
   ntype V, mdens, ndens; // volume, mass density, nuerical density
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep;
-  bool c_coordnum, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax, c_altbc, c_sq, c_sqt, c_edq; // compute or not
-  string s_in, s_out, s_rcut, tag, s_atom_label, s_box, s_ndens, s_coordnum, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf, s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
+  bool c_coordnum, c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
+  bool c_altbc, c_sq, c_sqt, c_edq; // compute or not
+  string s_in, s_out, s_rcut, tag, s_atom_label, s_box, s_ndens, s_coordnum;
+  string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf;
+  string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
   bool out_box, out_xyz, out_alphanes;
   bool debug, verbose;
   //
-  int maxsphere; // <= MAX_NSPHERE
+  int maxsphere, max_num_nnd; // <= MAX_NSPHERE
   vecflex<ntype> defaultCutoff[MAX_NSPHERE];
   Neigh_and_Bond_list<ntype,ptype> *n_b_list;
   //
@@ -121,6 +124,7 @@ public:
     cout << " c_sq = \t " << c_sq << endl;
     cout << " c_sqt = \t " << c_sqt << endl;
     cout << " c_edq = \t " << c_edq << endl;
+    cout << " c_nnd = \t " << c_nnd << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
     cout << " box (a|b|c) = \t "; box.show();
@@ -162,6 +166,7 @@ public:
     c_sq = false;
     c_sqt = false;
     c_edq = false;
+    c_nnd = false;
 
     filetype=FileType::NONE;
     s_in="__NOT_DEFINED__";
@@ -174,6 +179,7 @@ public:
     s_nxtal="nc";
     s_msd="msd";
     s_ngp="ngp";
+    s_nnd="nnd";
     s_rdf="rdf";
     s_adf="adf";
     s_rmin="rmin";
@@ -235,7 +241,7 @@ public:
     p1 = 2*p1half;
     p2 = 2*p2half;
     if(c_bondorient)             maxsphere=MAX_NSPHERE; // init all neigh spheres
-    else if(c_coordnum || c_adf || c_rmin || c_rmax || c_altbc || c_edq) maxsphere=1;       // init only first neigh sphere
+    else if(c_coordnum || c_nnd || c_adf || c_rmin || c_rmax || c_altbc || c_edq) maxsphere=1;       // init only first neigh sphere
     else                         maxsphere=0;       // do not init any
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
@@ -397,6 +403,7 @@ public:
       n_b_list->init(s_rcut, defaultCutoff, maxsphere, p1half, N, nTypes, s_log, tag, debug, verbose);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum);
+    if(c_nnd) n_b_list->init_nearest_neigh_dists(s_nnd,max_num_nnd);
     if(c_rmin) n_b_list->init_rmin(s_rmin);
     if(c_rmax) n_b_list->init_rmax(s_rmax);
     if(c_bondorient)
@@ -443,6 +450,7 @@ public:
 
     if(maxsphere>0) n_b_list->build(timestep, ps, box,boxInv);
     if(c_coordnum) n_b_list->compute_coordnum(timestep, ps);
+    if(c_nnd) n_b_list->compute_nearest_neigh_dists(timestep, ps);
     if(c_rmin) n_b_list->compute_rmin(timestep, ps);
     if(c_rmax) n_b_list->print_rmax(timestep);
     if(c_bondorient) bond_parameters->compute(timestep, ps);

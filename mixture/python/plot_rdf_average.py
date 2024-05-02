@@ -49,6 +49,8 @@ parser.add_argument('--yshift',  type=float,
 
 args = parser.parse_args()
 
+print("Plotting g(r) average ...")
+
 outpng="rdf.png"
 outpdf="rdf.pdf"
 
@@ -67,10 +69,13 @@ for line in lines:
     Nt.append(int(nt))
 Nt=np.array(Nt)
 xt=Nt/np.sum(Nt) #Fraction
-print(" plot_rdf_average.py: Atom types:",labels,". Occurrence:",Nt,". Fraction:",xt)
+
+print("  Atom types:",*labels)
+print("  Occurrence:",*Nt)
+print("  Fraction:",*xt)
 ign=np.array(args.ignore)
 ign_labels = [ labels[ig] for ig in args.ignore ]
-print(" plot_rdf_average.py: List of types to be ignored:",ign_labels)
+print("  List of types to be ignored:",ign_labels)
 
 fig, ax = plt.subplots()
 ax.set_xlabel(r"$r$ [$\AA$]")
@@ -104,6 +109,6 @@ plt.tight_layout()
 
 fig.savefig(outpng)
 fig.savefig(outpdf)
-print(" plot_rdf_average.py: Figure saved on %s , %s\n"%(outpng, outpdf))
+print("Figure saved on %s , %s\n"%(outpng, outpdf))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)

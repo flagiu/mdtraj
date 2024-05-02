@@ -41,7 +41,7 @@ outname="msd"
 
 args = parser.parse_args()
 
-
+print("Plotting MSD average ...")
 #--------------------------------------------------------------------------------------------------------#
 labels=[]
 Nt=[]
@@ -53,10 +53,13 @@ for i,line in enumerate(lines):
     Nt.append(int(nt))
     lab2idx[lab] = i
 Nt=np.array(Nt)
-print(sys.argv[0]+": Atom types:",labels,". Occurrence:",Nt,". Fraction:",Nt/np.sum(Nt))
+xt=Nt/np.sum(Nt) #Fraction
+print("  Atom types:",*labels)
+print("  Occurrence:",*Nt)
+print("  Fraction:",*xt)
 ign_labels=np.array(args.ignore, dtype=str)
 ign_types=np.zeros(len(ign_labels), dtype=int)
-print(sys.argv[0]+": List of types to be ignored:",ign_labels)
+print("  List of types to be ignored:",ign_labels)
 #---------------------------------------------------------------------------------------------------------#
 
 X = np.loadtxt(args.file, unpack=False).T
@@ -107,7 +110,9 @@ fig.savefig(outname+".pdf")
 print("Figure saved on %s.png , %s.pdf\n"%(outname,outname))
 
 if args.fitD:
-    np.savetxt(outname+"_D.dat", Ddata, header="n (last points for fit), D, D error", fmt="%.0f %f %f")
+    fmt="%.0f"
+    for i in range(len(Nt)): fmt+=" %f %f"
+    np.savetxt(outname+"_D.dat", Ddata, header="n (last points for fit), D for each type, D error for each type", fmt=fmt)
     print("Diffusion Coefficient data saved on %s_D.dat\n"%(outname))
     axD.legend()
     axD.tick_params(which='both', direction='in')

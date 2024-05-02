@@ -17,7 +17,8 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, string_rmin_out, string_rmax_out, log_file, myName, tag;
+    string string_cn_out, string_nnd_out, string_rmin_out, string_rmax_out;
+    string log_file, myName, tag;
     fstream fout;
     stringstream ss;
     bool debug, verbose;
@@ -35,7 +36,7 @@ class Neigh_and_Bond_list
 
   public:
     ntype rmaxSq;
-    int Nsphere, N, nTypes, nTypePairs;
+    int Nsphere, N, nTypes, nTypePairs, max_num_nnd;
     vecflex<ntype> rcut[MAX_NSPHERE], rcutSq[MAX_NSPHERE];
     vector< vecflex<ntype> > neigh[MAX_NSPHERE]; // Nspheres X nTypePairs X N
     vecflex<ntype> neigh_anytype[MAX_NSPHERE]; // Nspheres X N (agnostic of types)
@@ -130,7 +131,8 @@ class Neigh_and_Bond_list
       int i,u,ii;
       ss.str(std::string()); ss << log_file << tag; fout.open(ss.str(), ios::app);
       fout << "#---------------------- BOND SUMMARY --------------------------#\n";
-      for(u=0;u<Nsphere;u++)
+      //for(u=0;u<Nsphere;u++)
+      for(u=0;u<1;u++)
       {
         for(i=0;i<N;i++)
         {
@@ -379,6 +381,43 @@ class Neigh_and_Bond_list
       fout << endl;
       fout.close();
       if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " ENDED ***\n";
+    }
+
+    //----------------- Nearest Neighbours distances (done on 1st sphere) ------------//
+    void init_nearest_neigh_dists(string string_nnd_out_, int max_num_nnd_)
+    {
+      max_num_nnd=max_num_nnd_;
+      if(debug) cout<<"*** Initializing NearestNeighDistances within "<<myName<<"***\n";
+      cout<<"WARNING: NearestNeighDistances produces a large output file\n";
+      string_nnd_out = string_nnd_out_;
+      ss.str(std::string()); ss << string_nnd_out << tag << ".dat"; fout.open(ss.str(), ios::out);
+      fout << "#TimeStep | ParticleIdx | ParticleType | (NeighbourType, DistanceSquared) for the first "<<max_num_nnd<<" neighs, sorted by distance | # cutoffs = ";
+      for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
+      fout<<endl;
+      fout.close();
+      if(debug) cout<<"*** Initialization completed ***\n";
+    }
+
+    void compute_nearest_neigh_dists(int timestep, vector<ptype> ps)
+    {
+      if(debug) cout << "*** NearestNeighDistances computation for timestep " << timestep << " STARTED ***\n";
+      int i, j, k, u;
+      ntype rijSq;
+
+      ss.str(std::string()); ss << string_nnd_out << tag << ".dat"; fout.open(ss.str(), ios::app);
+
+      u=0; // 1st sphere neighbours
+      for(i=0;i<N;i++){
+        fout << timestep << " " << i << " " << ps[i].label;
+        for(k=0;k<ps[i].neigh_list[u].size()&&k<max_num_nnd;k++){ // search in neigh list
+          j = ps[i].neigh_list[u][k];
+          fout << " " << ps[j].label << " " << ps[i].rijSq_list[u][k];
+        }
+        fout << endl;
+      }
+
+      fout.close();
+      if(debug) cout << "*** NearestNeighDistances computation for timestep " << timestep << " ENDED ***\n";
     }
 
     //---------------------- Minimum atomic distance ---------------------------------//

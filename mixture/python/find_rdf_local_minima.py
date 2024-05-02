@@ -72,7 +72,10 @@ def main(rdf_file: str, output_file: str, w: str, n: int, delta: float, debug: b
     for ip in range(p):
         y = X[:,1+ip]
         
-        if debug: plt.plot(x,y,label='data',color='black')
+        if debug:
+            plt.figure()
+            plt.title("Pair n. %d of %d"%(1+ip,p))
+            plt.plot(x,y,label='data',color='black')
         
         ok=False
         while not ok:
@@ -102,11 +105,11 @@ def main(rdf_file: str, output_file: str, w: str, n: int, delta: float, debug: b
         rcut[1,ip] = (xmin[1] if len(xmin)>1 else rcut[0,ip])
         rcut[2,ip] = (xmin[2] if len(xmin)>2 else rcut[1,ip])
 
-    if debug:
-        plt.scatter(xmin,ymin, marker='x',color='red',alpha=0.7, label='minima')
-        plt.scatter(xmax,ymax, marker='o',color='green',alpha=0.7, label='maxima')
-        plt.legend()
-        plt.show()
+        if debug:
+            plt.scatter(xmin,ymin, marker='x',color='red',alpha=0.7, label='minima')
+            plt.scatter(xmax,ymax, marker='o',color='green',alpha=0.7, label='maxima')
+            plt.legend()
+            plt.show()
 
     # print the first 3 local minima in column
     np.savetxt(output_file, rcut, fmt="%.3f")

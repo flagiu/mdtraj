@@ -28,6 +28,7 @@ outname="sqt"
 #-------------------------------------#
 args = parser.parse_args()
 
+print("Plotting monospecies S(q,t) ...")
 lines = args.inavg.readlines()
 # Parse wavevectors from 1st block:
 i = 0
@@ -90,7 +91,7 @@ for i in range(Nt):
     col = colors[i]
     ax.errorbar(q, sqt[:,i], sqt_[:,i], fmt='.-', color=col, label=lab, alpha=0.5)
 ax.tick_params(which='both', direction='in')
-ax.grid(axis='both', which='major')
+#ax.grid(axis='both', which='major')
 fig.colorbar( mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][0], orientation="horizontal", label="t [ps]")
 
 ax = axes[1][1]
@@ -106,7 +107,7 @@ for i in range(Nq):
     y_ = y * np.sqrt( (sqt_[i]/sqt[i])**2 + (sqt_[i,0]/sqt[i,0])**2 ) # gaussian error propagation
     ax.errorbar(t,y,y_, fmt='.-', color=col, label=lab, alpha=0.5)
 ax.tick_params(which='both', direction='in')
-ax.grid(axis='both', which='major')
+#ax.grid(axis='both', which='major')
 fig.colorbar( mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][1], orientation="horizontal", label=r"q [$\AA^{-1}$]")
 
 plt.tight_layout()

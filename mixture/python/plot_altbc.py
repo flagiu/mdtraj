@@ -30,6 +30,8 @@ parser.add_argument('--outname',  type=str,
 #-------------------------------------#
 args = parser.parse_args()
 
+print("Plotting ALTBC ...")
+
 lines = args.inavg.readlines()
 i = 0
 block=0
