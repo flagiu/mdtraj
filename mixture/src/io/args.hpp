@@ -310,9 +310,9 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	  else if ( !strcmp(argv[i], "-tag") )
 	    {
 	      i++;
-	      if (i == argc) { fprintf(stderr, "ERROR: '-tag' must be followed by some text!\n"); exit(-1); }
+	      if (i == argc) { fprintf(stderr, "ERROR: '-tag' must be followed by some text! (can be an empty string '')\n"); exit(-1); }
 	      tag = argv[i];
-	      tag.insert(0, 1, '.'); // add a dot to the beginning of the tag
+	      if(tag.length()>0) tag.insert(0, 1, '.'); // add a dot to the beginning of the tag, if not empty
 	    }
 	  else if ( !strcmp(argv[i], "-alphanes") )
 	    {
