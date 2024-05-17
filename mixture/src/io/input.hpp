@@ -459,10 +459,21 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
         }
       }
     }
+
     getline(i,line); // line 8
-    istringstream(line) >> a >> b >> c;
-    timestep=stoi(c);
-    if(debug) cout << "  Line 8: coordinates format = " << a << ", timestep = " << timestep << endl;
+    ss.str(std::string()); ss.clear(); // clear the string stream!
+    ss<<line;
+    // get first segment separed by a whitespace
+    ss>>a;
+    // then get 2nd segment separed by a '='
+    for(int foo=0;foo<2;foo++){
+      if(!getline(ss, b, '=')) {
+        cout << "ERROR during reading of timestep in a xdatcar/xdatcarV frame.\n";
+        exit(1);
+      }
+    }
+    timestep=stoi(b);
+    if(debug) cout << "  Line 8: coordinates format = " << a << " , timestep = " << timestep << endl;
     if(a=="Direct" || a=="direct") format=0; // lattice units
     else if(a=="Cartesian" || a=="cartesian") format=1; // cartesian units
     else { cout << "[ERROR: coordinates format not recognized: " << a << "]\n"; exit(1); }
