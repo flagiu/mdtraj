@@ -26,7 +26,7 @@ public:
   using mat=mymatrix<ntype,3,3>;
   int N, nTypes, nTypePairs, Nt[MAX_N_TYPES]; // number of particles, number of types, num of particles for each type
   string type_names[MAX_N_TYPES]; // name for each type
-  vec L; // dimensions of an orthorombic simulation box ( ??? centered in 0: -Lx/2 < x < Lx/2 )
+  vec L; // length of box vectors ( ??? centered in 0: -Lx/2 < x < Lx/2 )
   mat box, boxInv; // most general simulation box
   int image_convention; // 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff radius)
   bool remove_rot_dof; // remove the 3 rotational degrees of freedom from the box?
@@ -434,11 +434,13 @@ public:
     }
     if(c_sq) {
       sq_calculator = new SQ_Calculator<ntype,ptype>();
-      sq_calculator->init(qmodmin, qmodmax, qmodstep, L, s_sq, tag, debug, verbose);
+      sq_calculator->init(qmodmin, qmodmax, qmodstep,
+        L, s_sq, tag, debug, verbose);
     }
     if(c_sqt) {
       sqt_calculator = new SQT_Calculator<ntype,ptype>();
-      sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe,nframes,period, L, s_sqt, tag, debug, verbose); // init_rdf();
+      sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe,
+        nframes,period, L, s_sqt, tag, debug, verbose);
     }
   }
 

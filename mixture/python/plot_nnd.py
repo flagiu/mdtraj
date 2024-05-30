@@ -74,12 +74,16 @@ ax.set_ylabel("Density")
 y_shift=0.0
 central_atom_type=x[:,2]
 
+print("#Central atom type, Average distance for each shell:")
 for nt in range(ntypes): # for each type of central atom
     y_shift=nt*args.yshift
+    print(labels[nt],end='')
     for nn in range(M): # for each closest neighbour
         selection=(central_atom_type==nt)
         dist_forAnyNeighType = x[selection,3+2*nn+1]
         _,edges_forAnyNeighType = np.histogram(dist_forAnyNeighType, bins=args.bins)
+        avg=dist_forAnyNeighType.mean()
+        print(" %.2f"%avg,end='')
         baseline_values=y_shift+np.zeros(len(edges_forAnyNeighType)-1)
         for nt_other in range(ntypes):
             neigh_type = x[selection,3+2*nn]
@@ -88,6 +92,7 @@ for nt in range(ntypes): # for each type of central atom
             values,_ = np.histogram(dist, bins=edges_forAnyNeighType, density=True)
             ax.stairs(values,edges_forAnyNeighType, baseline=baseline_values, fill=False, alpha=0.9)
             baseline_values+=values
+    print()
 
 #ax.set_yscale("log")
 ax.tick_params(which='both', direction='in')

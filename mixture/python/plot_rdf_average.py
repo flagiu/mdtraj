@@ -82,7 +82,7 @@ ax.set_xlabel(r"$r$ [$\AA$]")
 ax.set_ylabel(r"$g(r)$")
 if args.yshift: ax.set_title(r"Shifted by %.1f"%args.yshift, fontsize=10)
 g_tot = np.zeros_like(r)
-for i in range(npairs):
+for i in reversed(range(npairs)): # reverse in order for the legend to match the plots in vertical order
     g = X[:,1+i]
     g_ = X[:,1+i+npairs]
     ti,tj = int2types(i, ntypes)

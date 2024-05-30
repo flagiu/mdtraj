@@ -26,7 +26,7 @@ class SQ_Calculator
     void init(int q_mod_min, int q_mod_max, int q_mod_step, vec box_diagonal,
       string string_out_, string tag_, bool debug_, bool verbose_)
     {
-      qm = q_mod_min;
+      qm = q_mod_min; // in units of half mesh (pi/L)
       qM = q_mod_max;
       dq = q_mod_step;
       string_out = string_out_;
@@ -72,7 +72,7 @@ class SQ_Calculator
       vecflex<ntype> exps;
       exps.resize(exp_storage_size);
 
-      for(k=0;k<num_k_values;k++) // wavenumber
+      for(k=0;k<num_k_values;k++) // wavenumber (in units of full mesh 2*pi/L)
       {
         for(i=0;i<N;i++) // particle
         {
@@ -91,8 +91,10 @@ class SQ_Calculator
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
       for(k=0; k<nbins; k++)
       {
-        qmod = qm + k*dq;
+        qmod = qm + k*dq; // in units of half mesh binw=pi/L
         if(debug) cout << "  k="<<k<<", qmod="<<qmod<<endl;
+        // qvector.${qmod} file contains wavenumbers whose
+        // modulus is in (qmod-1,qmod] half mesh units
         ss.str(std::string()); ss << qvectors_path << "/qvector." << setw(3) << setfill('0') << qmod; fout.open(ss.str(), ios::in);
         if(debug) cout << "  opening qvectors: " << ss.str() << endl;
 
@@ -101,7 +103,7 @@ class SQ_Calculator
         while( getline(fout,line) )
         {
           istringstream(line) >> a >> b >> c;
-          qx = stoi(a);
+          qx = stoi(a); //
           qy = stoi(b);
           qz = stoi(c);
           if(debug) cout << "  read kx,ky,kz = " << qx<<", "<< qy<<", "<< qz<<endl;
