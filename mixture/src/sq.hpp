@@ -3,7 +3,7 @@
 using namespace std;
 //------------------------------- Static Structure Factor ----------------------------------//
 const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
-
+#define MAX_QVECTORS 300
 template <class ntype, class ptype>
 class SQ_Calculator
 {
@@ -65,7 +65,7 @@ class SQ_Calculator
       int i,k,qmod, qx,qy,qz, qcount, j,idx;
       ntype arg, rho_real, rho_imag, sq_oriented;
       string line,a,b,c;
-      const int num_k_values = 1 + qM/2; // 1/2 is the mesh spacing!
+      const int num_k_values = 1 + qM/2; // qM is in units of half mesh
       const int exp_storage_size = num_k_values * N * 3 * 2; // wavenumber, particle, cartesian, real/imag
       const ntype dk = 2.*binw; // 2*M_PI/L[0];
       ntype x0,x1, y0,y1, z0,z1;
@@ -94,7 +94,7 @@ class SQ_Calculator
         qmod = qm + k*dq; // in units of half mesh binw=pi/L
         if(debug) cout << "  k="<<k<<", qmod="<<qmod<<endl;
         // qvector.${qmod} file contains wavenumbers whose
-        // modulus is in (qmod-1,qmod] half mesh units
+        // modulus is in (qmod-0.5,qmod+0.5] in half mesh units
         ss.str(std::string()); ss << qvectors_path << "/qvector." << setw(3) << setfill('0') << qmod; fout.open(ss.str(), ios::in);
         if(debug) cout << "  opening qvectors: " << ss.str() << endl;
 
@@ -103,19 +103,19 @@ class SQ_Calculator
         while( getline(fout,line) )
         {
           istringstream(line) >> a >> b >> c;
-          qx = stoi(a); //
+          qx = stoi(a); // in units of full mesh 2*pi/L
           qy = stoi(b);
           qz = stoi(c);
           if(debug) cout << "  read kx,ky,kz = " << qx<<", "<< qy<<", "<< qz<<endl;
           rho_real=rho_imag=0.0;
           for(i=0;i<N;i++)
           {
-            /* // Brute force method
+            /* // 'Brute force' method
             arg = dk * (qx*ps[i].r[0] + qy*ps[i].r[1] + qz*ps[i].r[2]);
             rho_real += cos(arg);
             rho_imag += sin(arg);
             */
-            // Pre-computation method
+            // 'Pre-computation' method
             x0 = exps[ 2*3*N*abs(qx) + 2*3*i + 2*0     ]; // cos( kx * rx )
             x1 = exps[ 2*3*N*abs(qx) + 2*3*i + 2*0 + 1 ]; // sin(|kx|* rx )
             y0 = exps[ 2*3*N*abs(qy) + 2*3*i + 2*1     ]; // cos( ky * ry )
@@ -129,14 +129,19 @@ class SQ_Calculator
             rho_imag += ( x1*y0*z0 + x0*y1*z0 + x0*y0*z1 - x1*y1*z1 ); // sin( k*r )
           }
           sq_oriented = ( rho_real*rho_real + rho_imag*rho_imag ) / N;
-          if(debug) cout << "  S(qx,qy,qz) = "<<sq_oriented<<endl;
+          if(debug) {
+            cout << "  Re[ S(qx,qy,qz) ] = "<<sq_oriented<<endl;
+            cout << "  Im[ S(qx,qy,qz) ] = "<<(-rho_real*rho_imag + rho_imag*rho_real)/N<<endl;
+          }
           value[k] += sq_oriented;
           value2[k] += sq_oriented*sq_oriented;
           qcount++;
         }
         value[k] /= qcount;
         value2[k] /= qcount;
-        value2[k] = sqrt( (value2[k]-value[k]*value[k])/(qcount-1) ); // fluctuations of S(q;t0) over q
+        if(qcount>1){
+          value2[k] = sqrt( (value2[k]-value[k]*value[k])/(qcount-1) ); // fluctuations of S(q;t0) over q
+        }
         if(debug) cout << "  Total "<<qcount<<" triplets of wavenumbers.\n";
         fout.close();
       }
@@ -154,14 +159,16 @@ class SQ_Calculator
       if(verbose) fout.close();
 
       if(frameidx == (nframes-1)){
-          ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
-          for(k=0; k<nbins; k++){
-            ave[k] /= (frameidx+1);
-            ave2[k] /= (frameidx+1);
-            fout << bins[k] << " " << ave[k] << " " << sqrt( (ave2[k]-ave[k]*ave[k])/(frameidx+1 -1) ) << endl;
-          }
-          fout.close();
-          if(debug) cout << "Average "<<myName<<" printed to file\n";
+        ntype std_dev=0.0;
+        ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
+        for(k=0; k<nbins; k++){
+          ave[k] /= nframes;
+          ave2[k] /= nframes;
+          if(nframes>1) std_dev = sqrt( (ave2[k]-ave[k]*ave[k])/(nframes-1) );
+          fout << bins[k] << " " << ave[k] << " " << std_dev << endl;
+        }
+        fout.close();
+        if(debug) cout << "Average "<<myName<<" printed to file\n";
       }
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       return;

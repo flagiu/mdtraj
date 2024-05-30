@@ -1,0 +1,10 @@
+#!/bin/bash
+
+cat > tmp << EOF
+function max(a,b){return (a>b?a:b);}
+function fabs(a){return (a<0?-a:a);}
+{for(i=0;i<NF;i++){x=max(x,\$i)}}
+END{print x}
+EOF
+
+awk -f tmp $1

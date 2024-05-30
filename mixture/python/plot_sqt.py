@@ -23,10 +23,20 @@ parser.add_argument('--inavg',  type=argparse.FileType('r'),
 parser.add_argument('--dt',  type=float, default=0.002, required=False,
                      help="Integration time step (picoseconds). [default: %(default)s]"
 )
+
+parser.add_argument('--yshift',  type=float, default=0.0, required=False,
+                     help="Shift vertically the vs-time-plot. [default: %(default)s]"
+)
+parser.add_argument('--normalize',  type=int, default=1, required=False,
+                     help="Normalize the vs-time-plot to S(q,0)? 1: yes ; 0: no. [default: %(default)s]"
+)
+
+
 outname="sqt"
 
 #-------------------------------------#
 args = parser.parse_args()
+assert args.normalize==0 or args.normalize==1
 
 print("Plotting monospecies S(q,t) ...")
 lines = args.inavg.readlines()
@@ -79,6 +89,8 @@ else:
     assert sqt.shape==(Nq,Nt)
     assert sqt_.shape==(Nq,Nt)
 
+#-------------------------------------------------------------------------------------------------------------------#
+
 fig, axes = plt.subplots(2,2, figsize=(10,5),gridspec_kw={'height_ratios': [1, 9]} ) # figsize is experimental
 ax = axes[1][0]
 ax.set_xlabel(r"$q$ $[\AA^{-1}]$")
@@ -89,22 +101,32 @@ colors = cmap(norm(t))
 for i in range(Nt):
     lab = r"$t=%.1f$ $ps$"%t[i]
     col = colors[i]
-    ax.errorbar(q, sqt[:,i], sqt_[:,i], fmt='.-', color=col, label=lab, alpha=0.5)
+    y = sqt[:,i] + i*args.yshift
+    y_ = sqt_[:,i]
+    ax.errorbar(q,y,y_, fmt='.-', color=col, label=lab, alpha=0.5)
 ax.tick_params(which='both', direction='in')
+ax.set_yscale("log")
 #ax.grid(axis='both', which='major')
 fig.colorbar( mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][0], orientation="horizontal", label="t [ps]")
 
 ax = axes[1][1]
 ax.set_xlabel(r"$t$ [$ps$]")
-ax.set_ylabel(r"$S(q,t)$ / $S(q,0)$")
+if args.normalize==1:
+	ax.set_ylabel(r"$S(q,t)$ / $S(q,0)$")
+else:
+	ax.set_ylabel(r"$S(q,t)$")
 cmap = mpl.cm.magma
 norm = mpl.colors.Normalize(vmin=q.min(), vmax=q.max())
 colors = cmap(norm(q))
 for i in range(Nq):
     lab = r"$q=%.2f$ $\AA^{-1}$"%q[i]
     col = colors[i]
-    y = sqt[i] / sqt[i,0]
-    y_ = y * np.sqrt( (sqt_[i]/sqt[i])**2 + (sqt_[i,0]/sqt[i,0])**2 ) # gaussian error propagation
+    if args.normalize==1:
+        y = sqt[i] / sqt[i,0] + i*args.yshift
+        y_ = y * np.sqrt( (sqt_[i]/sqt[i])**2 + (sqt_[i,0]/sqt[i,0])**2 ) # gaussian error propagation
+    else:
+        y = sqt[i] + i*args.yshift
+        y_ = sqt_[i]
     ax.errorbar(t,y,y_, fmt='.-', color=col, label=lab, alpha=0.5)
 ax.tick_params(which='both', direction='in')
 #ax.grid(axis='both', which='major')
