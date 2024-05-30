@@ -7,12 +7,11 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 - Current limited to:
 	- constant number of particles
 	- uniform timestep.
-	- S(q) for cubic boxes only (?).
+	- S(q) for cubic boxes only.
 
 - Bugs to be corrected:
-	- some empty files are created during 'altbc' and 'bond_order'
-	- Check again the NGP.
-	- S(q,0) is wrong by some period-dependent factor.
+	- some empty files are created during 'altbc' and 'bond_order' (maybe?)
+	- Check again the MSD and NGP.
 
 ## Requirements
 
