@@ -7,11 +7,11 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 - Current limited to:
 	- constant number of particles
 	- uniform timestep.
-	- S(q) for cubic boxes only.
+	- S(q),S(q,t) for cubic boxes only; and they consider all atoms as equal.
 
 - Bugs to be corrected:
-	- some empty files are created during 'altbc' and 'bond_order' (maybe?)
-	- Check again the MSD and NGP.
+	- some empty files are created during 'altbc' and 'bond_order' (maybe it's already fixed?)
+	- MSD: sometimes I find a jump in MSD(t).
 
 ## Requirements
 
@@ -47,14 +47,16 @@ The subfolder examples/ contains some example of application to real or toy syst
 - (both) Toy particles displaced along a 3d cubic lattice with small random gaussian noise.
 - (mixture) Binary LJ mixture.
 - (mixture) Short sample of a Phase-Change Heterostructure.
+- (mixture) Water molecules.
 
 ## Future development
 
 - More input formats for multi-species.
 - More analysis tools for multi-species.
-- S(q) with non-cubic boxes?
+- S(q),S(q,t) with non-cubic boxes?
+- S(q),S(q,t) with mixtures? How? Weighted by mass?
 - Add example with antimony?
-- Add logarithmic timestep?
+- Add logarithmically-spaced timestep?
 - Add more input formats? GROMACS, ...
 - Add structural quasi-entropy? [Oganov,Valle,2008]
-- Add crystalline clusters analysis?
+- Add crystalline clusters analysis like pyscal?

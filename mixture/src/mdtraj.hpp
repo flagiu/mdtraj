@@ -440,7 +440,7 @@ public:
     if(c_sqt) {
       sqt_calculator = new SQT_Calculator<ntype,ptype>();
       sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe,
-        nframes,period, L, s_sqt, tag, debug, verbose);
+        nframes,period, L, nTypes, Nt, s_sqt, tag, debug, verbose);
     }
   }
 

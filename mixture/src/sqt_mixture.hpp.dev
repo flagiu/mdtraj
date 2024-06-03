@@ -2,7 +2,6 @@
 #define _SQT_H_
 using namespace std;
 //-------- Dynamic Structure Factor S(q,t), a.k.a. Intermediate Scattering Function F(q,t) -----------------------//
-//-------- Currently treats all particles as equal -----------------------//
 #ifndef _SQ_H_
 const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
 #define MAX_QVECTORS 300
@@ -18,7 +17,8 @@ class SQT_Calculator
     int qm, qM, dq, nbins, nTypes, nTypePairs;
     int period_in_dt_units, num_periods;
     vector<int> Nt;
-    vecflex<ntype> bins, rho_real, rho_imag, ave, ave2;
+    vector<ntype> invSqrtNt;
+    vecflex<ntype> bins, ave, ave2;
     string string_out, myName, tag, rho_tmpfile_prefix;
     fstream fout, f_rho;
     stringstream ss;
@@ -35,31 +35,45 @@ class SQT_Calculator
       ss << rho_tmpfile_prefix << "_idx" << idx << ".dat";
       return ss.str();
     }
-    void write_rho_tmpfile(int idx, ntype re, ntype im) {
+    void write_rho_tmpfile(int idx, vecflex<ntype> rho) {
       ofstream ftmp;
       ftmp.open(get_rho_tmpfile(idx),ios::out);
-      ftmp<<re<<" "<<im<<endl;
+      for(int ti=0;ti<nTypes;ti++)
+        ftmp<<rho[2*ti]<<" "<<rho[2*ti+1]<<" ";
+      ftmp<<endl;
       ftmp.close();
     }
-    void append_rho_tmpfile(int idx, ntype re, ntype im) {
+    void append_rho_tmpfile(int idx, vecflex<ntype> rho) {
       ofstream ftmp;
       ftmp.open(get_rho_tmpfile(idx),ios::app);
-      ftmp<<re<<" "<<im<<endl;
+      for(int ti=0;ti<nTypes;ti++)
+        ftmp<<rho[2*ti]<<" "<<rho[2*ti+1]<<" ";
+      ftmp<<endl;
       ftmp.close();
     }
-    void read_rho_tmpfile(int q, int idx, ntype *re, ntype *im) {
+    void read_rho_tmpfile(int q, int idx, vecflex<ntype> *rho) {
       ifstream ftmp;
       string line, a,b;
-      int qq=-1;
+      istringstream istr;
+      int qq=-1, ti;
+      vector<ntype> rho_local;
+      rho_local.resize(2*nTypes);
       ftmp.open(get_rho_tmpfile(idx),ios::in);
       if (ftmp.is_open()){
         while ( getline(ftmp,line) && qq<q ){
-          istringstream(line) >> a >> b;
+          istr = istringstream(line);
+          for(ti=0;ti<nTypes;ti++){
+            istr >> a >> b;
+            rho_local[2*ti  ]=stof(a);
+            rho_local[2*ti+1]=stof(b);
+          }
           qq++;
         }
         ftmp.close();
-        *re=stof(a);
-        *im=stof(b);
+        for(ti=0;ti<nTypes;ti++){
+          (*rho)[2*ti  ]=rho_local[2*ti  ];
+          (*rho)[2*ti+1]=rho_local[2*ti+1];
+        }
       }
       else {
         cout << "ERROR: Unable to open file "<<get_rho_tmpfile(idx)<<endl;
@@ -78,7 +92,7 @@ class SQT_Calculator
       int nframes, int period_in_real_units, vec box_diagonal,int nTypes_,int* Nt_,
       string string_out_, string tag_, bool debug_, bool verbose_)
     {
-      int i,j,idx;
+      int i,j,idx,tp;
       string_out = string_out_;
       tag = tag_;
       debug = debug_;
@@ -86,8 +100,10 @@ class SQT_Calculator
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
       Nt.resize(nTypes);
+      invSqrtNt.resize(nTypes);
       for(i=0;i<nTypes;i++) {
         Nt[i]=Nt_[i];
+        invSqrtNt[i]=1.0/sqrt((ntype)Nt[i]);
       }
       qm = q_mod_min;
       qM = q_mod_max;
@@ -104,17 +120,14 @@ class SQT_Calculator
       binw = M_PI / box_diagonal[0]; // half mesh: it is in units of pi/L
       bins.resize(nbins);
       for(i=0; i<nbins; i++) bins[i] = (1+qm+i*dq)*binw; // q-wave-vector values
-      // rho(q,t0+t) for each q,t
-      rho_real.resize(nbins * period_in_dt_units);
-      rho_imag.resize(nbins * period_in_dt_units);
-      // S(q,t0+t) for each q,t
-      ave.resize(nbins * period_in_dt_units);
-      ave2.resize(nbins * period_in_dt_units);
+      // S(q,t0+t) for each q,t and type-pair
+      ave.resize(nbins * period_in_dt_units * nTypePairs);
+      ave2.resize(nbins * period_in_dt_units * nTypePairs);
 
       if(verbose)
       {
         ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-        fout << "# 1st block: q-wave-vectors; 2nd block: Delta timestep; Other blocks: S(q,t;t0) trajectory for each frame\n";
+        fout << "# 1st block: q-wave-vectors; 2nd block: Delta timestep; Other blocks: S(q,t;t0) trajectory for each type-pair, for each frame\n";
         for(i=0; i<nbins; i++) fout << bins[i] << endl;
         fout<<endl; // new block
         for(i=0;i<period_in_dt_units;i++)
@@ -124,16 +137,16 @@ class SQT_Calculator
 
       // reset rho, <S(q,dt)>, <S(q,dt)^2> for each q=qmin,qmin+dq,...,qmax
       //    and for each dt=0,1,...,period_in_dt_units-1
-      for(i=0; i<nbins; i++)
-      {
-        for(j=0;j<period_in_dt_units;j++)
-        {
-          idx = period_in_dt_units*i + j;
-          ave[idx]=ave2[idx]=0.0;
+      for(i=0; i<nbins; i++) {
+        for(j=0;j<period_in_dt_units;j++) {
+          for(tp=0;tp<nTypePairs;tp++) {
+            idx = period_in_dt_units*nTypePairs*i + nTypePairs*j + tp;
+            ave[idx]=ave2[idx]=0.0;
+          }
         }
       }
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "# 1st block: q-wave-vector; 2nd block: Delta timestep; 3rd block: <S(q,t)> matrix; 4th block: <S(q,t)> error matrix.\n";
+      fout << "# 1st block: q-wave-vector; 2nd block: Delta timestep; [3,3+nTP-1] block: <S(q,t)> matrix for each type-pair; [4,4+nTP-1] block: <S(q,t)> error matrix for each type-pair.\n";
       for(i=0; i<nbins; i++) fout << bins[i] << endl;
       fout<<endl; // new block
       for(i=0;i<period_in_dt_units;i++) fout << i*dtframe << endl;
@@ -143,36 +156,26 @@ class SQT_Calculator
     void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
     {
       const int N=ps.size();
-      const ntype invSqrtN=1.0/sqrt((ntype)N);
       int i,k,qmod, qx,qy,qz, q,num_qvectors, j,idx, idx_old, dframe, nperiod;
+      int ti,tj,tp; // particle types
       int qvectors[3*MAX_QVECTORS];
-      ntype rhoQvecRe,rhoQvecIm, rhoQvecRe_old,rhoQvecIm_old;
-      ntype sqtQvecRe, sqtQvecIm;
       string line,a,b,c;
       const int num_k_values=1+qM/2; // 1/2 is the mesh spacing!
       const int exp_storage_size=num_k_values*N*3*2; // wavenumber, particle, cartesian, real/imag
       const ntype dk=2.*binw; // 2*M_PI/L[0];
       ntype x0,x1, y0,y1, z0,z1;
-      vecflex<ntype> exps, ave_t0, ave2_t0;
+      vecflex<ntype> exps, rhoQvec,rhoQvec_old, sqtQvec, ave_t0, ave2_t0;
       exps.resize(exp_storage_size);
-      ave_t0.resize(nbins);
-      ave2_t0.resize(nbins);
+      rhoQvec.resize(2*nTypes); // Fourier component of density for each type at a given time
+      rhoQvec_old.resize(2*nTypes);
+      sqtQvec.resize(2*nTypePairs); // S(q,t0+t) of a Four. comp. for each type pair
+      ave_t0.resize(nbins*nTypePairs);
+      ave2_t0.resize(nbins*nTypePairs);
 
       nperiod = frameidx / period_in_dt_units;
       dframe = frameidx % period_in_dt_units;
 
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
-      if(dframe==0)
-      { // reset rho(t0+t) for each q,t at the beginning of each cycle t=0
-        for(i=0;i<nbins;i++)
-        {
-          for(j=0;j<period_in_dt_units;j++)
-          {
-            idx = period_in_dt_units*i + j;
-            rho_real[idx]=rho_imag[idx]=0.0;
-          }
-        }
-      }
 
       for(k=0;k<num_k_values;k++) // wavenumber
       {
@@ -218,15 +221,17 @@ class SQT_Calculator
 
         ave_t0[k]=ave2_t0[k]=0.0;
         for(q=0;q<num_qvectors;q++) {
-          rhoQvecRe=rhoQvecIm=0.0;
+          for(ti=0;ti<nTypes;ti++){ // reset density
+            rhoQvec[2*ti]=rhoQvec[2*ti+1]=0.;
+          }
           qx=qvectors[3*q  ];
           qy=qvectors[3*q+1];
           qz=qvectors[3*q+2];
           for(i=0;i<N;i++) {
             /* // Brute force method
             arg = dk * (qx*ps[i].r[0] + qy*ps[i].r[1] + qz*ps[i].r[2]);
-            rho_real += cos(arg);
-            rho_imag += sin(arg);
+            rhoQvecRe += cos(arg);
+            rhoQvecIm += sin(arg);
             */
             // Pre-computation method
             x0 = exps[ 2*3*N*abs(qx) + 2*3*i + 2*0     ]; // cos( kx * rx )
@@ -239,16 +244,31 @@ class SQT_Calculator
             if(qy<0) y1 = -y1;
             if(qz<0) z1 = -z1;
             // Compute rho(t0+t)
-            rhoQvecRe += ( x0*y0*z0 - x0*y1*z1 - x1*y0*z1 - x1*y1*z0 ); // cos( k*r )
-            rhoQvecIm += ( x1*y0*z0 + x0*y1*z0 + x0*y0*z1 - x1*y1*z1 ); // sin( k*r )
+            ti=ps[i].label;
+            rhoQvec[2*ti  ] += ( x0*y0*z0 - x0*y1*z1 - x1*y0*z1 - x1*y1*z0 ); // cos( k*r )
+            rhoQvec[2*ti+1] += ( x1*y0*z0 + x0*y1*z0 + x0*y0*z1 - x1*y1*z1 ); // sin( k*r )
           }
-          rhoQvecRe*=invSqrtN;
-          rhoQvecIm*=invSqrtN;
-          if(q==0) write_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
-          else    append_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
-          // Project rho(t0+t) onto rho(t0)
+          for(ti=0;ti<nTypes;ti++){
+            rhoQvec[2*ti  ]*=invSqrtNt[ti];
+            rhoQvec[2*ti+1]*=invSqrtNt[ti];
+          }
+          if(q==0) write_rho_tmpfile(idx,rhoQvec);
+          else    append_rho_tmpfile(idx,rhoQvec);
+          // Project rho(t0+t) onto rho(t0) for each type pair
           idx_old = period_in_dt_units*k + 0;
-          read_rho_tmpfile(q,idx_old,&rhoQvecRe_old,&rhoQvecIm_old);
+          read_rho_tmpfile(q,idx_old,&rhoQvec_old);
+          for(ti=0;ti<nTypes;ti++){
+            for(tj=0;tj<nTypes;tj++){ // should it be upper-diagonal?
+              tp = types2int(ti,tj);
+              sqtQvec[2*tp  ] = rhoQvec[2*ti  ]*rhoQvec_old[2*tj  ] + rhoQvec[2*ti+1]*rhoQvec_old[2*tj+1];
+              sqtQvec[2*tp+1] =-rhoQvec[2*ti  ]*rhoQvec_old[2*tj+1] + rhoQvec[2*ti  ]*rhoQvec_old[2*tj  ];
+              if(debug) cout << "  S(qx,qy,qz; dt="<<dframe<<"; types="<<ti<<","<<tj<<" ) = "<<sqtQvec[2*tp  ]<<" + i "<<sqtQvec[2*tp+1]<<endl;
+              // Average over orientations at fixed q,t0,t
+              ave_t0[nTypePairs*k+tp] += sqtQvec[2*tp]; // take the real part only
+              ave2_t0[nTypePairs*k+tp] += sqtQvec[2*tp];
+            }
+          }
+          /*
           sqtQvecRe = rhoQvecRe*rhoQvecRe_old + rhoQvecIm*rhoQvecIm_old;
           if(debug) cout << "  Re[ S(qx,qy,qz; dt="<<dframe<<") ] = "<<sqtQvecRe<<endl;
           sqtQvecIm = -rhoQvecRe*rhoQvecIm_old + rhoQvecIm*rhoQvecRe_old;
@@ -256,12 +276,16 @@ class SQT_Calculator
           // Average over orientations at fixed q,t0,t
           ave_t0[k] += sqtQvecRe;
           ave2_t0[k] += sqtQvecRe*sqtQvecRe;
+          */
         }
-        ave_t0[k] /= num_qvectors;
-        ave2_t0[k] /= num_qvectors;
-        if(num_qvectors>1){
-          // fluctuations of S(q;t0) over q orientation
-          ave2_t0[k] = sqrt( (ave2_t0[k]-ave_t0[k]*ave_t0[k])/(num_qvectors-1) );
+        for(tp=0;tp<nTypePairs;tp++){
+          i=nTypePairs*k+tp;
+          ave_t0[i]  /= num_qvectors;
+          ave2_t0[i] /= num_qvectors;
+          if(num_qvectors>1){
+            // fluctuations of S(q;t0) over q orientation (unused...)
+            ave2_t0[i] = sqrt( (ave2_t0[i]-ave_t0[i]*ave_t0[i])/(num_qvectors-1) );
+          }
         }
       }
 
@@ -269,42 +293,55 @@ class SQT_Calculator
       {
         ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
         fout << endl; // start new block
-        for(k=0; k<nbins; k++) fout << ave_t0[k] << endl;
+        for(k=0; k<nbins; k++) {
+          for(tp=0;tp<nTypePairs;tp++){
+            fout << ave_t0[nTypePairs*k+tp];
+            if(tp<nTypePairs-1) fout << " ";
+            else fout << endl;
+          }
+        }
         fout.close();
       }
 
       for(k=0; k<nbins; k++){
-        idx = period_in_dt_units*k + dframe;
-        ave[idx] += ave_t0[k]; // average over t0 at fixed q,t
-        ave2[idx] += ave_t0[k]*ave_t0[k];
+        for(tp=0;tp<nTypePairs;tp++){
+          idx = period_in_dt_units*nTypePairs*k + nTypePairs*dframe + tp;
+          i = nTypePairs*k+tp;
+          ave[idx] += ave_t0[i]; // average over t0 at fixed q,t
+          ave2[idx] += ave_t0[i]*ave_t0[i];
+        }
       }
 
       if(frameidx == (nframes-1))
       {
           ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
           fout<<endl; // new block
-          for(k=0; k<nbins; k++)
-          {
-            for(j=0;j<period_in_dt_units;j++)
-            {
-              idx = period_in_dt_units*k + j;
-              ave[idx] /= num_periods; // average over t0 at fixed q,t
-              fout << ave[idx] << " ";
+          for(tp=0;tp<nTypePairs;tp++){
+            for(k=0; k<nbins; k++){
+              for(j=0;j<period_in_dt_units;j++){
+                idx = period_in_dt_units*nTypePairs*k + nTypePairs*j + tp;
+                ave[idx] /= num_periods; // average over t0 at fixed q,t
+                fout << ave[idx] << " ";
+              }
+              fout << endl; // end of line (new q)
             }
-            fout << endl;
+            fout << endl; // new block (new type-pair)
           }
 
           fout << endl; // new block
-          for(k=0; k<nbins; k++){
-            for(j=0;j<period_in_dt_units;j++){
-              idx = period_in_dt_units*k + j;
-              ave2[idx] /= num_periods;
-              if(num_periods>1){
-                ave2[idx] = sqrt( (ave2[idx]-ave[idx]*ave[idx])/(num_periods-1) );
+          for(tp=0;tp<nTypePairs;tp++){
+            for(k=0; k<nbins; k++){
+              for(j=0;j<period_in_dt_units;j++){
+                idx = period_in_dt_units*nTypePairs*k + nTypePairs*j + tp;
+                ave2[idx] /= num_periods;
+                if(num_periods>1){
+                  ave2[idx] = sqrt( (ave2[idx]-ave[idx]*ave[idx])/(num_periods-1) );
+                }
+                fout << ave2[idx] << " ";
               }
-              fout << ave2[idx] << " ";
+              fout << endl; // end of line (new q)
             }
-            fout << endl;
+            fout << endl; // new block (new type-pair)
           }
           fout.close();
           if(debug) cout << "Average "<<myName<<" printed to file\n";

@@ -5,6 +5,8 @@ echo $0": Unzipping trajectory:"
 [ -e trajectory.gz ] && gunzip trajectory.gz
 
 echo $0": Test g(r) & coordination number & E-D order parameter for H2O:"
+../../bin/mdtraj -xdatcarV trajectory -rcut rcut.save -sq 2 2 1 -sqt 2 2 1 -d -period 500 -fskip .99 0 -d
+exit
 ../../bin/mdtraj -xdatcarV trajectory -rcut rcut.save -rdf 0.02 -1 -cn -edq -bo -l 4 -msd -period 500
 ../../bin/mdtraj -xdatcarV trajectory -rcut rcut.save -bo -l 6
 printf "Exit $? \n\n"
@@ -21,4 +23,3 @@ python3 ../../python/plot_coordnum_histogram.py
 
 python3 ../../python/plot_ed_q_histogram.py
 python ../../python/plot_msd_average.py
-
