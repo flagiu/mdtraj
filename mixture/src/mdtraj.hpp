@@ -36,10 +36,10 @@ public:
   int nframes, timestep;
   bool c_coordnum, c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
   bool c_altbc, c_sq, c_sqt, c_edq; // compute or not
-  string s_in, s_out, s_rcut, tag, s_atom_label, s_box, s_ndens, s_coordnum;
+  string s_in, s_out, s_rcut, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum;
   string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
-  bool out_box, out_xyz, out_alphanes;
+  bool logtime, out_box, out_xyz, out_alphanes;
   bool debug, verbose;
   //
   int maxsphere, max_num_nnd; // <= MAX_NSPHERE
@@ -71,8 +71,9 @@ public:
   SQT_Calculator<ntype,ptype> *sqt_calculator;
 
 private:
+  string myName="mdtraj";
   bool timings;
-  int nlines, t0frame, dtframe, nskip0, nskip1, nframes_original;
+  int nlines, t0frame, dtframe,last_dtframe,last_timestep, nskip0, nskip1, nframes_original;
   int p1half, p2half, p1, p2; // parameters for fcut (only p1half is free)
   float fskip0, fskip1;
   fstream fin, fout;
@@ -134,6 +135,8 @@ public:
     cout << " p1 = \t " << p1 << endl;
     cout << " p2 = \t " << p2 << endl;
     cout << " period for MSD & NGP & S(q,t) = \t " << period << endl;
+    cout << " logtime = \t " << logtime << endl;
+    cout << " s_logtime = \t " << s_logtime << endl;
     cout << " rdf_binw = \t " << rdf_binw << endl;
     cout << " rdf_rmax = \t " << rdf_rmax << endl;
     cout << " adf_binw = \t " << adf_binw << endl;
@@ -202,6 +205,8 @@ public:
     remove_rot_dof = false;
     out_box = false;
     out_xyz = false;
+    logtime = false;
+    s_logtime="";
     out_alphanes = false;
     pbc_out = false;
     timings = false;
@@ -304,13 +309,13 @@ public:
     fin.open(s_in, ios::in);
 
     if(filetype==FileType::CONTCAR || filetype==FileType::POSCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
-      timestep=-1; dtframe = 1;
+      timestep=-1; dtframe=1;
     } // set manual time for CONTCAR, POSCAR, ALPHANES, ALPHANES9 file format
     //---------- Read 1st frame -------------//
     read_frame(fin, true, 0);
     t0frame = timestep;
-    if(debug) cout << "Read first frame. Set N = " << N << " (assumed to be constant), t0frame = " << t0frame << ".\n";
-    if(debug) cout << "Deduced nframes = " << nframes << ".\n";
+    if(debug) cout << " I read first frame: set N = " << N << " (I assume it's constant) and t0frame = " << t0frame << "\n";
+    if(debug) cout << "  From N, I deduce nframes = " << nframes << "\n";
     print_types();
 
     nskip0=int(fskip0*nframes);
@@ -323,18 +328,20 @@ public:
     try
     {
       read_frame(fin, false, 1);
-      if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9) dtframe = timestep - t0frame;
-      if(debug) cout << "Read second frame. Set dtframe = " << dtframe << " (assumed to be constant).\n";
+      if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9){
+        dtframe=timestep-t0frame;
+      }
+      if(debug) cout << " I read the second frame: dtframe = "<<dtframe<<endl;
     } catch (...) {
       cout << "WARNING: only 1 frame in trajectory.\n";
-      dtframe=1; // this is meaningless, but it avoids nonsense later
+      dtframe=last_dtframe=1; // this is meaningless, but it avoids nonsense later
     }
     if(debug) cout << "Initialization of Computations STARTED\n";
     init_computations();
     if(debug) cout << "Initialization of Computations COMPLETED\n";
     fin.close();
 
-    // Restart reading
+    // Restart reading!!
     if(debug || verbose) cout << "#------- MAIN LOOP ------#\n";
     fin.open(s_in, ios::in);
     printProgress.init( nframes, 2000 ); // update % every 2000 ms
@@ -347,13 +354,17 @@ public:
     {
       read_frame(fin, false, i);
       if(N != ps.size()) { cout << "[Warning: N has changed]\n"; exit(1);}
-      if( (timestep - t0frame)%dtframe != 0) {
-        cout << "[Warning: timestep interval has changed]\n";
-        cout << "[t0frame = "<<t0frame<<", dtframe = "<<dtframe<<", timestep = "<<timestep<<"]\n";
+      if(i==0) dtframe=0;
+      else     dtframe=timestep-last_timestep;
+      if(i>1 && !logtime && dtframe!=last_dtframe) {
+        cout<<"["<<myName<<" ERROR] logtime==false but timestep interval is not linearly spaced:\n";
+        cout<<"               last_dt = "<<last_dtframe<<", dt = "<<dtframe<<", at timestep = "<<timestep<<"\n";
         exit(1);
       }
       if(i+1>nskip0 && i<nframes_original-nskip1) do_computations_and_output(i-nskip0);
       printProgress.update( i+1-nskip0, timer.lap() );
+      last_dtframe=dtframe;
+      last_timestep=timestep;
     }
     printProgress.end();
     fin.close();
@@ -439,8 +450,8 @@ public:
     }
     if(c_sqt) {
       sqt_calculator = new SQT_Calculator<ntype,ptype>();
-      sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe,
-        nframes,period, L, nTypes, Nt, s_sqt, tag, debug, verbose);
+      sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe, nframes,
+        period, L, nTypes, Nt, logtime,s_logtime, s_sqt, tag, debug, verbose);
     }
   }
 

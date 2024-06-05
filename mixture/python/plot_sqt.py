@@ -36,7 +36,13 @@ parser.add_argument('--normalize',  type=int, default=1, required=False,
                      help="Normalize the vs-time-plot to S(q,0)? 1: yes ; 0: no. [default: %(default)s]"
 )
 parser.add_argument('--ylog',  type=int, default=1, required=False,
-                     help="Use log axis for the vs-q-plot? 1: yes ; 0: no. [default: %(default)s]"
+                     help="Use log y-axis for the vs-q-plot? 1: yes ; 0: no. [default: %(default)s]"
+)
+parser.add_argument('--xlog',  type=int, default=1, required=False,
+                     help="Use log x-axis for the vs-t-plot? 1: yes ; 0: no. [default: %(default)s]"
+)
+parser.add_argument('--fmt',  type=str, default="-", required=False,
+                     help="Use the given format for errorbar plotting. [default: %(default)s]"
 )
 
 outname="sqt"
@@ -141,7 +147,7 @@ for ii in range(len(t_selected_idx)):
     col = colors[i]
     y = sqt[:,i]
     y_ = sqt_[:,i]
-    ax.errorbar(q,y,y_, fmt='-', color=col, label=lab, alpha=0.5)
+    ax.errorbar(q,y,y_, fmt=args.fmt, color=col, label=lab, alpha=0.5)
 cbar_t=fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][0],
                     orientation="horizontal", label="t [ps]")
 if args.select_t!=[]: add_upperxticks_to_cbar(cbar_t,t_selected)
@@ -170,7 +176,7 @@ for ii in range(len(q_selected_idx)):
     else:
         y = sqt[i]
         y_ = sqt_[i]
-    ax.errorbar(t,y+i*args.yshift,y_, fmt='-', color=col, label=lab, alpha=0.5)
+    ax.errorbar(t,y+i*args.yshift,y_, fmt=args.fmt, color=col, label=lab, alpha=0.5)
 ax.set_ylim(-0.1,1.1)
 ax.axhline(np.exp(-1), color="k", linestyle="--", linewidth=0.5, zorder=-999)
 ax.tick_params(which='both', direction='in')
@@ -178,6 +184,8 @@ ax.tick_params(which='both', direction='in')
 cbar_q=fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][1],
                     orientation="horizontal", label=r"q [$\AA^{-1}$]")
 if args.select_q!=[]: add_upperxticks_to_cbar(cbar_q,q_selected)
+if args.xlog:
+    ax.set_xscale("log")
 
 plt.tight_layout()
 

@@ -36,6 +36,7 @@ class SQ_Calculator
 
       nbins = int(floor( (qM-qm)/dq )) + 1;
       binw = M_PI / box_diagonal[0]; // half mesh: it is in units of pi/L
+      if(debug) cout<<"binw="<<binw<<endl;
       bins.resize(nbins);
       value.resize(nbins);
       value2.resize(nbins);
@@ -48,7 +49,7 @@ class SQ_Calculator
         fout << "# First block: q-wave-vectors; other blocks: S(q)\n";
       }
       for( auto i=0; i<nbins; i++){
-        bins[i] = (1+qm+i*dq)*binw; // q-wave-vector values
+        bins[i] = (qm+i*dq)*binw; // q-wave-vector values
         if(verbose) fout << bins[i] << endl;
         ave[i] = 0.0;
         ave2[i] = 0.0;

@@ -23,11 +23,15 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n INPUT FILES (only one of the following must be selected, followed by the file name):");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file (one row for each timestep; 6 columns for box + 3N columns for coordinates). ONLY MONOSPECIES.");
+  fprintf(stderr, "\n -alphanes \t alpha_nes format. It expects a [paste -d ' ' box.dat pos.dat] file");
+  fprintf(stderr, "\n           \t (one row for each timestep; 6 columns for box + 3N columns for coordinates). ONLY MONOSPECIES.");
   fprintf(stderr, "\n -alphanes9 \t like -alphanes but with 9 columns for box. ONLY MONOSPECIES.");
-  fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities, lattice velocities and gear-predictor-corrector data.");
+  fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities,");
+  fprintf(stderr, "\n          \t lattice velocities and gear-predictor-corrector data.");
   fprintf(stderr, "\n -poscar \t Concatenation of POSCAR files.");
-  fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done] file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat). ONLY MONOSPECIES.");
+  fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a ");
+  fprintf(stderr, "\n      \t [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done]");
+  fprintf(stderr, "\n      \t file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat). ONLY MONOSPECIES.");
   fprintf(stderr, "\n -lammpstrj \t LAMMPS format. It expects the output of a 'dump atom' command.");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
@@ -41,14 +45,21 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -box3 \t INPUT: Lx,Ly,Lz. Sizes of an orthorombic box");
   fprintf(stderr, "\n -box6 \t INPUT: Ax,Bx,Cx,By,Cy,Cz. Components of an upper-diagonalized box");
   fprintf(stderr, "\n -box9 \t INPUT: Ax,Bx,Cx,Ay,By,Cy,Az,Bz,Cz. Components of a general box");
-  fprintf(stderr, "\n -image_convention \t How many box images? [ONLY FOR g(r)]. 1 (Minimum Image), 0 (Cluster), -1 (All within the cutoff). [default 1].");
+  fprintf(stderr, "\n -image_convention \t How many box images? [ONLY FOR g(r)]. 1 (Minimum Image),");
+  fprintf(stderr, "\n                   \t 0 (Cluster), -1 (All within the cutoff). [default 1].");
   fprintf(stderr, "\n -remove_rot_dof \t Rotate the positions and the box to upper-diagonalize it. [default don't].");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n STATISTICAL ANALYSIS:");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st sphere. INPUT: bin_width (in terms of the cosine). OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
-  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation. INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension, with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
-  fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters. Defines crystalline particles by a threshold of %.2f on the BOC. Angular momentum is provided by the option -l.  OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave}, %s.l*.{indexes,dat}.", qldot_th, s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
+  fprintf(stderr, "\n -adf \t Compute Angular Distribution Function within the 1st sphere.");
+  fprintf(stderr, "\n      \t INPUT: bin_width (in terms of the cosine). OUTPUT: %s.{traj,ave}.", s_adf.c_str() );
+  fprintf(stderr, "\n -altbc \t Compute Angular-Limited Three-Body Correlation.");
+  fprintf(stderr, "\n        \t INPUT: bin_width rmin maxangle. Uses the given bin width for each dimension,");
+  fprintf(stderr, "\n        \t with rmin <= bond length <= rcut1 and |180°- bond angle|<=maxangle. OUTPUT: %s.{traj,ave}.", s_altbc.c_str() );
+  fprintf(stderr, "\n -bo \t Compute the bond order orientation (BOO) and correlation (BOC) parameters.");
+  fprintf(stderr, "\n     \t Defines crystalline particles by a threshold of %.2f on the BOC.",qldot_th);
+  fprintf(stderr, "\n     \t Orbital angular momentum is provided by the option -l.");
+  fprintf(stderr, "\n     \t OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave}, %s.l*.{indexes,dat}.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st sphere, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
@@ -63,21 +74,29 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -rcut \t File containing <=%d lines of cutoff radii for each pair of atom types, each line ordered by type pair (e.g. for 3 types: r00 r01 r02 r11 r12 r22).", MAX_NSPHERE);
   fprintf(stderr, "\n       \t They will be used for cutoff functions in neighbour-spheres. No need to specify higher order spheres if not required for calculation. [default %.2f;%.2f;%.2f for every pair].", defaultCutoff[0][0], defaultCutoff[1][0], defaultCutoff[2][0]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
-  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units, not number of frames!), when computing MSD and S(q,t). If negative, don't. [default %d].", period);
+  fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units, not number of frames!),");
+  fprintf(stderr, "\n         \t when computing MSD and S(q,t). If negative, don't. [default %d].", period);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
+  fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end.");
+  fprintf(stderr, "\n        \t INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
+  fprintf(stderr, "\n -logtime \t Input has log-linear timesteps specified by the following file. [default: %s]",s_logtime.c_str());
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
-  fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining files: type.dat, box.dat, pos.dat. Box is rotated if -remove_rot_dof is activated. No tag is addded.");
+  fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining");
+  fprintf(stderr, "\n               \t files: type.dat, box.dat, pos.dat. Box is rotated if");
+  fprintf(stderr, "\n               \t -remove_rot_dof is activated. No tag is addded.");
   fprintf(stderr, "\n -pbc_out \t Apply PBC to the output trajectory files. [default don't].");
-  fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end. INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
   fprintf(stderr, "\n -tag \t Add this text tag inside output files' name [default none].");
-  fprintf(stderr, "\n -timings \t Measure time for computation of S(q) into the log file: %s[default don't].", s_log.c_str());
+  fprintf(stderr, "\n -timings \t Measure time for computation of S(q) into the ");
+  fprintf(stderr, "\n          \t log file: %s. [default don't].", s_log.c_str());
   fprintf(stderr, "\n");
   fprintf(stderr, "\n TIPS:");
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n - Convert a .traj file to a column file with mdtraj/shell/traj2nxy.sh; then plot it with mdtraj/*/python/plot_{rdf,adf,msd,...}_trajectory.py");
-  fprintf(stderr, "\n - Plot a statistical average for all type pairs with mdtraj/.../python/plot_{rdf,adf,msd,...}_average.py");
+  fprintf(stderr, "\n - Convert a .traj file to a column file with mdtraj/shell/traj2nxy.sh;");
+  fprintf(stderr, "\n     then plot it with mdtraj/*/python/plot_{rdf,adf,msd,...}_trajectory.py");
+  fprintf(stderr, "\n - Plot a statistical average for all type pairs with");
+  fprintf(stderr, "\n     mdtraj/.../python/plot_{rdf,adf,msd,...}_average.py");
   fprintf(stderr, "\n - Plot the ALTBC with mdtraj/.../python/plot_altbc.py");
   fprintf(stderr, "\n\n");
   }
@@ -432,14 +451,23 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	  else if ( !strcmp(argv[i], "-yuhan") )
 	    {
 	      i++;
-	      if (i == argc)
-		{
-		  fprintf(stderr, "ERROR: '-yuhan' must be followed by file name!\n");
-		  exit(-1);
-		}
+	      if (i == argc){
+    		  fprintf(stderr, "ERROR: '-yuhan' must be followed by file name!\n");
+    		  exit(-1);
+    		}
         filetype = FileType::YUHAN;
 	      s_in = string(argv[i]);
 	    }
+    else if ( !strcmp(argv[i], "-logtime") )
+    {
+       i++;
+       if(i==argc){
+         fprintf(stderr, "ERROR: '-logtime' must be followed by file name!\n");
+         exit(-1);
+       }
+       logtime = true;
+       s_logtime = string(argv[i]);
+     }
 	  else if ( !strcmp(argv[i], "-out_xyz") )
 	    out_xyz = true;
 	  else if ( !strcmp(argv[i], "-out_alphanes") )

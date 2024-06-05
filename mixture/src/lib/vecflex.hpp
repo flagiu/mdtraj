@@ -35,7 +35,7 @@ public:
       v[0] = val;
       idx=0;
       return (*this);
-    } 
+    }
   inline ntype& operator[](const int& i)
   {
     return v[i];
@@ -79,7 +79,7 @@ public:
 
   // overloaded operations returning THIS vecflex
   //// operations with vectors - returning *this
-  
+
   inline vecflex<ntype>& operator=(const vecflex<ntype>& other) //assignment
     {
       if(length()!=other.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
@@ -110,7 +110,7 @@ public:
     if (n!=0)
       (*this)/=n;
   }
-  
+
   ////operations with scalars - returning *this
   inline vecflex<ntype>& operator *= (const ntype& sc)
   {
@@ -267,7 +267,7 @@ public:
 	  m = v[i];
     return m;
   }
-  
+
   ntype max(void) const
   {
     ntype m=v[0];

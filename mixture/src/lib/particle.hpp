@@ -5,6 +5,9 @@
 
 using namespace std;
 
+// TO DO:
+// make consistency within the treatment of wrapped/unwrapped cartetian/fractional coordinates
+
 template <class ntype>
 class params_pt: public Params<ntype>
 {
@@ -33,8 +36,9 @@ class particle
 {
 public:
   using vec3d=myvec<ntype,3>;
-  vec3d r, s; // r: cartesian coordinate; s: fractional coordinate
-  myvec<ntype,3> pi; // i: periodic image (unwrapped position: r_unw = r + box*pi)
+  vec3d r, s; // (wrapped) cartesian, fractional coordinates ( r=box*s )
+  vec3d ru, su; // unwrapped cartesian, fractional coordinates
+  vec3d pi; // (integer) periodic image (unwrapped position is ru=r+box*pi, su=s+pi)
   vec3d rold, last_dr;
   int last_move; // -1: none; -2 box-move; 0: translation; 1: rotation;
   ntype sigma, sigmaSq, rcut; // for LJ particles
@@ -53,6 +57,8 @@ public:
   {
     r << 0,0,0;
     s << 0,0,0;
+    ru << 0,0,0;
+    su << 0,0,0;
     pi << 0,0,0;
     last_dr << 0,0,0;
     last_move=-1;
@@ -75,6 +81,8 @@ public:
     {
       r=p1.r;
       s=p1.s;
+      ru=p1.ru;
+      su=p1.su;
       pi=p1.pi;
       sigma=p1.sigma;
       rcut=p1.rcut;
@@ -91,6 +99,9 @@ public:
   void show() const
   {
     r.show("r");
+    s.show("s");
+    ru.show("ru");
+    su.show("su");
     pi.show("pi");
   }
 

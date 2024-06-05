@@ -16,13 +16,16 @@ class SQT_Calculator
   private:
     ntype binw;
     int qm, qM, dq, nbins, nTypes, nTypePairs;
-    int period_in_dt_units, num_periods;
+    int period_in_dt_units, ntimes;
     vector<int> Nt;
-    vecflex<ntype> bins, rho_real, rho_imag, ave, ave2;
+    vecflex<ntype> bins, ave, ave2;
+    vecflex<ntype> num_avg;
     string string_out, myName, tag, rho_tmpfile_prefix;
     fstream fout, f_rho;
     stringstream ss;
-    bool debug, verbose;
+    bool debug, verbose, logtime;
+    string s_logtime;
+    LogTimesteps logt;
 
     int types2int(int ti, int tj){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
       if (ti>tj) return types2int(tj,ti); // map to ti<=tj
@@ -32,7 +35,7 @@ class SQT_Calculator
 
     string get_rho_tmpfile(int idx) {
       ss.str(std::string());
-      ss << rho_tmpfile_prefix << "_idx" << idx << ".dat";
+      ss<<rho_tmpfile_prefix<<"_idx"<<idx<<tag<<".dat";
       return ss.str();
     }
     void write_rho_tmpfile(int idx, ntype re, ntype im) {
@@ -74,42 +77,19 @@ class SQT_Calculator
     }
     virtual ~SQT_Calculator(){}
 
-    void init(int q_mod_min, int q_mod_max, int q_mod_step, int dtframe,
-      int nframes, int period_in_real_units, vec box_diagonal,int nTypes_,int* Nt_,
-      string string_out_, string tag_, bool debug_, bool verbose_)
+    void initLogTime()
     {
       int i,j,idx;
-      string_out = string_out_;
-      tag = tag_;
-      debug = debug_;
-      verbose = verbose_;
-      nTypes = nTypes_;
-      nTypePairs = nTypes*(nTypes+1)/2;
-      Nt.resize(nTypes);
-      for(i=0;i<nTypes;i++) {
-        Nt[i]=Nt_[i];
-      }
-      qm = q_mod_min;
-      qM = q_mod_max;
-      dq = q_mod_step;
-      if(period_in_real_units>0 && period_in_real_units<nframes*dtframe){
-        period_in_dt_units = ceil(period_in_real_units/dtframe);
-      } else{
-        period_in_dt_units = nframes;
-      }
-      num_periods = nframes/period_in_dt_units;
-      if(debug) cout << myName<<": Set period_in_dt_units = " << period_in_dt_units << ", num_periods = " << num_periods << endl;
+      logt.deduce_fromfile(s_logtime);
+      if(debug) logt.print_summary();
+      ntimes = logt.time_window_size;
 
-      nbins = int(floor( (qM-qm)/dq )) + 1;
-      binw = M_PI / box_diagonal[0]; // half mesh: it is in units of pi/L
-      bins.resize(nbins);
-      for(i=0; i<nbins; i++) bins[i] = (1+qm+i*dq)*binw; // q-wave-vector values
-      // rho(q,t0+t) for each q,t
-      rho_real.resize(nbins * period_in_dt_units);
-      rho_imag.resize(nbins * period_in_dt_units);
+      num_avg.resize(ntimes);
+      for(j=0;j<ntimes;j++) num_avg[j]=logt.get_num_avg(j);
+
       // S(q,t0+t) for each q,t
-      ave.resize(nbins * period_in_dt_units);
-      ave2.resize(nbins * period_in_dt_units);
+      ave.resize(nbins * ntimes);
+      ave2.resize(nbins * ntimes);
 
       if(verbose)
       {
@@ -117,18 +97,16 @@ class SQT_Calculator
         fout << "# 1st block: q-wave-vectors; 2nd block: Delta timestep; Other blocks: S(q,t;t0) trajectory for each frame\n";
         for(i=0; i<nbins; i++) fout << bins[i] << endl;
         fout<<endl; // new block
-        for(i=0;i<period_in_dt_units;i++)
-          fout << i*dtframe << endl; // Delta timestep values
+        for(i=0;i<ntimes;i++)
+          fout << logt.get_dt(i) << endl; // Delta timestep values
         fout.close();
       }
 
       // reset rho, <S(q,dt)>, <S(q,dt)^2> for each q=qmin,qmin+dq,...,qmax
       //    and for each dt=0,1,...,period_in_dt_units-1
-      for(i=0; i<nbins; i++)
-      {
-        for(j=0;j<period_in_dt_units;j++)
-        {
-          idx = period_in_dt_units*i + j;
+      for(i=0; i<nbins; i++){
+        for(j=0;j<ntimes;j++){
+          idx = ntimes*i + j;
           ave[idx]=ave2[idx]=0.0;
         }
       }
@@ -136,8 +114,84 @@ class SQT_Calculator
       fout << "# 1st block: q-wave-vector; 2nd block: Delta timestep; 3rd block: <S(q,t)> matrix; 4th block: <S(q,t)> error matrix.\n";
       for(i=0; i<nbins; i++) fout << bins[i] << endl;
       fout<<endl; // new block
-      for(i=0;i<period_in_dt_units;i++) fout << i*dtframe << endl;
+      for(i=0;i<ntimes;i++) fout << logt.get_dt(i) << endl;
       fout.close();
+    }
+
+    void initLinearTime(int period_in_real_units, int dtframe, int nframes)
+    {
+      int i,j,idx;
+      if(period_in_real_units>0 && period_in_real_units<nframes*dtframe){
+        period_in_dt_units = ceil(period_in_real_units/dtframe);
+      } else{
+        period_in_dt_units = nframes;
+      }
+
+      ntimes = period_in_dt_units;
+      num_avg.resize(ntimes);
+      i=nframes/period_in_dt_units;
+      for(j=0;j<ntimes;j++) num_avg[j]=i;
+
+      // S(q,t0+t) for each q,t
+      ave.resize(nbins * ntimes);
+      ave2.resize(nbins * ntimes);
+
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
+        fout << "# 1st block: q-wave-vectors; 2nd block: Delta timestep; Other blocks: S(q,t;t0) trajectory for each frame\n";
+        for(i=0; i<nbins; i++) fout << bins[i] << endl;
+        fout<<endl; // new block
+        for(i=0;i<ntimes;i++)
+          fout << i*dtframe << endl; // Delta timestep values
+        fout.close();
+      }
+
+      // reset rho, <S(q,dt)>, <S(q,dt)^2> for each q=qmin,qmin+dq,...,qmax
+      //    and for each dt=0,1,...,period_in_dt_units-1
+      for(i=0; i<nbins; i++){
+        for(j=0;j<ntimes;j++){
+          idx = ntimes*i + j;
+          ave[idx]=ave2[idx]=0.0;
+        }
+      }
+      ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
+      fout << "# 1st block: q-wave-vector; 2nd block: Delta timestep; 3rd block: <S(q,t)> matrix; 4th block: <S(q,t)> error matrix.\n";
+      for(i=0; i<nbins; i++) fout << bins[i] << endl;
+      fout<<endl; // new block
+      for(i=0;i<ntimes;i++) fout << i*dtframe << endl;
+      fout.close();
+    }
+
+    void init(int q_mod_min, int q_mod_max, int q_mod_step, int dtframe,
+      int nframes, int period_in_real_units, vec box_diagonal, int nTypes_,int* Nt_,
+      bool logtime_, string s_logtime_, string string_out_, string tag_, bool debug_, bool verbose_)
+    {
+      int i,j,idx;
+      string_out = string_out_;
+      tag = tag_;
+      debug = debug_;
+      verbose = verbose_;
+      logtime=logtime_;
+      s_logtime=s_logtime_;
+      nTypes = nTypes_;
+      nTypePairs = nTypes*(nTypes+1)/2;
+      Nt.resize(nTypes);
+      for(i=0;i<nTypes;i++) Nt[i]=Nt_[i];
+      qm = q_mod_min;
+      qM = q_mod_max;
+      dq = q_mod_step;
+
+      nbins = int(floor( (qM-qm)/dq )) + 1;
+      binw = M_PI / box_diagonal[0]; // half mesh: it is in units of pi/L
+      bins.resize(nbins);
+      for(i=0; i<nbins; i++) bins[i] = (qm+i*dq)*binw; // q-wave-vector values
+
+      if(logtime){
+        initLogTime();
+      } else {
+        initLinearTime(period_in_real_units, dtframe, nframes);
+      }
     }
 
     void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
@@ -153,26 +207,36 @@ class SQT_Calculator
       const int exp_storage_size=num_k_values*N*3*2; // wavenumber, particle, cartesian, real/imag
       const ntype dk=2.*binw; // 2*M_PI/L[0];
       ntype x0,x1, y0,y1, z0,z1;
-      vecflex<ntype> exps, ave_t0, ave2_t0;
+      vecflex<ntype> exps, ave_t0,ave2_t0, ave_t0_lin,ave2_t0_lin;
       exps.resize(exp_storage_size);
       ave_t0.resize(nbins);
       ave2_t0.resize(nbins);
 
-      nperiod = frameidx / period_in_dt_units;
-      dframe = frameidx % period_in_dt_units;
+      if(logtime){
+        nperiod = frameidx / logt.npc;
+        dframe = frameidx % logt.npc; // log-spaced at short time
+        if(dframe==0 && nperiod>0) dframe = logt.npc-1+nperiod; // linearly-spaced at long time
+        /*
+        frameidx 0 1 ... npc-1 npc npc+1 ... 2*npc-1 2*npc 2*npc+1 ...
+        nperiod  0 0 ...     0  1    1   ...    1       2     2    ...
+        dframe   0 1 ... npc-1 npc!! 1   ...  npc-1  npc+1!!  1    ...
+
+        dframe   0 1 ... npc-1 npc npc+1 npc+2 ... npc-1+ncycles
+        frameidx 0 1 ... npc-1 npc 2*npc 3*npc ... (ncycles-1+1)*npc
+        nperiod  0 0 ...   0    1    2     3   ...     ncycles
+        */
+        if(dframe>logt.npc){
+          ave_t0_lin.resize(nbins*(nperiod-1));
+          ave2_t0_lin.resize(nbins*(nperiod-1));
+          for(k=0;k<nbins*(nperiod-1);k++) ave_t0_lin[k]=ave2_t0_lin[k]=0.0;
+        }
+      } else {
+        nperiod = frameidx / ntimes;
+        dframe = frameidx % ntimes;
+      }
 
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
-      if(dframe==0)
-      { // reset rho(t0+t) for each q,t at the beginning of each cycle t=0
-        for(i=0;i<nbins;i++)
-        {
-          for(j=0;j<period_in_dt_units;j++)
-          {
-            idx = period_in_dt_units*i + j;
-            rho_real[idx]=rho_imag[idx]=0.0;
-          }
-        }
-      }
+
 
       for(k=0;k<num_k_values;k++) // wavenumber
       {
@@ -191,9 +255,13 @@ class SQT_Calculator
         }
       }
 
+      for(k=0;k<nbins;k++){
+        ave_t0[k]=ave2_t0[k]=0.0;
+      }
+
       for(k=0; k<nbins; k++)
       {
-        idx = period_in_dt_units*k + dframe;
+        idx = ntimes*k + dframe;
         qmod = qm + k*dq; // in units of half mesh binw=pi/L
         if(debug) cout << "  k="<<k<<", qmod="<<qmod<<endl;
         // qvector.${qmod} file contains wavenumbers whose
@@ -216,7 +284,6 @@ class SQT_Calculator
         fout.close();
         if(debug) cout << "  Total "<<num_qvectors<<" triplets of wavenumbers.\n";
 
-        ave_t0[k]=ave2_t0[k]=0.0;
         for(q=0;q<num_qvectors;q++) {
           rhoQvecRe=rhoQvecIm=0.0;
           qx=qvectors[3*q  ];
@@ -246,8 +313,8 @@ class SQT_Calculator
           rhoQvecIm*=invSqrtN;
           if(q==0) write_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
           else    append_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
-          // Project rho(t0+t) onto rho(t0)
-          idx_old = period_in_dt_units*k + 0;
+          // Project rho(t0+t) onto rho(t0) (at the beginning of each cycle)
+          idx_old = ntimes*k + 0;
           read_rho_tmpfile(q,idx_old,&rhoQvecRe_old,&rhoQvecIm_old);
           sqtQvecRe = rhoQvecRe*rhoQvecRe_old + rhoQvecIm*rhoQvecIm_old;
           if(debug) cout << "  Re[ S(qx,qy,qz; dt="<<dframe<<") ] = "<<sqtQvecRe<<endl;
@@ -256,12 +323,48 @@ class SQT_Calculator
           // Average over orientations at fixed q,t0,t
           ave_t0[k] += sqtQvecRe;
           ave2_t0[k] += sqtQvecRe*sqtQvecRe;
+
+          // for log-lin combination, project also onto other linear sub-intervals:
+          // dframe  : 0 1 ... npc-1 npc npc+1 npc+2 ... npc-1+ncycles
+          // frameidx: 0 1 ... npc-1 npc 2*npc 3*npc ... (ncycles-1+1)*npc
+          // nperiod : 0 0 ...   0    1    2     3   ...     ncycles
+          // e.g. project dframe=npc+2 (nperiod=3), other than on dframe=0,
+          //      on dframe=npc+1,npc (nperiod=2,1)
+          if(logtime && dframe>logt.npc) {
+            for(i=0;i<nperiod-1;i++) {
+              read_rho_tmpfile(q,idx-i-1,&rhoQvecRe_old,&rhoQvecIm_old);
+              sqtQvecRe = rhoQvecRe*rhoQvecRe_old + rhoQvecIm*rhoQvecIm_old;
+              if(debug) cout << "  Re[ S(qx,qy,qz; dt="<<dframe<<"-"<<i<<") ] = "<<sqtQvecRe<<endl;
+              sqtQvecIm = -rhoQvecRe*rhoQvecIm_old + rhoQvecIm*rhoQvecRe_old;
+              if(debug) cout << "  Im[ S(qx,qy,qz; dt="<<dframe<<"-"<<i<<") ] = "<<sqtQvecIm<<endl;
+              // Average over orientations at fixed q,t0,t
+              ave_t0_lin[k+nbins*i]  += sqtQvecRe;
+              ave2_t0_lin[k+nbins*i] += sqtQvecRe*sqtQvecRe;
+            }
+          }
         }
+
         ave_t0[k] /= num_qvectors;
         ave2_t0[k] /= num_qvectors;
-        if(num_qvectors>1){
-          // fluctuations of S(q;t0) over q orientation
+        if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
           ave2_t0[k] = sqrt( (ave2_t0[k]-ave_t0[k]*ave_t0[k])/(num_qvectors-1) );
+        }
+        idx = ntimes*k + dframe;
+        ave[idx] += ave_t0[k]; // average over t0 at fixed q,t
+        ave2[idx] += ave_t0[k]*ave_t0[k];
+
+        if(logtime && dframe>logt.npc) {
+          for(i=0;i<nperiod-1;i++) {
+            idx=k+nbins*i;
+            ave_t0_lin[idx]  /= num_qvectors;
+            ave2_t0_lin[idx] /= num_qvectors;
+            if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
+              ave2_t0_lin[idx] = sqrt( (ave2_t0_lin[idx]-ave_t0_lin[idx]*ave_t0_lin[idx])/(num_qvectors-1) );
+            }
+            idx=ntimes*k+dframe-i-1;
+            ave[idx] += ave_t0_lin[k]; // average over t0 at fixed q,t within the linear sub-tajectories
+            ave2[idx] += ave_t0_lin[k]*ave_t0_lin[k];
+          }
         }
       }
 
@@ -273,22 +376,14 @@ class SQT_Calculator
         fout.close();
       }
 
-      for(k=0; k<nbins; k++){
-        idx = period_in_dt_units*k + dframe;
-        ave[idx] += ave_t0[k]; // average over t0 at fixed q,t
-        ave2[idx] += ave_t0[k]*ave_t0[k];
-      }
-
       if(frameidx == (nframes-1))
       {
           ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
           fout<<endl; // new block
-          for(k=0; k<nbins; k++)
-          {
-            for(j=0;j<period_in_dt_units;j++)
-            {
-              idx = period_in_dt_units*k + j;
-              ave[idx] /= num_periods; // average over t0 at fixed q,t
+          for(k=0; k<nbins; k++){
+            for(j=0;j<ntimes;j++){
+              idx = ntimes*k + j;
+              ave[idx] /= num_avg[j]; // average over t0 at fixed q,t
               fout << ave[idx] << " ";
             }
             fout << endl;
@@ -296,11 +391,11 @@ class SQT_Calculator
 
           fout << endl; // new block
           for(k=0; k<nbins; k++){
-            for(j=0;j<period_in_dt_units;j++){
-              idx = period_in_dt_units*k + j;
-              ave2[idx] /= num_periods;
-              if(num_periods>1){
-                ave2[idx] = sqrt( (ave2[idx]-ave[idx]*ave[idx])/(num_periods-1) );
+            for(j=0;j<ntimes;j++){
+              idx = ntimes*k + j;
+              ave2[idx] /= num_avg[j];
+              if(num_avg[j]>1){
+                ave2[idx] = sqrt( (ave2[idx]-ave[idx]*ave[idx])/(num_avg[j]-1) );
               }
               fout << ave2[idx] << " ";
             }
@@ -311,8 +406,8 @@ class SQT_Calculator
 
           if(!debug){ // clear temporary files
             for(k=0; k<nbins; k++){
-              for(j=0;j<period_in_dt_units;j++){
-                idx = period_in_dt_units*k + j;
+              for(j=0;j<ntimes;j++){
+                idx = ntimes*k + j;
                 remove(get_rho_tmpfile(idx).c_str());
               }
             }

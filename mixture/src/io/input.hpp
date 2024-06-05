@@ -655,14 +655,14 @@ void Trajectory<ntype, ptype>::
 read_lammpstrj_frame(fstream &i, bool resetN)
 {
   enum class LAMMPS_ATOM_ENTRIES {
-    ID, TYPE, X,Y,Z, XS,YS,ZS, IX,IY,IZ, VX,VY,VZ
+    ID, TYPE, X,Y,Z, XS,YS,ZS, IX,IY,IZ, XU,YU,ZU, VX,VY,VZ
   };
   // Assumes that particles are labelled as 1,2,...,ntypes
   // This must be mapped to our convention: 0,1,...,ntypes-1
   string line, x, a,b,c;
   LAMMPS_ATOM_ENTRIES entries[15];
   stringstream ss;
-  int ncols, num_atomic_entries, x_count, xs_count, pi_count, v_count;
+  int ncols, num_atomic_entries, x_count, xs_count, xu_count, pi_count, v_count;
   ntype xlo,ylo,zlo, xlob,ylob;
   ntype xhi,yhi,zhi, xhib,yhib;
   ntype xy,xz,yz;
@@ -764,7 +764,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
   getline(i,line); // ITEM: ATOMS ...
   if(debug) cout << "\n  Line 9: " << line << endl;
   ncols=0;
-  x_count=xs_count=pi_count=v_count=0;
+  x_count=xs_count=pi_count=xu_count=v_count=0;
   ss << line;
   while( ss >> x )
   {
@@ -790,6 +790,10 @@ read_lammpstrj_frame(fstream &i, bool resetN)
       else if (x=="ix") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::IX; pi_count++; }
       else if (x=="iy") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::IY; pi_count++; }
       else if (x=="iz") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::IZ; pi_count++; }
+
+      else if (x=="xu") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::XU; xu_count++; }
+      else if (x=="yu") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::YU; xu_count++; }
+      else if (x=="zu") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::ZU; xu_count++; }
 
       else if (x=="vx") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::VX; v_count++; }
       else if (x=="vy") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::VY; v_count++; }
@@ -828,6 +832,9 @@ read_lammpstrj_frame(fstream &i, bool resetN)
         case LAMMPS_ATOM_ENTRIES::IX : p.pi[0] = stof(x); break; // x periodic image
         case LAMMPS_ATOM_ENTRIES::IY : p.pi[1] = stof(x); break; // y periodic image
         case LAMMPS_ATOM_ENTRIES::IZ : p.pi[2] = stof(x); break; // z periodic image
+        case LAMMPS_ATOM_ENTRIES::XU : p.ru[0] = stof(x); break; // x cartesian unwrapped
+        case LAMMPS_ATOM_ENTRIES::YU : p.ru[1] = stof(x); break; // y cartesian unwrapped
+        case LAMMPS_ATOM_ENTRIES::ZU : p.ru[2] = stof(x); break; // z cartesian unwrapped
         case LAMMPS_ATOM_ENTRIES::VX : break;
         case LAMMPS_ATOM_ENTRIES::VY : break;
         case LAMMPS_ATOM_ENTRIES::VZ : break;
@@ -842,8 +849,37 @@ read_lammpstrj_frame(fstream &i, bool resetN)
       p.r[1] -= ylo;
       p.r[2] -= zlo;
     }
-    if(x_count>0 && xs_count==0) p.s = boxInv * p.r; // compute scaled coordinate from Cartesian
-    if(xs_count>0 && x_count==0) p.r = box * p.s; // compute Cartesian coordinate from scaled
+    if(xu_count>0)
+    {
+      p.ru[0] -= xlo; // CORRETTO traslare per xl0,ylo,zlo tutto ???
+      p.ru[1] -= ylo;
+      p.ru[2] -= zlo;
+    }
+    // given only the wrapped cartesian:
+    if(x_count>0 && xs_count==0 && pi_count==0 && xu_count==0) {
+      p.s = boxInv * p.r;
+      // you can tell nothing about the unwrapped ones
+      p.su=p.s; p.ru=p.r;
+    }
+    // given only the wrapped fractional:
+    if(xs_count>0 && x_count==0 && pi_count==0 && xu_count==0) {
+      p.r = box * p.s;
+      // you can tell nothing about the unwrapped ones
+      p.su=p.s; p.ru=p.r;
+    }
+    // given only the wrapped fractionals and the periodic images:
+    if(xs_count>0 && pi_count>0 && x_count==0 && xu_count==0) {
+      p.r = box*p.s;    // get wrapped cartesian
+      p.su = p.s + p.pi; // get unwrapped fractional
+      p.ru = box*p.s;   // get unwrapped cartesian
+    }
+    // given only unwrapped cartesian coordinates:
+    if(xu_count>0 && x_count==0 && xs_count==0 && pi_count==0) {
+      p.su = boxInv * p.ru; // get unwrapped fractional
+      p.pi = round(p.su);   // get periodic image
+      p.s  = p.su - p.pi;   // get wrapped fractional in (-0.5,0.5]
+      p.r = box * p.s;      // get wrapped cartesian
+    }
     //if(debug) p.show();
     ss.str(std::string()); ss.clear(); // clear the string stream!
     if(resetN)

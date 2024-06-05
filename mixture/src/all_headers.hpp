@@ -21,7 +21,6 @@
 #include "rdf.hpp"
 #include "sq.hpp"
 #include "sqt.hpp"
-#include "sqt_mixture_attempt.hpp"
 #include "mdtraj.hpp"
 #include "io/args.hpp"
 #include "io/input.hpp"
