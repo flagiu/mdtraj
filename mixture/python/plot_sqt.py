@@ -173,12 +173,16 @@ for ii in range(len(q_selected_idx)):
     if args.normalize==1:
         y = sqt[i] / sq[i]
         y_ = y * np.sqrt( (sqt_[i]/sqt[i])**2 + (sq_[i]/sq[i])**2 ) # gaussian error propagation
+        #print(sq[i],sq_[i])
+        #print(sqt[i],sqt_[i])
+        #print(y,y_)
     else:
         y = sqt[i]
         y_ = sqt_[i]
-    ax.errorbar(t,y+i*args.yshift,y_, fmt=args.fmt, color=col, label=lab, alpha=0.5)
-ax.set_ylim(-0.1,1.1)
-ax.axhline(np.exp(-1), color="k", linestyle="--", linewidth=0.5, zorder=-999)
+    ax.errorbar(t,y+ii*args.yshift,y_, fmt=args.fmt, color=col, label=lab, alpha=0.5)
+if args.normalize==1:
+    ax.set_ylim(-0.1,1.1)
+    ax.axhline(np.exp(-1), color="k", linestyle="--", linewidth=0.5, zorder=-999)
 ax.tick_params(which='both', direction='in')
 #ax.grid(axis='both', which='major')
 cbar_q=fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][1],

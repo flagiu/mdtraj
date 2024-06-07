@@ -97,6 +97,11 @@ public:
   float alpha;
   int time_window_size;
 
+  int get_time_window_size(){
+    time_window_size=npc-1+ncycles;
+    return time_window_size;
+  }
+
   int get_dt(int i){
     if(i==0) return 0; // dt=0 static properties
     else if(i<npc) return (int)(t0*pow(alpha,i+1)+0.5)-delta; // log sampling
@@ -192,7 +197,7 @@ public:
       exit(1);
     }
     i.close();
-    time_window_size=npc-1+ncycles;
+    get_time_window_size();
   }
 
 };

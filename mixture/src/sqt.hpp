@@ -19,7 +19,7 @@ class SQT_Calculator
     int period_in_dt_units, ntimes;
     vector<int> Nt;
     vecflex<ntype> bins, ave, ave2;
-    vecflex<ntype> num_avg;
+    vecflex<ntype> num_avg, num_avg_predicted;
     string string_out, myName, tag, rho_tmpfile_prefix;
     fstream fout, f_rho;
     stringstream ss;
@@ -82,10 +82,14 @@ class SQT_Calculator
       int i,j,idx;
       logt.deduce_fromfile(s_logtime);
       if(debug) logt.print_summary();
-      ntimes = logt.time_window_size;
+      ntimes = logt.get_time_window_size();
 
       num_avg.resize(ntimes);
-      for(j=0;j<ntimes;j++) num_avg[j]=logt.get_num_avg(j);
+      num_avg_predicted.resize(ntimes);
+      for(j=0;j<ntimes;j++) {
+        num_avg[j]=0.0;
+        num_avg_predicted[j]=logt.get_num_avg(j);
+      }
 
       // S(q,t0+t) for each q,t
       ave.resize(nbins * ntimes);
@@ -129,8 +133,12 @@ class SQT_Calculator
 
       ntimes = period_in_dt_units;
       num_avg.resize(ntimes);
+      num_avg_predicted.resize(ntimes);
       i=nframes/period_in_dt_units;
-      for(j=0;j<ntimes;j++) num_avg[j]=i;
+      for(j=0;j<ntimes;j++) {
+        num_avg[j]=0.0;
+        num_avg_predicted[j]=i;
+      }
 
       // S(q,t0+t) for each q,t
       ave.resize(nbins * ntimes);
@@ -212,6 +220,10 @@ class SQT_Calculator
       ave_t0.resize(nbins);
       ave2_t0.resize(nbins);
 
+      for(k=0;k<nbins;k++) ave_t0[k]=ave2_t0[k]=0.0;
+
+      if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
+
       if(logtime){
         nperiod = frameidx / logt.npc;
         dframe = frameidx % logt.npc; // log-spaced at short time
@@ -225,17 +237,17 @@ class SQT_Calculator
         frameidx 0 1 ... npc-1 npc 2*npc 3*npc ... (ncycles-1+1)*npc
         nperiod  0 0 ...   0    1    2     3   ...     ncycles
         */
-        if(dframe>logt.npc){
-          ave_t0_lin.resize(nbins*(nperiod-1));
-          ave2_t0_lin.resize(nbins*(nperiod-1));
-          for(k=0;k<nbins*(nperiod-1);k++) ave_t0_lin[k]=ave2_t0_lin[k]=0.0;
+        if(dframe>=logt.npc){
+          // Average over orientations at fixed q,t0, for each linear t
+          ave_t0_lin.resize(nbins*nperiod);
+          ave2_t0_lin.resize(nbins*nperiod);
+          for(k=0;k<nbins*nperiod;k++) ave_t0_lin[k]=ave2_t0_lin[k]=0.0;
         }
       } else {
         nperiod = frameidx / ntimes;
         dframe = frameidx % ntimes;
       }
-
-      if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
+      if(debug) cout<<"  frameidx="<<frameidx<<" ==> nperiod="<<nperiod<<" , dframe="<<dframe<<endl;
 
 
       for(k=0;k<num_k_values;k++) // wavenumber
@@ -255,15 +267,11 @@ class SQT_Calculator
         }
       }
 
-      for(k=0;k<nbins;k++){
-        ave_t0[k]=ave2_t0[k]=0.0;
-      }
-
       for(k=0; k<nbins; k++)
       {
-        idx = ntimes*k + dframe;
+        idx  = ntimes*k + dframe; // rho(q,t0+t)
         qmod = qm + k*dq; // in units of half mesh binw=pi/L
-        if(debug) cout << "  k="<<k<<", qmod="<<qmod<<endl;
+        if(debug) cout << "  k="<<k<<", qmod="<<qmod<<"; dframe="<<dframe<<", idx="<<idx<<endl;
         // qvector.${qmod} file contains wavenumbers whose
         // modulus is in (qmod-0.5,qmod+0.5] in half mesh units
         ss.str(std::string()); ss << qvectors_path << "/qvector." << setw(3) << setfill('0') << qmod; fout.open(ss.str(), ios::in);
@@ -275,7 +283,7 @@ class SQT_Calculator
           qx = stoi(a); // in units of full mesh 2*pi/L
           qy = stoi(b);
           qz = stoi(c);
-          if(debug) cout << "  read kx,ky,kz = " << qx<<", "<< qy<<", "<< qz<<endl;
+          if(debug) cout << "   read kx,ky,kz = " << qx<<", "<< qy<<", "<< qz<<endl;
           qvectors[3*num_qvectors  ]=qx;
           qvectors[3*num_qvectors+1]=qy;
           qvectors[3*num_qvectors+2]=qz;
@@ -289,6 +297,7 @@ class SQT_Calculator
           qx=qvectors[3*q  ];
           qy=qvectors[3*q+1];
           qz=qvectors[3*q+2];
+          if(debug) cout << "  calculating on kx,ky,kz = " << qx<<", "<< qy<<", "<< qz<<endl;
           for(i=0;i<N;i++) {
             /* // Brute force method
             arg = dk * (qx*ps[i].r[0] + qy*ps[i].r[1] + qz*ps[i].r[2]);
@@ -305,68 +314,105 @@ class SQT_Calculator
             if(qx<0) x1 = -x1; // give correct sign to sin() !
             if(qy<0) y1 = -y1;
             if(qz<0) z1 = -z1;
-            // Compute rho(t0+t)
+            // Compute rho(qvec,t0+t)
             rhoQvecRe += ( x0*y0*z0 - x0*y1*z1 - x1*y0*z1 - x1*y1*z0 ); // cos( k*r )
             rhoQvecIm += ( x1*y0*z0 + x0*y1*z0 + x0*y0*z1 - x1*y1*z1 ); // sin( k*r )
-          }
+          } // end of atoms
           rhoQvecRe*=invSqrtN;
           rhoQvecIm*=invSqrtN;
-          if(q==0) write_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
-          else    append_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
-          // Project rho(t0+t) onto rho(t0) (at the beginning of each cycle)
-          idx_old = ntimes*k + 0;
+          // Save rho(qvec,t0+t) for each qvec in a file; for later projection
+          if(!logtime || (dframe==0||dframe>=logt.npc))
+          { // no need to save frames within the npc log cycle 0<dframe<npc
+            if(q==0) write_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
+            else    append_rho_tmpfile(idx,rhoQvecRe,rhoQvecIm);
+          }
+
+          // Project rho(qvec,t0+t) onto rho(qvec,t0):
+          // - linear sampling: t0 is the beginning of each cycle
+          // - linlog sampling: depends
+          if(logtime){
+            if(dframe==0)    idx_old=ntimes*k+0; // if first absolute snapshot: t0 is itself
+            else if(dframe<logt.npc){
+              if(nperiod==0) idx_old=ntimes*k+0; // else if first period, t0 is the begining of the first npc log cycle
+              else           idx_old=ntimes*k+logt.npc-1+nperiod; // else t0 is the begining of the current npc log cycle
+            }
+            else             idx_old=ntimes*k+0; // for linear subsampling, first compare with first absolute snapshot
+          } else idx_old=ntimes*k+0;
           read_rho_tmpfile(q,idx_old,&rhoQvecRe_old,&rhoQvecIm_old);
-          sqtQvecRe = rhoQvecRe*rhoQvecRe_old + rhoQvecIm*rhoQvecIm_old;
-          if(debug) cout << "  Re[ S(qx,qy,qz; dt="<<dframe<<") ] = "<<sqtQvecRe<<endl;
+          sqtQvecRe =  rhoQvecRe*rhoQvecRe_old + rhoQvecIm*rhoQvecIm_old;
           sqtQvecIm = -rhoQvecRe*rhoQvecIm_old + rhoQvecIm*rhoQvecRe_old;
-          if(debug) cout << "  Im[ S(qx,qy,qz; dt="<<dframe<<") ] = "<<sqtQvecIm<<endl;
+          if(debug) {
+            cout << "    rho(qxyz;    idx="<<idx<<") = "<<rhoQvecRe<<" + i* "<<rhoQvecIm<<endl;
+            cout << "    rho(qxyz;idx_old="<<idx_old<<") = "<<rhoQvecRe_old<<" + i* "<<rhoQvecIm_old<<endl;
+            cout << "   S(qx,qy,qz;dframe="<<dframe<<") = "<<sqtQvecRe<<" + i* "<<sqtQvecIm<<endl;
+          }
+
           // Average over orientations at fixed q,t0,t
           ave_t0[k] += sqtQvecRe;
           ave2_t0[k] += sqtQvecRe*sqtQvecRe;
 
-          // for log-lin combination, project also onto other linear sub-intervals:
+          // for log-lin sampling, when outside the log cycle,
+          //   project also onto any linear sub-intervals:
           // dframe  : 0 1 ... npc-1 npc npc+1 npc+2 ... npc-1+ncycles
           // frameidx: 0 1 ... npc-1 npc 2*npc 3*npc ... (ncycles-1+1)*npc
           // nperiod : 0 0 ...   0    1    2     3   ...     ncycles
           // e.g. project dframe=npc+2 (nperiod=3), other than on dframe=0,
           //      on dframe=npc+1,npc (nperiod=2,1)
-          if(logtime && dframe>logt.npc) {
-            for(i=0;i<nperiod-1;i++) {
-              read_rho_tmpfile(q,idx-i-1,&rhoQvecRe_old,&rhoQvecIm_old);
+          if(logtime && dframe>=logt.npc) {
+            if(debug) cout << "   Out-of-log-cycle linear subsampling:\n";
+            for(i=0;i<nperiod;i++) {
+              idx_old = idx-i;
+              read_rho_tmpfile(q,idx_old,&rhoQvecRe_old,&rhoQvecIm_old);
+              if(debug) {
+                cout << "    rho(qxyz;    idx="<<idx<<") = "<<rhoQvecRe<<" + i* "<<rhoQvecIm<<endl;
+                cout << "    rho(qxyz;idx_old="<<idx_old<<") = "<<rhoQvecRe_old<<" + i* "<<rhoQvecIm_old<<endl;
+              }
               sqtQvecRe = rhoQvecRe*rhoQvecRe_old + rhoQvecIm*rhoQvecIm_old;
-              if(debug) cout << "  Re[ S(qx,qy,qz; dt="<<dframe<<"-"<<i<<") ] = "<<sqtQvecRe<<endl;
               sqtQvecIm = -rhoQvecRe*rhoQvecIm_old + rhoQvecIm*rhoQvecRe_old;
-              if(debug) cout << "  Im[ S(qx,qy,qz; dt="<<dframe<<"-"<<i<<") ] = "<<sqtQvecIm<<endl;
-              // Average over orientations at fixed q,t0,t
+              if(debug) cout << "   S(qxyz;dt="<<i<<"*"<<logt.npc<<") = "<<sqtQvecRe<<" + i* "<<sqtQvecIm<<endl;
+              // Average over orientations at fixed q,t0, for each linear t
               ave_t0_lin[k+nbins*i]  += sqtQvecRe;
               ave2_t0_lin[k+nbins*i] += sqtQvecRe*sqtQvecRe;
             }
           }
-        }
+        } // end of qvectors
+        if(debug) cout << "  done calculating qvectors\n";
 
         ave_t0[k] /= num_qvectors;
-        ave2_t0[k] /= num_qvectors;
         if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
+          ave2_t0[k] /= num_qvectors;
           ave2_t0[k] = sqrt( (ave2_t0[k]-ave_t0[k]*ave_t0[k])/(num_qvectors-1) );
-        }
+        }else ave2_t0[k] = 0.0;
+        if(debug) cout << "   S(k="<<k<<";dframe="<<dframe<<") = "<<ave_t0[k]<<" +- "<<ave2_t0[k]<<endl;
+
         idx = ntimes*k + dframe;
         ave[idx] += ave_t0[k]; // average over t0 at fixed q,t
         ave2[idx] += ave_t0[k]*ave_t0[k];
+        num_avg[dframe]+=1./(ntype)nbins;
 
-        if(logtime && dframe>logt.npc) {
-          for(i=0;i<nperiod-1;i++) {
-            idx=k+nbins*i;
-            ave_t0_lin[idx]  /= num_qvectors;
-            ave2_t0_lin[idx] /= num_qvectors;
+        if(logtime && dframe>=logt.npc) {
+          if(debug) cout << "  Out-of-log-cycle linear subsampling:\n";
+
+          for(i=0;i<nperiod;i++) {
+            j=k+nbins*i;
+            ave_t0_lin[j]  /= num_qvectors;
             if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
-              ave2_t0_lin[idx] = sqrt( (ave2_t0_lin[idx]-ave_t0_lin[idx]*ave_t0_lin[idx])/(num_qvectors-1) );
+              ave2_t0_lin[j] /= num_qvectors;
+              ave2_t0_lin[j] = sqrt( (ave2_t0_lin[j]-ave_t0_lin[j]*ave_t0_lin[j])/(num_qvectors-1) );
+            } else ave2_t0_lin[j] = 0.0;
+            if(debug) cout << "   S(k="<<k<<";dt="<<i<<"*"<<logt.npc<<") = "<<ave_t0_lin[j]<<" +- "<<ave2_t0_lin[j]<<endl;
+            if(i==0) {
+              idx = ntimes*k + 0; // dt for the average among linear subsamples
+              num_avg[0]+=1/(ntype)nbins;
+            }else{
+              idx = ntimes*k + logt.npc+i-1;
+              num_avg[logt.npc+i-1]+=1/(ntype)nbins;
             }
-            idx=ntimes*k+dframe-i-1;
-            ave[idx] += ave_t0_lin[k]; // average over t0 at fixed q,t within the linear sub-tajectories
-            ave2[idx] += ave_t0_lin[k]*ave_t0_lin[k];
+            ave[idx] += ave_t0_lin[j]; // average over t0 at fixed q,t within the linear sub-tajectories
+            ave2[idx] += ave_t0_lin[j]*ave_t0_lin[j];
           }
         }
-      }
+      } // end of qvector modulus (index k)
 
       if(verbose)
       {
@@ -376,26 +422,34 @@ class SQT_Calculator
         fout.close();
       }
 
-      if(frameidx == (nframes-1))
+      if(frameidx == (nframes-1)) //last frame
       {
+          if(debug){
+            cout<<"Please check that num_avg is the same as the predicted one:\n";
+            cout<<" index num_avg predicted\n";
+            for(j=0;j<ntimes;j++)
+              cout << " "<<j<<" "<<num_avg[j]<<" "<<num_avg_predicted[j]<<endl;
+          }
           ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
           fout<<endl; // new block
-          for(k=0; k<nbins; k++){
+          for(k=0;k<nbins;k++){
             for(j=0;j<ntimes;j++){
               idx = ntimes*k + j;
-              ave[idx] /= num_avg[j]; // average over t0 at fixed q,t
+              ave[idx]/=num_avg[j]; // average over t0 at fixed q,t
               fout << ave[idx] << " ";
             }
             fout << endl;
           }
 
           fout << endl; // new block
-          for(k=0; k<nbins; k++){
+          for(k=0;k<nbins;k++){
             for(j=0;j<ntimes;j++){
               idx = ntimes*k + j;
-              ave2[idx] /= num_avg[j];
               if(num_avg[j]>1){
+                ave2[idx]/=num_avg[j];
                 ave2[idx] = sqrt( (ave2[idx]-ave[idx]*ave[idx])/(num_avg[j]-1) );
+              }else{
+                ave2[idx] = 0.0;
               }
               fout << ave2[idx] << " ";
             }

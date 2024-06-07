@@ -17,6 +17,7 @@
 #include "bond_parameters.hpp"
 #include "ed_bond_parameter.hpp"
 #include "msd_and_ngp.hpp"
+#include "msd_unwrapped.hpp"
 #include "neighbour_and_bond_list.hpp"
 #include "rdf.hpp"
 #include "sq.hpp"
