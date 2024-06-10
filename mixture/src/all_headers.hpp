@@ -11,6 +11,7 @@
 #include "lib/mymatrix.hpp"
 #include "lib/Ycomplex.hpp"
 #include "lib/pbc.hpp"
+#include "lib/logtimesteps.hpp"
 #include "adf.hpp"
 #include "all_headers.hpp"
 #include "altbc.hpp"

@@ -11,12 +11,13 @@ class SQ_Calculator
   using mat=mymatrix<ntype,3,3>;
   private:
     ntype binw;
-    int qm, qM, dq, nbins;
+    int qm, qM, dq, nbins, numSampled, numSampledPredicted;
     vecflex<ntype> bins, norm, value, value2, ave, ave2;
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
-    bool debug, verbose;
+    bool debug, verbose, logtime;
+    LogTimesteps logt;
   public:
     SQ_Calculator(){
       myName = "SQ";
@@ -24,11 +25,14 @@ class SQ_Calculator
     virtual ~SQ_Calculator(){}
 
     void init(int q_mod_min, int q_mod_max, int q_mod_step, vec box_diagonal,
+      bool logtime_, LogTimesteps logt_,
       string string_out_, string tag_, bool debug_, bool verbose_)
     {
       qm = q_mod_min; // in units of half mesh (pi/L)
       qM = q_mod_max;
       dq = q_mod_step;
+      logtime = logtime_;
+      logt = logt_;
       string_out = string_out_;
       tag = tag_;
       debug = debug_;
@@ -58,6 +62,8 @@ class SQ_Calculator
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# q-wave-vector, <S(q)>, <S(q)> error.\n";
       fout.close();
+
+      numSampled=0;
     }
 
     void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
@@ -71,9 +77,17 @@ class SQ_Calculator
       const ntype dk = 2.*binw; // 2*M_PI/L[0];
       ntype x0,x1, y0,y1, z0,z1;
       vecflex<ntype> exps;
-      exps.resize(exp_storage_size);
+      bool linear_sampling=true;
 
-      for(k=0;k<num_k_values;k++) // wavenumber (in units of full mesh 2*pi/L)
+      if(logtime) linear_sampling=logt.is_linear_sampling(timestep);
+      if(linear_sampling) {
+        numSampled++;
+        exps.resize(exp_storage_size);
+      }
+
+      if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
+
+      for(k=0;k<num_k_values&&linear_sampling;k++) // wavenumber (in units of full mesh 2*pi/L)
       {
         for(i=0;i<N;i++) // particle
         {
@@ -89,8 +103,8 @@ class SQ_Calculator
           }
         }
       }
-      if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
-      for(k=0; k<nbins; k++)
+
+      for(k=0; k<nbins&&linear_sampling; k++)
       {
         qmod = qm + k*dq; // in units of half mesh binw=pi/L
         if(debug) cout << "  k="<<k<<", qmod="<<qmod<<endl;
@@ -147,29 +161,37 @@ class SQ_Calculator
         fout.close();
       }
 
-      if(verbose)
+      if(verbose&&linear_sampling)
       {
         ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
         fout << endl; // start new block
+        for(k=0; k<nbins; k++) fout << value[k] << endl;
+        fout.close();
       }
-      for(k=0; k<nbins; k++){
+
+      for(k=0; k<nbins&&linear_sampling; k++){
         if(verbose) fout << value[k] << endl;
         ave[k] += value[k];
         ave2[k] += value[k]*value[k];
       }
-      if(verbose) fout.close();
 
+      // end of trajectory
       if(frameidx == (nframes-1)){
-        ntype std_dev=0.0;
+        numSampledPredicted=(logtime?logt.ncycles:nframes);
         ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
         for(k=0; k<nbins; k++){
-          ave[k] /= nframes;
-          ave2[k] /= nframes;
-          if(nframes>1) std_dev = sqrt( (ave2[k]-ave[k]*ave[k])/(nframes-1) );
-          fout << bins[k] << " " << ave[k] << " " << std_dev << endl;
+          ave[k] /= numSampled;
+          ave2[k] /= numSampled;
+          if(numSampled>1) ave2[k] = sqrt( (ave2[k]-ave[k]*ave[k])/(numSampled-1) );
+          else             ave2[k] = 0.0;
+          fout << bins[k] << " " << ave[k] << " " << ave2[k] << endl;
         }
         fout.close();
-        if(debug) cout << "Average "<<myName<<" printed to file\n";
+        if(debug) {
+          cout << "Average "<<myName<<" printed to file\n";
+          cout << "Averaged over "<<numSampled<<" linearly-spaced frames\n";
+          cout << "(should be equal to "<<numSampledPredicted<<" (= ncycles if logtime, else nframes)\n";
+        }
       }
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       return;

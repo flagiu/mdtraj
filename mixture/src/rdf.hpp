@@ -11,13 +11,14 @@ class RDF_Calculator
   private:
     int image_convention=1; // 0: no images (cluster) ; 1: 1 replica (minimum image) ; -1: all replicas (crystal)
     ntype binw;
-    int nbins, nTypes, nTypePairs;
+    int nbins, nTypes, nTypePairs, numSampled, numSampledPredicted;
     vecflex<ntype> bins;
     vector< vecflex<ntype> > norm, value, ave, ave2;
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
-    bool debug, verbose;
+    bool debug, verbose, logtime;
+    LogTimesteps logt;
 
     int types2int(int ti, int tj){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
       if (ti>tj) return types2int(tj,ti); // map to ti<=tj
@@ -46,19 +47,27 @@ class RDF_Calculator
     }
     virtual ~RDF_Calculator(){}
 
-    void init(ntype binw_, ntype rmax_, mat box, int N, ntype V, int nTypes_, int* Nt_, string string_out_, string tag_, bool debug_, bool verbose_)
+    void init(ntype binw_, ntype rmax_, mat box, int N, ntype V, int nTypes_,
+              int* Nt_, bool logtime_, LogTimesteps logt_, string string_out_,
+              string tag_, bool debug_, bool verbose_)
     {
       string_out = string_out_;
       tag = tag_;
       debug =debug_;
       verbose = verbose_;
+      logtime = logtime_;
+      logt = logt_;
       binw = binw_;
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
       int k,t1,t2,tp;
       ntype r, r_limit, shell1, shell2, normalization;
       // r_limit = 1/2 * min( |ax+bx+cx|, |ay+by+cy|, |az+bz+cz| ) for minimum image convention
-      r_limit = 0.5* min( min( fabs(box[0][0]+box[0][1]+box[0][2]), fabs(box[1][0]+box[1][1]+box[1][2]) ), fabs(box[2][0]+box[2][1]+box[2][2]) );
+      r_limit = 0.5* min( min(
+                            fabs(box[0][0]+box[0][1]+box[0][2]),
+                            fabs(box[1][0]+box[1][1]+box[1][2])
+                          ),fabs(box[2][0]+box[2][1]+box[2][2])
+                        );
       if(rmax_<=0) rmax = r_limit;
       else
       {
@@ -124,6 +133,8 @@ class RDF_Calculator
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "# r | g_00(r), g_01(r), ... | error for each g(r).\n";
       fout.close();
+
+      numSampled=0;
     }
 
     void compute(int frameidx, int nframes, int timestep, vector<ptype> ps, PBC<ntype> *pbc)
@@ -132,13 +143,20 @@ class RDF_Calculator
       const int N=ps.size();
       vec rij, r_images[MAX_N_IMAGES];
       ntype r,r_mic;
+      bool linear_sampling=true;
+
       for(tp=0;tp<nTypePairs;tp++){
         for(k=0; k<nbins; k++){
           value[tp][k] = 0.0;
         }
       }
+
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
-      for(i=0;i<N;i++){
+
+      if(logtime) linear_sampling=logt.is_linear_sampling(timestep);
+      if(linear_sampling) numSampled++;
+
+      for(i=0;i<N&&linear_sampling;i++){
         for(j=i;j<N;j++){
           //if(i==j) continue;
           rij = ps[j].r - ps[i].r; // real distance
@@ -163,12 +181,7 @@ class RDF_Calculator
         }
       }
 
-      if(verbose)
-      {
-        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
-        fout << endl; // start new block
-      }
-      for(k=0; k<nbins; k++)
+      for(k=0; k<nbins&&linear_sampling; k++)
       {
         for(tp=0;tp<nTypePairs;tp++)
         {
@@ -183,29 +196,45 @@ class RDF_Calculator
           }
         }
       }
-      if(verbose) fout.close();
 
-      if(frameidx == (nframes-1)){
-          ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
-          for(k=0; k<nbins; k++)
-          {
-            fout << bins[k] << " "; // print bin
-            for(tp=0;tp<nTypePairs;tp++)
-            {
-              ave[tp][k] /= nframes;
-              fout << ave[tp][k] << " ";
-            }
-            for(tp=0;tp<nTypePairs;tp++)
-            {
-              ave2[tp][k] /= nframes;
-              if(nframes>1) fout << sqrt( (ave2[tp][k]-ave[tp][k]*ave[tp][k])/(nframes -1) );
-              else  fout << 0.0;
-              if(tp<nTypePairs-1) fout << " ";
-              else fout << endl;
-            }
+      if(verbose&&linear_sampling)
+      {
+        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
+        fout << endl; // start new block
+        for(k=0; k<nbins; k++){
+          for(tp=0;tp<nTypePairs;tp++){
+            fout << value[tp][k];
+            if(tp<nTypePairs-1) fout << " ";
+            else fout << endl;
           }
-          fout.close();
-          if(debug) cout << "Average "<<myName<<" printed to file\n";
+        }
+        fout.close();
+      }
+
+      // end of trajectory
+      if(frameidx == (nframes-1)){
+        numSampledPredicted=(logtime?logt.ncycles:nframes);
+        ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
+        for(k=0; k<nbins; k++) {
+          fout << bins[k] << " "; // print bin
+          for(tp=0;tp<nTypePairs;tp++) {
+            ave[tp][k] /= numSampled;
+            fout << ave[tp][k] << " ";
+          }
+          for(tp=0;tp<nTypePairs;tp++) {
+            ave2[tp][k] /= numSampled;
+            if(numSampled>1) fout << sqrt( (ave2[tp][k]-ave[tp][k]*ave[tp][k])/(numSampled -1) );
+            else             fout << 0.0;
+            if(tp<nTypePairs-1) fout << " ";
+            else fout << endl;
+          }
+        }
+        fout.close();
+        if(debug) {
+          cout << "Average "<<myName<<" printed to file\n";
+          cout << "Averaged over "<<numSampled<<" linearly-spaced frames\n";
+          cout << "(should be equal to "<<numSampledPredicted<<" (= ncycles if logtime, else nframes)\n";
+        }
       }
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       return;

@@ -24,7 +24,6 @@ class SQT_Calculator
     fstream fout, f_rho;
     stringstream ss;
     bool debug, verbose, logtime;
-    string s_logtime;
     LogTimesteps logt;
 
     int types2int(int ti, int tj){ // map type pairs (ti,tj) in 0,1,...,nTypes-1 to integer index 0,1,...,nTypePairs
@@ -80,8 +79,6 @@ class SQT_Calculator
     void initLogTime()
     {
       int i,j,idx;
-      logt.deduce_fromfile(s_logtime);
-      if(debug) logt.print_summary();
       ntimes = logt.get_time_window_size();
 
       num_avg.resize(ntimes);
@@ -172,8 +169,9 @@ class SQT_Calculator
     }
 
     void init(int q_mod_min, int q_mod_max, int q_mod_step, int dtframe,
-      int nframes, int period_in_real_units, vec box_diagonal, int nTypes_,int* Nt_,
-      bool logtime_, string s_logtime_, string string_out_, string tag_, bool debug_, bool verbose_)
+      int nframes, int period_in_real_units, vec box_diagonal,
+      int nTypes_,int* Nt_, bool logtime_, LogTimesteps logt_,
+      string string_out_, string tag_, bool debug_, bool verbose_)
     {
       int i,j,idx;
       string_out = string_out_;
@@ -181,7 +179,7 @@ class SQT_Calculator
       debug = debug_;
       verbose = verbose_;
       logtime=logtime_;
-      s_logtime=s_logtime_;
+      logt = logt_;
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
       Nt.resize(nTypes);
@@ -200,6 +198,7 @@ class SQT_Calculator
       } else {
         initLinearTime(period_in_real_units, dtframe, nframes);
       }
+      if(debug) cout << myName << " Initialization COMPLETED\n";
     }
 
     void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)

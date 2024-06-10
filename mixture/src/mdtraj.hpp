@@ -11,6 +11,7 @@
 #include "lib/mymatrix.hpp"
 #include "lib/Ycomplex.hpp"
 #include "lib/pbc.hpp"
+#include "lib/logtimesteps.hpp"
 using namespace std;
 
 const string root_path="/home/flavio/programmi/mdtraj/mixture_dev";
@@ -42,6 +43,8 @@ public:
   bool logtime, out_box, out_xyz, out_alphanes;
   bool debug, verbose;
   //
+  LogTimesteps logt;
+  //
   int maxsphere, max_num_nnd; // <= MAX_NSPHERE
   vecflex<ntype> defaultCutoff[MAX_NSPHERE];
   Neigh_and_Bond_list<ntype,ptype> *n_b_list;
@@ -63,7 +66,7 @@ public:
   //
   int period; // this is in timestep units, not in number of frames
   bool msdAverageOverTime0;
-  MSD_Calculator<ntype,ptype> *msd_calculator;
+  MSDU_Calculator<ntype,ptype> *msd_calculator;
   //
   ntype altbc_rmin, altbc_binw, altbc_angle_th;
   ALTBC_Calculator<ntype,ptype> *altbc_calculator;
@@ -400,6 +403,10 @@ public:
     if(out_box) init_box();
     if(out_xyz) init_out_xyz();
     if(out_alphanes) init_out_alphanes();
+    if(logtime) {
+      logt.deduce_fromfile(s_logtime);
+      if(debug) logt.print_summary();
+    }
 
     if(maxsphere>0 || c_rdf || c_msd)
     {
@@ -411,7 +418,8 @@ public:
     if(maxsphere>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(s_rcut, defaultCutoff, maxsphere, p1half, N, nTypes, s_log, tag, debug, verbose);
+      n_b_list->init(s_rcut, defaultCutoff, maxsphere, p1half, N, nTypes, s_log,
+        tag, debug, verbose);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum);
     if(c_nnd) n_b_list->init_nearest_neigh_dists(s_nnd,max_num_nnd);
@@ -420,7 +428,8 @@ public:
     if(c_bondorient)
     {
       bond_parameters = new Bond_Parameters<ntype,ptype>();
-      bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr, s_nxtal, tag, debug, verbose);
+      bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr,
+        s_nxtal, tag, debug, verbose);
     }
     if(c_edq)
     {
@@ -428,12 +437,14 @@ public:
       ed_q_calculator->init(n_b_list, s_edq, tag, debug, verbose);
     }
     if(c_msd) {
-      msd_calculator = new MSD_Calculator<ntype,ptype>();
-      msd_calculator->init(dtframe,nframes,period, N,nTypes,Nt, s_msd,s_ngp,tag,debug,verbose);
+      msd_calculator = new MSDU_Calculator<ntype,ptype>();
+      msd_calculator->init(dtframe,nframes,period, N,nTypes,Nt,
+        logtime,logt, s_msd,s_ngp,tag, debug,verbose);
     }
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();
-      rdf_calculator->init(rdf_binw, rdf_rmax, box, N, V, nTypes, Nt, s_rdf, tag, debug, verbose);
+      rdf_calculator->init(rdf_binw, rdf_rmax, box, N, V, nTypes, Nt, logtime,logt,
+        s_rdf, tag, debug, verbose);
     }
     if(c_adf) {
       adf_calculator = new ADF_Calculator<ntype,ptype>();
@@ -441,17 +452,18 @@ public:
     }
     if(c_altbc) {
       altbc_calculator = new ALTBC_Calculator<ntype,ptype>();
-      altbc_calculator->init(altbc_rmin, altbc_binw, n_b_list->rcut[0][0], altbc_angle_th, N, V, s_altbc, tag, debug, verbose);
+      altbc_calculator->init(altbc_rmin, altbc_binw, n_b_list->rcut[0][0],
+        altbc_angle_th, N, V, s_altbc, tag, debug, verbose);
     }
     if(c_sq) {
       sq_calculator = new SQ_Calculator<ntype,ptype>();
-      sq_calculator->init(qmodmin, qmodmax, qmodstep,
-        L, s_sq, tag, debug, verbose);
+      sq_calculator->init(qmodmin, qmodmax, qmodstep, L, logtime,logt,
+        s_sq, tag, debug, verbose);
     }
     if(c_sqt) {
       sqt_calculator = new SQT_Calculator<ntype,ptype>();
       sqt_calculator->init(qmodmin, qmodmax, qmodstep, dtframe, nframes,
-        period, L, nTypes, Nt, logtime,s_logtime, s_sqt, tag, debug, verbose);
+        period, L, nTypes, Nt, logtime,logt, s_sqt, tag, debug, verbose);
     }
   }
 

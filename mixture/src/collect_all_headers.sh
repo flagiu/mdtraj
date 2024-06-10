@@ -14,6 +14,7 @@ cat > $HEADER << EOF
 #include "lib/mymatrix.hpp"
 #include "lib/Ycomplex.hpp"
 #include "lib/pbc.hpp"
+#include "lib/logtimesteps.hpp"
 EOF
 # First include external objects
 for file in $(ls *.hpp | grep -v mdtraj.hpp)
