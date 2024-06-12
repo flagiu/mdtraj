@@ -141,10 +141,9 @@ class MSDU_Calculator
           r2[t][i]=0.0;
           r4[t][i]=0.0;
         }
-        CM_rvec[i] << 0.0,0.0,0.0;
         r2CM[i]=0.0;
       }
-      CM_rvec[ntimes-1] << 0.0,0.0,0.0; // last time was not counted
+      for(int i=0;i<ntimes-1;i++) CM_rvec[i]<<0.,0.,0.;
 
       ss.str(std::string()); ss << string_out_msd << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Delta timestep | MSD for each type | MSD error for each type | MSD of c.o.m.\n";
@@ -184,16 +183,18 @@ class MSDU_Calculator
 
       if(dframe==0) // either linear and every nperiod, or logtime and first absolute frame
       {
+        CM_rvec[dframe]<<0.,0.,0.;
         for(i=0;i<N;i++)
         {
-          particle_rvec[N*0 + i] = ps[i].ru; //store initial positions for this sample trajectory
-          CM_rvec[0] += ( ps[i].ru * invN ); // store initial center of mass for '''
+          particle_rvec[N*dframe + i] = ps[i].ru; //store initial positions for this sample trajectory
+          CM_rvec[dframe] += ( particle_rvec[N*dframe + i] * invN ); // store initial center of mass for '''
         }
         if(debug) cout << "  Saved positions of initial frame\n";
       }
       else
       {
         num_avg[dframe-1]+=1;
+        CM_rvec[dframe]<<0.,0.,0.;
         if(debug) cout << "  Computing dr^2 for dframe="<<dframe<<endl;
         if(verbose) r2t0 = 0.0; // average r^2 over atoms at fixed t,t0
         for(i=0;i<N;i++)
@@ -232,7 +233,7 @@ class MSDU_Calculator
               t=ps[i].label;                  // type: integer 0,1,...,nTypes-1
               r2[t][dframe-1-j] += dr2;         // average over t0 and atoms of same type
               r4[t][dframe-1-j] += dr2*dr2; // -time interval decreases with j
-              num_avg[dframe-1-j]+=1*invN; // time interval decreases with j
+              //num_avg[dframe-1-j]+=1*invN; // time interval decreases with j (DONE in CM for saving operations)
             }
           }
 
@@ -257,9 +258,24 @@ class MSDU_Calculator
           }
           else             idx_old=0; // for linear subsampling, first compare with first absolute snapshot
         } else idx_old=0;
+
         dr = CM_rvec[dframe] - CM_rvec[idx_old];
+        num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
         dr2 = dr.sq();
         r2CM[dframe-1] += dr2;
+
+        if(logtime && dframe>=logt.npc) {
+          if(debug) cout << "  Out-of-log-cycle linear subsampling for CM:\n";
+          for(j=1;j<=nperiod-1;j++) { // subtract a decreasing time interval
+            idx_old=logt.npc-1+j; // ... t0 increases with j
+            dr = CM_rvec[dframe] - CM_rvec[idx_old];  // displacement r(t)-r(t0)
+            num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
+            dr2 = dr.sq();
+            r2CM[dframe-1-j] += dr2;
+            num_avg[dframe-1-j]+=1;
+          }
+        }
+
       }
 
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
