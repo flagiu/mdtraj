@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 .box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nnd -rdf -rmin -rmax -sq -sqt]"
+  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nnd -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -76,6 +76,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
   fprintf(stderr, "\n -period \t Average over initial time t0 every 'period' (in timesteps units, not number of frames!),");
   fprintf(stderr, "\n         \t when computing MSD and S(q,t). If negative, don't. [default %d].", period);
+  fprintf(stderr, "\n -qdot_th \t Threshold for the qdot bond-order parameter. A particle is crystalline if qdot>qdot_th. Must be in [0,1] [default %f].", qldot_th);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
@@ -243,6 +244,13 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      if (i == argc) { fprintf(stderr, "ERROR: '-p1half must be followed by a positive integer value!\n"); exit(-1); }
 	      p1half = atoi(argv[i]);
 	      if(p1half<=0) { fprintf(stderr, "ERROR: '-p1half must be a positive integer value!\n"); exit(-1); }
+	    }
+    else if ( !strcmp(argv[i], "-qdot_th") )
+	    {
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-qdot_th must be followed by a number in [0,1]!\n"); exit(-1); }
+	      qldot_th = atoi(argv[i]);
+	      if(qldot_th<0||qldot_th>1) { fprintf(stderr, "ERROR: '--qdot_th must be followed by a number in [0,1]!\n"); exit(-1); }
 	    }
 	  else if ( !strcmp(argv[i], "-rcut") )
 	  	{
