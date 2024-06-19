@@ -1,0 +1,91 @@
+# Test of NN potential for Sb system
+
+units           metal
+boundary        p p p
+atom_style      atomic
+
+variable times_file string "schedule.times"
+
+# 1) Get run length
+print "#fg: Reading times_file: ${times_file}"
+print "#fg: Note: The file of timesteps must list a first time that is beyond the time associated"
+print "#fg:       with the current timestep (e.g., it cannot be 0.0)."
+print "#fg:       And it must list one or more times beyond the length of the run you perform."
+variable foo file ${times_file}
+label loop_nrun
+variable nrun equal ${foo}-1
+next foo
+jump SELF loop_nrun
+print "#fg: Set nrun=${nrun} as the last item of times_file, decreased by 1"
+
+# 2) Get single timesteps as a file-next variable
+variable        f1 file ${times_file}
+variable        save_restart equal next(f1)
+# we need 2 different copies of the timestep variable for restart and dump,
+#   otherwise we'd save every two steps!
+variable        f2 file ${times_file}
+variable        save_dump equal next(f2)
+# we need a 3rd variable for the restarting procedure (see loopa)
+variable        f3 file ${times_file}
+variable        save_foo equal next(f3)
+
+# 3) Restarting procedure
+print "#fg: Please ignore the WARNING: Shell command returned with non-zero status"
+shell echo "0" > restart_exists
+shell [ -f restart1 ] && echo "1" > restart_exists
+shell [ -f restart2 ] && echo "1" > restart_exists
+variable restart_exists file restart_exists
+if   ${restart_exists} then &
+  "shell ls -rt restart1 restart2 | tail -n 1 > restart_newer" &
+  "variable restart_newer file restart_newer" &
+  "print '#fg: Restarting from latest file: ${restart_newer}'" &
+  "read_restart ${restart_newer}" &
+  "print '#fg: Timestep=$(step)'" &
+  "jump SELF setup_and_run"
+
+# 4) Run the first-frame setup only if you are starting from scratch...
+read_data	start.data
+reset_timestep	0
+velocity all create TEMP TSEED dist gaussian mom yes rot yes
+#velocity all scale TEMP   # you may prefer to use this, if velocities are saved
+
+# 5) ... otherwise jump here (you are restarting)
+label setup_and_run
+
+# 5.a) Skip the scheduled times earlier than the timestep $(step) from which you are (re)starting
+label loopa
+variable a loop ${nrun}
+if "${save_foo}>$(step)" then "jump SELF run"
+variable foo equal ${save_restart} #trick to increase the save_restart variable
+variable foo equal ${save_dump}    #trick to increase the save_dump variable
+variable foo delete
+next a
+jump SELF loopa
+
+#------------------------------------------------------------------------------#
+# 6) jump here when ready to run
+label run
+
+mass            1 121.750
+
+#pair_style      hybrid/overlay runner dir RuNNer showew yes resetew no maxew 5000 showewsum 100  momb 12.0 0.75 20.0  #
+pair_style      runner dir RuNNer showew yes resetew no maxew 5000 showewsum 100
+pair_coeff      * * 6.6147158
+
+neighbor        1.1 bin
+neigh_modify    delay 6
+
+thermo_style    custom step temp pe press density
+thermo_modify   norm yes
+thermo          100
+
+# save restarts and dumps every scheduled timestep
+restart v_save_restart restart1 restart2
+
+dump myDump all custom 666 dump.lammpstrj id type xu yu zu vx vy vz
+dump_modify myDump every v_save_dump sort id                         # first yes
+
+# Integrator ('upto' is required for the restarting procedure)
+timestep 0.002
+fix INT all nve
+run ${nrun} upto

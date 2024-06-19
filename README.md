@@ -6,12 +6,12 @@ This program computes statistical quantities over a Molecular Dynamics TRAJector
 
 - Current limited to:
 	- constant number of particles
-	- uniform timestep.
-	- S(q),S(q,t) for cubic boxes only; and they consider all atoms as equal.
+	- uniform timestep; or special logarithmic timesteps (see mixture/examples/log_timesteps/) for g(r),S(q),S(q,t),MSD(t).
+	- S(q),S(q,t) for cubic boxes only; and they consider all atoms as belonging to the same type.
 
 - Bugs to be corrected:
 	- some empty files are created during 'altbc' and 'bond_order' (maybe it's already fixed?)
-	- MSD: sometimes I find a jump in MSD(t).
+	- sometimes I find an unpredicted jump in MSD(t) when trajectory is not unwrapped.
 
 ## Requirements
 
