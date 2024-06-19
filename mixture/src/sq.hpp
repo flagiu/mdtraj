@@ -84,6 +84,9 @@ class SQ_Calculator
         numSampled++;
         exps.resize(exp_storage_size);
       }
+      if(debug&&logtime&&linear_sampling){
+        cout<<"  timestep "<<timestep<<" is within linear subsampling\n";
+      }
 
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
 

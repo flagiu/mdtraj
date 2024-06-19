@@ -155,6 +155,9 @@ class RDF_Calculator
 
       if(logtime) linear_sampling=logt.is_linear_sampling(timestep);
       if(linear_sampling) numSampled++;
+      if(debug&&logtime&&linear_sampling){
+        cout<<"  timestep "<<timestep<<" is within linear subsampling\n";
+      }
 
       for(i=0;i<N&&linear_sampling;i++){
         for(j=i;j<N;j++){

@@ -16,7 +16,7 @@ public:
   }
 
   int get_log_period(){
-    log_period = t0 * pow(alpha,npc);
+    log_period = t0 * round(pow(alpha,npc));
     return log_period;
   }
 
@@ -50,14 +50,17 @@ public:
   }
 
   void print_summary(){
-    cout<<"#--------------------#\n";
+    cout<<"#-----------------------------#\n";
     cout<<"LogTimesteps summary:\n";
-    cout<<"   alpha="<<alpha<<endl;
-    cout<<"   delta="<<delta<<endl;
-    cout<<"     npc="<<npc<<endl;
-    cout<<" ncycles="<<ncycles<<endl;
-    cout<<"      t0="<<t0<<endl;
-    cout<<"#--------------------#\n\n";
+    cout<<"           alpha="<<alpha<<endl;
+    cout<<"           delta="<<delta<<endl;
+    cout<<"             npc="<<npc<<endl;
+    cout<<"         ncycles="<<ncycles<<endl;
+    cout<<"              t0="<<t0<<endl;
+    cout<<endl;
+    cout<<"      log_period="<<log_period<<endl;
+    cout<<"time_window_size="<<time_window_size<<endl;
+    cout<<"#-----------------------------#\n\n";
   }
 
   void print_all_timesteps(){

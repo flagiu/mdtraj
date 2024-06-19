@@ -12,11 +12,19 @@ MDTRAJ="${MDTRAJ_PATH}/bin/mdtraj -lammpstrj ../dump.lammpstrj -fskip $f0 $f1"
 [[ $tag ]] && MDTRAJ="${MDTRAJ} -tag $tag" # if tag is not empty, add it as an argument
 [[ $tag ]] && tagdot=".${tag}" || tagdot="" # if tag is not empty, prepend a '.' for output files' names
 
-echo "|||||||| $tag : g(r), S(q) and MSD(t) ..."
+echo "|||||||| $tag : g(r) and S(q) ..."
 $MDTRAJ -rdf 0.02 -1 -sq 2 100 1 -msd -period $period -out_xyz -pbc_out
 
 python ${MDTRAJ_PATH}/python/find_rdf_local_minima.py rdf${tagdot}.ave rcut${tagdot}.dat hanning 5 0.8 0
+python ${MDTRAJ_PATH}/python/find_sq_local_maxima.py sq${tagdot}.ave qmax${tagdot}.dat hanning 5 0.1 1
+L=$(grep BOX -A 1 $traj | head -n 2 | tail -n 1 | awk '{printf "%.7f\n",$2-$1}')
+qpeak=$(head -n 1 qmax${tagdot}.dat | awk -v L=$L 'BEGIN{pi=atan2(0,-1); dq=pi/L}{printf "%.0f", $1/dq-1}')
 
+echo "|||| $tag |||| Logarithmic S(q,t) and MSD(t) ..."
+#$MDTRAJ -logtime ../scheduled.times -sqt 2 $((${qpeak}+5)) 1 -msd
+
+echo "|||| $tag ||||  S(q,t) and MSD(t) ..."
+$MDTRAJ -sqt 2 $((${qpeak}+5)) 1 -msd
 echo "|||||||| $tag : Prob(angle), q_Errington-Debenetetti ..."
 $MDTRAJ -rcut rcut${tagdot}.dat -adf 0.01 -edq
 echo "|||||||| $tag : Q4 and detailed Coordination-Number ..."
