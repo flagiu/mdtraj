@@ -26,7 +26,7 @@ using namespace std;
 //   Problem: C_l is complex... I take the real part. Should I take the norm? No, real part is better
 //   Problem: what happens when Norm(q_l(i))==0.0 ? I define C_l=0, but this is arbitrary.
 // q_l^dot(i) is the local average of C_l(i,j) over neighbours j.
-//   Note: here we use a cutoff radius rcut2 (2nd sphere) which can be > rcut1.
+//   Note: here we use a cutoff radius rcut2 (2nd sphere) which can be >= rcut1.
 //   Note: here we weight Sum_j by a smooth cutoff function f(r_ij/rcut2).
 //   This is saved into ${string_bondcorr_out}.ave
 //
@@ -47,14 +47,16 @@ class Bond_Parameters
     Neigh_and_Bond_list<ntype,ptype> *nb_list;
     int l, l_deg; // angular momentum and its degeneracy
     bool l_is_odd;
-    vecflex<ntype> ql, ql_ave, Cl_ij, ql_dot, Ql_dot;
+    vecflex<ntype> ql, ql_ave, Ql_dot;
     vector< vecflex< complex<ntype> > > qlm, qlm_ave; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
-    ntype qldot_th;
     string string_bondcorr_out, string_bondorient_out, string_nxtal_out, myName, tag;
     fstream fout;
     stringstream ss;bool debug, verbose;
 
   public:
+    vecflex<ntype> Cl_ij, ql_dot;
+    ntype qldot_th;
+
     Bond_Parameters(){
       myName = "BOND PARAMETERS";
     }

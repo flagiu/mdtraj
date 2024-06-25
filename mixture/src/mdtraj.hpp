@@ -36,11 +36,11 @@ public:
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep;
   bool c_coordnum, c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
-  bool c_altbc, c_sq, c_sqt, c_edq; // compute or not
-  string s_in, s_out, s_rcut, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum;
+  bool c_altbc, c_sq, c_sqt, c_edq, c_clusters; // compute or not
+  string s_in, s_out, s_rcut, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
   string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
-  bool logtime, out_box, out_xyz, out_alphanes;
+  bool logtime, out_box, out_xyz, out_alphanes, out_lammpsdump;
   bool debug, verbose;
   //
   LogTimesteps logt;
@@ -129,6 +129,7 @@ public:
     cout << " c_sqt = \t " << c_sqt << endl;
     cout << " c_edq = \t " << c_edq << endl;
     cout << " c_nnd = \t " << c_nnd << endl;
+    cout << " c_clusters = \t " << c_clusters << endl;
     cout << " angular momentum for ql: l = \t " << l << endl;
     cout << " qldot threshold = \t " << qldot_th << endl;
     cout << " box (a|b|c) = \t "; box.show();
@@ -147,6 +148,7 @@ public:
     cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
     cout << " out_box = \t " << out_box << endl;
     cout << " out_xyz = \t " << out_xyz << endl;
+    cout << " out_lammpsdump = \t " << out_lammpsdump << endl;
     cout << " out_alphanes = \t " << out_alphanes << endl;
     cout << " pbc_out = \t " << pbc_out << endl;
     cout << " fskip_from_beginning = \t " << fskip0 << endl;
@@ -173,6 +175,7 @@ public:
     c_sqt = false;
     c_edq = false;
     c_nnd = false;
+    c_clusters = false;
 
     filetype=FileType::NONE;
     s_in="__NOT_DEFINED__";
@@ -194,6 +197,7 @@ public:
     s_sq="sq";
     s_sqt="sqt";
     s_edq="ed_q";
+    s_clusters="clusters";
     tag="";
     s_out="traj";
     s_log="log";
@@ -208,6 +212,7 @@ public:
     remove_rot_dof = false;
     out_box = false;
     out_xyz = false;
+    out_lammpsdump = false;
     logtime = false;
     s_logtime="";
     out_alphanes = false;
@@ -251,6 +256,10 @@ public:
     if(c_bondorient)             maxsphere=MAX_NSPHERE; // init all neigh spheres
     else if(c_coordnum || c_nnd || c_adf || c_rmin || c_rmax || c_altbc || c_edq) maxsphere=1;       // init only first neigh sphere
     else                         maxsphere=0;       // do not init any
+    if(c_clusters && !c_bondorient) {
+      cout << "ERROR: cannot compute clusters without computing BOC parameters!\n";
+      exit(1);
+    }
     // Print a recap:
     if(debug) { cout << "State after reading args():\n"; print_state(); }
 
@@ -402,6 +411,7 @@ public:
     init_density();
     if(out_box) init_box();
     if(out_xyz) init_out_xyz();
+    if(out_lammpsdump) init_out_lammpsdump();
     if(out_alphanes) init_out_alphanes();
     if(logtime) {
       logt.deduce_fromfile(s_logtime);
@@ -430,6 +440,7 @@ public:
       bond_parameters = new Bond_Parameters<ntype,ptype>();
       bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr,
         s_nxtal, tag, debug, verbose);
+      if(c_clusters) n_b_list->init_clusterize(s_clusters);
     }
     if(c_edq)
     {
@@ -469,16 +480,19 @@ public:
 
   void do_computations_and_output(int i) {
     compute_density();
-    if(out_box) print_box();
-    if(out_xyz) print_out_xyz();
-    if(out_alphanes) print_out_alphanes();
-
     if(maxsphere>0) n_b_list->build(timestep, ps, box,boxInv);
     if(c_coordnum) n_b_list->compute_coordnum(timestep, ps);
     if(c_nnd) n_b_list->compute_nearest_neigh_dists(timestep, ps);
     if(c_rmin) n_b_list->compute_rmin(timestep, ps);
     if(c_rmax) n_b_list->print_rmax(timestep);
-    if(c_bondorient) bond_parameters->compute(timestep, ps);
+    if(c_bondorient) {
+      bond_parameters->compute(timestep, ps);
+      if(c_clusters) {
+        n_b_list->clusterize(timestep, ps,
+                            bond_parameters->ql_dot, bond_parameters->qldot_th,
+                            bond_parameters->Cl_ij, bond_parameters->qldot_th);
+      }
+    }
     if(c_edq) ed_q_calculator->compute(timestep, ps);
     if(c_msd) msd_calculator->compute(i,timestep,ps,pbc);
     if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,pbc);
@@ -491,6 +505,16 @@ public:
       if(timings) timing_log( "sq_timing(ms): ", sq_timer.lap() );
     }
     if(c_sqt) sqt_calculator->compute(i,nframes,timestep,ps);
+
+    if(c_bondorient && c_clusters && (out_xyz || out_lammpsdump) ) { // visualization of clusters
+      for(auto i=0;i<ps.size();i++){
+        ps[i].label = n_b_list->cluster_of_particle[i];
+      }
+    }
+    if(out_box) print_box();
+    if(out_xyz) print_out_xyz();
+    if(out_lammpsdump) print_out_lammpsdump();
+    if(out_alphanes) print_out_alphanes();
   }
 
   void print_final_computations() {
@@ -529,10 +553,15 @@ public:
 //-------------Trajectory output, implemented in io/output.cpp -----------------//
   void init_box();
   void print_box();
+
   void init_out_xyz();
   void print_out_xyz();
+
   void init_out_alphanes();
   void print_out_alphanes();
+
+  void init_out_lammpsdump();
+  void print_out_lammpsdump();
 
 };
 

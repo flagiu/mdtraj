@@ -36,5 +36,8 @@ x = x[n0:n-n1]
 
 plt.xlabel("x")
 plt.ylabel("counts")
-plt.hist(x[:,args.x])
+if len(x.shape)>1:
+  plt.hist(x[:,args.x])
+else:
+  plt.hist(x)
 plt.show()

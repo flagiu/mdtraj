@@ -60,6 +60,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n     \t Defines crystalline particles by a threshold of %.2f on the BOC.",qldot_th);
   fprintf(stderr, "\n     \t Orbital angular momentum is provided by the option -l.");
   fprintf(stderr, "\n     \t OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave}, %s.l*.{indexes,dat}.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
+  fprintf(stderr, "\n -clusters \t Clusterize the particles according to the BOC parameters. OUTPUT: %s{.dat,_size.dat}.", s_clusters.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st sphere, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
@@ -131,6 +132,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    }
 	  else if ( !strcmp(argv[i], "-bo") )
 	      c_bondorient = true;
+    else if ( !strcmp(argv[i], "-clusters") )
+	      c_clusters = true;
 	  else if ( !strcmp(argv[i], "-cn") )
 	      c_coordnum = true;
     else if ( !strcmp(argv[i], "-nnd") )
@@ -249,7 +252,7 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    {
 	      i++;
 	      if (i == argc) { fprintf(stderr, "ERROR: '-qdot_th must be followed by a number in [0,1]!\n"); exit(-1); }
-	      qldot_th = atoi(argv[i]);
+	      qldot_th = atof(argv[i]);
 	      if(qldot_th<0||qldot_th>1) { fprintf(stderr, "ERROR: '--qdot_th must be followed by a number in [0,1]!\n"); exit(-1); }
 	    }
 	  else if ( !strcmp(argv[i], "-rcut") )
@@ -482,6 +485,11 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	  {
 	    out_alphanes = true;
 		remove_rot_dof = true; // important!
+	  }
+    else if ( !strcmp(argv[i], "-out_lammpsdump") )
+	  {
+	    out_lammpsdump = true;
+		  remove_rot_dof = true; // important!
 	  }
   	else if ( !strcmp(argv[i], "-pbc_out") )
     	pbc_out = true;

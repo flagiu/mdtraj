@@ -47,6 +47,47 @@ print_out_xyz() {
   fout.close();
 }
 
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+init_out_lammpsdump() {
+  ss.str(std::string()); ss << s_out << tag << ".dump"; fout.open(ss.str(), ios::out);
+  fout.close();
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+print_out_lammpsdump() {
+  ss.str(std::string()); ss << s_out << tag << ".dump"; fout.open(ss.str(), ios::app);
+  fout<<"ITEM: TIMESTEP\n";
+  fout<<timestep<<endl;
+
+  fout<<"ITEM: NUMBER OF ATOMS\n";
+  fout<<N<<endl;
+
+  if(pbc_out) fout<<"ITEM: BOX BOUNDS pp pp pp xy xz yz\n";
+  else        fout<<"ITEM: BOX BOUNDS xy xz yz\n";
+  ntype xy,xz,yz, xlo,ylo,zlo, xhi,yhi,zhi, xlob,ylob,zlob, xhib,yhib,zhib;
+  xlo=ylo=zlo=0.0;
+  xhi=box[0][0];
+  yhi=box[1][1];
+  zhi=box[2][2];
+  xy=box[0][1];
+  xz=box[0][2];
+  yz=box[1][2];
+  xlob = xlo + min(min(0.0,xy), min(xz,xy+xz) );
+  xhib = xhi + max( max(0.0,xy), max(xz,xy+xz) );
+  ylob = ylo + min(0.0,yz);
+  yhib = yhi + max(0.0,yz);
+  zlob = zlo;
+  zhib = zhi;
+  fout<<xlob<<" "<<xhib<<" "<<xy<<endl;
+  fout<<ylob<<" "<<yhib<<" "<<xz<<endl;
+  fout<<zlob<<" "<<zhib<<" "<<yz<<endl;
+
+  fout<<"ITEM: ATOMS type x y z\n";
+  for(auto &p : ps) p.write_xyz(fout);
+  fout.close();
+}
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::

@@ -14,7 +14,7 @@ MDTRAJ="${MDTRAJ_PATH}/bin/mdtraj -lammpstrj $traj -logtime ./schedule.times -fs
 [[ $tag ]] && tagdot=".${tag}" || tagdot="" # if tag is not empty, prepend a '.' for output files' names
 
 #echo "|||| $tag ||||  g(r), S(q) ..."
-$MDTRAJ -rdf 0.01 -1 -sq 2 100 1 -d
+$MDTRAJ -rdf 0.01 -1 -sq 2 100 1 
 
 python ${MDTRAJ_PATH}/python/find_sq_local_maxima.py sq${tagdot}.ave qmax${tagdot}.dat hanning 5 0.1 1
 L=$(grep BOX -A 1 $traj | head -n 2 | tail -n 1 | awk '{printf "%.7f\n",$2-$1}')
