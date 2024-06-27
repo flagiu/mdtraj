@@ -489,8 +489,7 @@ public:
       bond_parameters->compute(timestep, ps);
       if(c_clusters) {
         n_b_list->clusterize(timestep, ps,
-                            bond_parameters->ql_dot, bond_parameters->qldot_th,
-                            bond_parameters->Cl_ij, bond_parameters->qldot_th);
+                            bond_parameters->ql_dot, bond_parameters->qldot_th);
       }
     }
     if(c_edq) ed_q_calculator->compute(timestep, ps);
@@ -507,8 +506,11 @@ public:
     if(c_sqt) sqt_calculator->compute(i,nframes,timestep,ps);
 
     if(c_bondorient && c_clusters && (out_xyz || out_lammpsdump) ) { // visualization of clusters
+      int c;
       for(auto i=0;i<ps.size();i++){
-        ps[i].label = n_b_list->cluster_of_particle[i];
+        c=n_b_list->cluster_of_particle[i];
+        if(c>=0) ps[i].label = (int)n_b_list->cluster_permutation_by_size[c];
+        else     ps[i].label = c;
       }
     }
     if(out_box) print_box();

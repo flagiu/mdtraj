@@ -44,6 +44,7 @@ class Neigh_and_Bond_list
 
     vector<int> cluster_of_particle, head_of_cluster, next_of_particle, size_of_cluster;
     int num_clusters, maxClusterSize;
+    vector<std::size_t> cluster_permutation_by_size;
 
     Neigh_and_Bond_list(){
       myName = "NEIGH & BOND List";
@@ -500,8 +501,7 @@ class Neigh_and_Bond_list
     }
 
     void clusterize(int timestep, vector<ptype> particles,
-                    vecflex<ntype> particle_observable, ntype p_o_threshold,
-                    vecflex<ntype> bond_observable, ntype b_o_threshold){
+                    vecflex<ntype> particle_observable, ntype p_o_threshold){
       const int sphere=0; // look at neighbours in 1st sphere
       const int num_bonds=bond_list[sphere].size(); //ordered list i<j
       if(particles.size()!=N){
@@ -514,12 +514,6 @@ class Neigh_and_Bond_list
         cout<<"ERROR: size of particle_observable < size of particles\n";
         cout<<"       size of particle_observable = "<<particle_observable.length()<<endl;
         cout<<"       size of particles           = "<<N<<endl;
-        exit(1);
-      }
-      if(bond_observable.length()<num_bonds){
-        cout<<"ERROR: size of bond_observable < size of bond_list[0]\n";
-        cout<<"       size of bond_observable = "<<bond_observable.length()<<endl;
-        cout<<"       size of bond_list[0]    = "<<num_bonds<<endl;
         exit(1);
       }
       int i,j,k, typePair, ci,cj,ck, bond_idx,bond_encoded;
@@ -558,22 +552,22 @@ class Neigh_and_Bond_list
         cj=cluster_of_particle[j];
 
         // Requirement: bond>threshold && both particles > threshold,
-        if(bond_observable[bond_idx]<b_o_threshold) continue;
         if(particle_observable[i]<p_o_threshold) continue;
         if(particle_observable[j]<p_o_threshold) continue;
 
         if(debug) {
-          cout<<"  i,j,ci,cj,Oi,Oj,Oij = "<<i<<" "<<j<<" "<<" "<<ci<<" "<<cj<<
-              " "<<particle_observable[i]<<" "<<particle_observable[j]<<
-              " "<<bond_observable[bond_idx]<<endl;
+          cout<<"  i,j,ci,cj,Oi,Oj = "<<i<<" "<<j<<" "<<" "<<ci<<" "<<cj<<
+              " "<<particle_observable[i]<<" "<<particle_observable[j]<<endl;
         }
 
-        // select neighbours in 1st sphere among the ones in 2nd sphere
+        // select neighbours closer than a type-dependent cutoff
+        /* questo dovrebbe essere gia' incluso nella neighbor list
         typePair = types2int(particles[i].label, particles[j].label);
         for(k=0;k<particles[i].neigh_list[sphere].size();k++){
           if(j==particles[i].neigh_list[sphere][k]) break;
         }
         if(particles[i].rijSq_list[sphere][k]>rcutSq[sphere][typePair]) continue;
+        */
 
         // Cases:
         if(ci<0 && cj<0) {
@@ -636,12 +630,12 @@ class Neigh_and_Bond_list
 
       }
 
+      sort_clusters_by_size();
+
       ss.str(std::string()); ss << string_cluster_out << "_size" << tag << ".dat"; fout.open(ss.str(), ios::app);
-      maxClusterSize=0;
       fout<<timestep<<" ";
       for(ck=0;ck<num_clusters;ck++){
-        maxClusterSize=max(maxClusterSize,get_cluster_size(ck));
-        fout<<size_of_cluster[ck]<<" ";
+        fout<<size_of_cluster[cluster_permutation_by_size[ck]]<<" ";
       }
       fout<<endl;
       fout.close();
@@ -680,6 +674,29 @@ class Neigh_and_Bond_list
         exit(1);
       }
       return count;
+    }
+
+    void sort_clusters_by_size()
+    {
+      int foo;
+      cluster_permutation_by_size.resize(num_clusters); // vector of 0,1,...,size-1
+      for(std::size_t i=0;i<num_clusters;i++) {
+        cluster_permutation_by_size[i]=i;
+        foo=get_cluster_size((int)i);
+      }
+      // sort this vector according to cluster size
+      std::sort(
+        cluster_permutation_by_size.begin(),
+        cluster_permutation_by_size.end(),
+        [&](std::size_t i, std::size_t j){
+          return size_of_cluster[i] > size_of_cluster[j];
+        }
+      );
+
+      maxClusterSize=0;
+      if(num_clusters>0) maxClusterSize=size_of_cluster[cluster_permutation_by_size[0]];
+
+      return;
     }
 };
 #endif

@@ -80,9 +80,9 @@ print_out_lammpsdump() {
   yhib = yhi + max(0.0,yz);
   zlob = zlo;
   zhib = zhi;
-  fout<<xlob<<" "<<xhib<<" "<<xy<<endl;
-  fout<<ylob<<" "<<yhib<<" "<<xz<<endl;
-  fout<<zlob<<" "<<zhib<<" "<<yz<<endl;
+  fout<<xlo<<" "<<xhi<<" "<<xy<<endl;
+  fout<<ylo<<" "<<yhi<<" "<<xz<<endl;
+  fout<<zlo<<" "<<zhi<<" "<<yz<<endl;
 
   fout<<"ITEM: ATOMS type x y z\n";
   for(auto &p : ps) p.write_xyz(fout);
