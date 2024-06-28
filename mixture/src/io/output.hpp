@@ -85,8 +85,13 @@ print_out_lammpsdump() {
   fout<<zlo<<" "<<zhi<<" "<<yz<<endl;
 
   fout<<"ITEM: ATOMS type x y z\n";
-  for(auto &p : ps) p.write_xyz(fout);
+  for(auto &p : ps) {
+    if(pbc_out) p.r = p.r - box*round(boxInv*p.r); // apply PBC to the position
+    p.r += 0.5*box.diag(); // center inside the box [0,L] for better Ovito visualization
+    p.write_xyz(fout);
+  }
   fout.close();
+  return;
 }
 
 template <class ntype, class ptype>

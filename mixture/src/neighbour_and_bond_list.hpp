@@ -480,16 +480,6 @@ class Neigh_and_Bond_list
     //-------------------- Clusterize --------------------------------------//
     void init_clusterize(string string_cluster_out_){
       string_cluster_out = string_cluster_out_;
-      // cluster to which each particle belongs to
-      // (N elements, whose value is in [0,num_clusters-1] when assigned, -1 otherwise)
-      if(cluster_of_particle.size()<N) cluster_of_particle.resize(N);
-      // first particle in this cluster
-      // (num_clusters<=N elements, whose value is in [0,N-1] when assigned, -1 otherwise)
-      if(head_of_cluster.size()<N) head_of_cluster.resize(N);
-      // next particle in the cluster of particle i
-      if(next_of_particle.size()<N) next_of_particle.resize(N);
-      // size of cluster (num_clusters<=N elements, whose value is non-negative when assigned, 0 otherwise)
-      if(size_of_cluster.size()<N) size_of_cluster.resize(N);
 
       ss.str(std::string()); ss << string_cluster_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout<<"# Timestep, num_clusters, max_cluster_size\n";
@@ -518,31 +508,35 @@ class Neigh_and_Bond_list
       }
       int i,j,k, typePair, ci,cj,ck, bond_idx,bond_encoded;
 
-      if(debug) cout<<"*** STARTED computation of "<<myName<<" ***\n";
+      if(debug) cout<<"*** STARTED computation of CLUSTERS ***\n";
+
+      // cluster to which each particle belongs to
+      // (N elements, whose value is in [0,num_clusters-1] when assigned, -1 otherwise)
+      if(cluster_of_particle.size()<N) cluster_of_particle.resize(N);
+      // first particle in this cluster
+      // (num_clusters<=N elements, whose value is in [0,N-1] when assigned, -1 otherwise)
+      if(head_of_cluster.size()<N) head_of_cluster.resize(N);
+      // next particle in the cluster of particle i
+      if(next_of_particle.size()<N) next_of_particle.resize(N);
+      // size of cluster (num_clusters<=N elements, whose value is non-negative when assigned, 0 otherwise)
+      if(size_of_cluster.size()<N) size_of_cluster.resize(N);
 
       // start with 1 single-particle-cluster for each crystalline particle
       num_clusters=0;
       for(i=0;i<N;i++){
-        cluster_of_particle[i]=-1; // the particle doesn't belong to any cluster
-        head_of_cluster[i]=-1;    // the clusters don't have any head (they don't exist)
-        next_of_particle[i]=-1;   // particle i don't have any next
-        size_of_cluster[i]=0;
         if(particle_observable[i]>p_o_threshold){
-          if(debug) {
-            cout<<"  New cluster from 1 particle: i,Oi = "<<i<<" "<<particle_observable[i]<<endl;
-          }
+          //if(debug) cout<<"  New cluster from 1 particle: i,Oi = "<<i<<" "<<particle_observable[i]<<endl;
           cluster_of_particle[i]=num_clusters;
           head_of_cluster[num_clusters]=i;
           size_of_cluster[num_clusters]=1;
           num_clusters++;
+        } else {
+          cluster_of_particle[i]=-1; // the particle doesn't belong to any cluster
+          head_of_cluster[i]=-1;    // the clusters don't have any head (they don't exist)
+          next_of_particle[i]=-1;   // particle i don't have any next
+          size_of_cluster[i]=0;
         }
       }
-
-      maxClusterSize=0;
-      for(ck=0;ck<num_clusters;ck++){
-        maxClusterSize=max(maxClusterSize,get_cluster_size(ck));
-      }
-      if(debug) fout<<num_clusters<<" "<<maxClusterSize<<endl;
 
       for(bond_idx=0;bond_idx<num_bonds;bond_idx++){
         bond_encoded=bond_list[sphere][bond_idx];
@@ -551,17 +545,19 @@ class Neigh_and_Bond_list
         ci=cluster_of_particle[i];
         cj=cluster_of_particle[j];
 
-        // Requirement: bond>threshold && both particles > threshold,
+        // Requirement: both particles > threshold,
         if(particle_observable[i]<p_o_threshold) continue;
         if(particle_observable[j]<p_o_threshold) continue;
 
+        /*
         if(debug) {
           cout<<"  i,j,ci,cj,Oi,Oj = "<<i<<" "<<j<<" "<<" "<<ci<<" "<<cj<<
               " "<<particle_observable[i]<<" "<<particle_observable[j]<<endl;
         }
+        */
 
         // select neighbours closer than a type-dependent cutoff
-        /* questo dovrebbe essere gia' incluso nella neighbor list
+        /* questo dovrebbe essere gia' incluso nella neighbor list!!
         typePair = types2int(particles[i].label, particles[j].label);
         for(k=0;k<particles[i].neigh_list[sphere].size();k++){
           if(j==particles[i].neigh_list[sphere][k]) break;
@@ -572,7 +568,7 @@ class Neigh_and_Bond_list
         // Cases:
         if(ci<0 && cj<0) {
           // new cluster of 2 elements (not possible!)
-          if(debug) cout<<"  New cluster from 2 independent particles\n";
+          //if(debug) cout<<"  New cluster from 2 independent particles\n";
           cluster_of_particle[i]=cluster_of_particle[j]=num_clusters;
           head_of_cluster[num_clusters]=i; //take arbitrarily i as head...
           next_of_particle[i]=j; //... and j as next of i
@@ -580,7 +576,7 @@ class Neigh_and_Bond_list
           num_clusters++; // num of clusters increases
         } else if(ci>=0 && cj<0) {
           // prepend particle j to cluster of particle i
-          if(debug) cout<<"  Prepending to cluster: ci<--j\n";
+          //if(debug) cout<<"  Prepending to cluster: ci<--j\n";
           cluster_of_particle[j]=ci;
           next_of_particle[j]=head_of_cluster[ci]; // add j as head...
           head_of_cluster[ci]=j; //... and set the former head as j's next
@@ -588,7 +584,7 @@ class Neigh_and_Bond_list
           //num_clusters+=0;
         } else if(ci<0 && cj>=0) {
           // same with i<-->j
-          if(debug) cout<<"  Prepending to cluster: i-->cj\n";
+          //if(debug) cout<<"  Prepending to cluster: i-->cj\n";
           cluster_of_particle[i]=cj;
           next_of_particle[i]=head_of_cluster[cj];
           head_of_cluster[cj]=i;
@@ -596,7 +592,7 @@ class Neigh_and_Bond_list
           //num_clusters+=0;
         } else if(ci>=0 && cj>=0 && ci!=cj){
           // merge 2 DIFFERENT clusters into one (move j's into i's)
-          if(debug) cout<<"  Merging clusters: ci<--cj\n";
+          //if(debug) cout<<"  Merging clusters: ci<--cj\n";
           // prepend particles in j's cluster to i's cluster
           int head_of_cluster_i=head_of_cluster[ci]; // store the head of i's cluster
           k=head_of_cluster[cj]; // take j's head...
@@ -630,7 +626,7 @@ class Neigh_and_Bond_list
 
       }
 
-      sort_clusters_by_size();
+      sort_clusters_by_size_and_get_maxsize();
 
       ss.str(std::string()); ss << string_cluster_out << "_size" << tag << ".dat"; fout.open(ss.str(), ios::app);
       fout<<timestep<<" ";
@@ -643,7 +639,7 @@ class Neigh_and_Bond_list
       ss.str(std::string()); ss << string_cluster_out << tag << ".dat"; fout.open(ss.str(), ios::app);
       fout<<timestep<<" "<<num_clusters<<" "<<maxClusterSize<<endl;
       fout.close();
-      if(debug) cout<<"*** COMPLETED computation of "<<myName<<" ***\n";
+      if(debug) cout<<"*** COMPLETED computation of CLUSTERS ***\n";
 
     }
 
@@ -655,18 +651,18 @@ class Neigh_and_Bond_list
         exit(1);
       }
       int k, count=0;
-      if(debug) { cout<<"  Cluster "<<cluster_index<<" : ";}
+      //if(debug) { cout<<"  Cluster "<<cluster_index<<" : ";}
       k=head_of_cluster[cluster_index];
       if(k>=0) {
         count++;
-        if(debug) { cout<<k<<" ";}
+        //if(debug) { cout<<k<<" ";}
         while(next_of_particle[k]>=0) {
           k=next_of_particle[k];
           count++;
-          if(debug) { cout<<k<<" ";}
+          //if(debug) { cout<<k<<" ";}
         }
       }
-      if(debug) { cout<<endl;}
+      //if(debug) { cout<<endl;}
       if(count!=size_of_cluster[cluster_index]) {
         cout<<"ERROR: unexpected size of cluster "<<cluster_index<<":\n";
         cout<<"       from get_cluster_size() : "<<count<<endl;
@@ -676,7 +672,7 @@ class Neigh_and_Bond_list
       return count;
     }
 
-    void sort_clusters_by_size()
+    void sort_clusters_by_size_and_get_maxsize()
     {
       int foo;
       cluster_permutation_by_size.resize(num_clusters); // vector of 0,1,...,size-1
@@ -693,8 +689,7 @@ class Neigh_and_Bond_list
         }
       );
 
-      maxClusterSize=0;
-      if(num_clusters>0) maxClusterSize=size_of_cluster[cluster_permutation_by_size[0]];
+      maxClusterSize=( num_clusters==0?0:size_of_cluster[cluster_permutation_by_size[0]] );
 
       return;
     }

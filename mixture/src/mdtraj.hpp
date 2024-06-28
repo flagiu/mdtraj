@@ -509,7 +509,7 @@ public:
       int c;
       for(auto i=0;i<ps.size();i++){
         c=n_b_list->cluster_of_particle[i];
-        if(c>=0) ps[i].label = (int)n_b_list->cluster_permutation_by_size[c];
+        if(c>=0) ps[i].label = (int)(n_b_list->cluster_permutation_by_size[c]);
         else     ps[i].label = c;
       }
     }

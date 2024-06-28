@@ -67,6 +67,7 @@ def main(sq_file: str, output_file: str, w: str, n: int, delta: float, debug: bo
     x = X[:,0]
 
     qmax=np.empty((3,p))
+    sqmax=np.empty((3,p))
     if debug: import matplotlib.pyplot as plt
 
     for ip in range(p):
@@ -100,10 +101,14 @@ def main(sq_file: str, output_file: str, w: str, n: int, delta: float, debug: bo
             # this may be False if S(q) is noisy --> increase smoothing
             n+=2
 
-        print("  Finding S(q) minima: DONE type pair [ %d / %d ]\n"%(ip+1,p))
+        print("  Finding S(q) maxima: DONE type pair [ %d / %d ]\n"%(ip+1,p))
         qmax[0,ip] = xmax[0]
         qmax[1,ip] = (xmax[1] if len(xmax)>1 else qmax[0,ip])
         qmax[2,ip] = (xmax[2] if len(xmax)>2 else qmax[1,ip])
+        
+        sqmax[0,ip] = ymax[0]
+        sqmax[1,ip] = (ymax[1] if len(xmax)>1 else sqmax[0,ip])
+        sqmax[2,ip] = (ymax[2] if len(xmax)>2 else sqmax[1,ip])
 
         if debug:
             plt.scatter(xmin,ymin, marker='x',color='red',alpha=0.7, label='minima')
@@ -112,7 +117,7 @@ def main(sq_file: str, output_file: str, w: str, n: int, delta: float, debug: bo
             plt.show()
 
     # print the first 3 local maxima in column
-    np.savetxt(output_file, qmax, fmt="%.3f")
+    np.savetxt(output_file, np.concatenate([qmax,sqmax],axis=1), fmt="%.3f")
 
     return
 

@@ -70,11 +70,23 @@ removeRotDof()
   vec u, xdir;
   ntype a_xy_radius, c, s, t, angle;
   if(debug) cout <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
-  if(debug) cout <<"\n[ Remember that box=(a|b|c) ]\n";
+  if(debug) cout <<"Pss: Remember that box=(a|b|c)\n";
+  // Remove rounding errors
+  if( abs(box[1][0])<1e-15 ) box[1][0]=0.0;
+  if( abs(box[2][0])<1e-15 ) box[2][0]=0.0;
+  if( abs(box[2][1])<1e-15 ) box[2][1]=0.0;
+  if(debug) { cout << "Raw box = "; box.show(); }
+  if( box[1][0]==box[2][0]==box[2][1]==0.0 ) {
+    if(debug) {
+      cout <<"Box has already the correct <=6 degrees of freedom!\n";
+      cout <<"*----------------------------------------------------------*\n";
+    }
+    return;
+  }
   // let a, b, c be the columns of the box matrix.
   // 1) Align a to x-axis
   // u=(0,az,-ay) or (0,-az,ay) is the axis of rotation (to be normalized)
-  if(debug) { cout << "Raw box = "; box.show(); }
+
   if(debug) { cout << "Raw volume (with sign)= "<< box.det()<<endl; }
   u << 0.0, box[2][0], -1*box[1][0];
   if(debug) { cout << "  axis1 = "; u.show(); }
@@ -636,7 +648,7 @@ read_jmd_frame(fstream &i, bool resetN)
     }
     else if(ncols>0)
     {
-      cout << "ERROR: ncols="<<ncols<<" not accepted for line 1 of JMD-formatted frame.\n";
+      cout << "ERROR: ncols="<<ncols<<" not accepted for Line 1 of JMD-formatted frame.\n";
       exit(1);
     }
 
@@ -647,7 +659,9 @@ read_jmd_frame(fstream &i, bool resetN)
       nframes = nlines / (N+1);
       Nt[0]=N; // ONLY MONOSPECIES IMPLEMENTED
     }
+
     for(auto &p: ps) p.read_3cols(i); // N particle lines
+    return;
 }
 
 template <class ntype, class ptype>
