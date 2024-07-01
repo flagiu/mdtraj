@@ -49,7 +49,7 @@ read_frame(fstream &i, bool resetN, int frameIdx)
         read_yuhan_frame(i, resetN, frameIdx==0);
         break;
       default:
-        cout << "[ERROR: filetype = " << static_cast<int>(filetype) << " not recognized]\n";
+        cerr << "[ERROR: filetype = " << static_cast<int>(filetype) << " not recognized]\n";
         exit(1);
     }
     if(remove_rot_dof) removeRotDof();
@@ -59,7 +59,7 @@ read_frame(fstream &i, bool resetN, int frameIdx)
     {
       for(auto &p: ps) p.s = boxInv * p.r; // pre-compute fractional coordinates
     }
-    if(debug) cout << "  Read frame at timestep " << timestep << " DONE.\n";
+    if(debug) cerr << "  Read frame at timestep " << timestep << " DONE.\n";
   }
 
 template <class ntype, class ptype>
@@ -69,17 +69,17 @@ removeRotDof()
   mat R1,R2,Rtot;
   vec u, xdir;
   ntype a_xy_radius, c, s, t, angle;
-  if(debug) cout <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
-  if(debug) cout <<"Pss: Remember that box=(a|b|c)\n";
+  if(debug) cerr <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
+  if(debug) cerr <<"Pss: Remember that box=(a|b|c)\n";
   // Remove rounding errors
   if( abs(box[1][0])<1e-15 ) box[1][0]=0.0;
   if( abs(box[2][0])<1e-15 ) box[2][0]=0.0;
   if( abs(box[2][1])<1e-15 ) box[2][1]=0.0;
-  if(debug) { cout << "Raw box = "; box.show(); }
+  if(debug) { cerr << "Raw box = "; box.show(); }
   if( box[1][0]==box[2][0]==box[2][1]==0.0 ) {
     if(debug) {
-      cout <<"Box has already the correct <=6 degrees of freedom!\n";
-      cout <<"*----------------------------------------------------------*\n";
+      cerr <<"Box has already the correct <=6 degrees of freedom!\n";
+      cerr <<"*----------------------------------------------------------*\n";
     }
     return;
   }
@@ -87,38 +87,38 @@ removeRotDof()
   // 1) Align a to x-axis
   // u=(0,az,-ay) or (0,-az,ay) is the axis of rotation (to be normalized)
 
-  if(debug) { cout << "Raw volume (with sign)= "<< box.det()<<endl; }
+  if(debug) { cerr << "Raw volume (with sign)= "<< box.det()<<endl; }
   u << 0.0, box[2][0], -1*box[1][0];
-  if(debug) { cout << "  axis1 = "; u.show(); }
+  if(debug) { cerr << "  axis1 = "; u.show(); }
   // c = cos(angle) = ax/|a| ; s = sin(angle)
   c = box[0][0] / sqrt( box[0][0]*box[0][0] + box[1][0]*box[1][0] + box[2][0]*box[2][0] );
   s = sqrt( 1.0 - c*c ); // + or - ? with the choice of u=(0,az,-ay) it should be +
-  if(debug) { cout << "  cos1 = "<< c << endl; }
-  if(debug) { cout << "  sin1 = "<< s << endl; }
+  if(debug) { cerr << "  cos1 = "<< c << endl; }
+  if(debug) { cerr << "  sin1 = "<< s << endl; }
   // build the rotation matrix
   R1 = rotation_matrix_axis_cossin( u, c, s ); // declared in lib/matrix.hpp
   if(box.det()<0) R1 *= -1.; // invert to go back to right-hand rule
-  if(debug) { cout << "Rotation matrix R1 = "; R1.show(); }
+  if(debug) { cerr << "Rotation matrix R1 = "; R1.show(); }
   box = R1*box;
-  if(debug) { cout << "box (after R1) = "; box.show(); }
+  if(debug) { cerr << "box (after R1) = "; box.show(); }
   // 2) Rotate around the x-axis to bring the new b within the x-y plane
   xdir << 1.0, 0.0, 0.0;
-  if(debug) { cout << "  axis2 (x-axis) = "; xdir.show(); }
+  if(debug) { cerr << "  axis2 (x-axis) = "; xdir.show(); }
   // tan(angle) = -bz / by
   angle = -atan2( box[2][1], box[1][1] );
-  if(debug) { cout << "  angle2 (deg) = "<<angle*180/M_PI<<endl; }
+  if(debug) { cerr << "  angle2 (deg) = "<<angle*180/M_PI<<endl; }
   R2 = rotation_matrix_axis_cossin( xdir, cos(angle), sin(angle) );
-  if(debug) { cout << "Rotation matrix R2 = "; R2.show(); }
+  if(debug) { cerr << "Rotation matrix R2 = "; R2.show(); }
   box = R2*box;
   if( abs(box[1][1])<1e-15 ) box[1][1]=0.0; // remove rounding errors
   if( abs(box[1][1])<1e-15 ) box[2][1]=0.0;
   if( abs(box[2][2])<1e-15 ) box[2][2]=0.0;
-  if(debug) { cout << "box (after R2) = "; box.show(); }
+  if(debug) { cerr << "box (after R2) = "; box.show(); }
   // 3) Apply both rotations to each particle
   Rtot=R2*R1;
   for(auto &p: ps) p.r = Rtot*p.r;
   // Final result: A=(Ax,0,0)^T, B=(Bx,By,0)^T, C generic ==> box is upper diagonal
-  if(debug) { cout <<"\n*------------------------------------------------------------*\n"; }
+  if(debug) { cerr <<"\n*------------------------------------------------------------*\n"; }
 }
 
 //-----------------------------------------------------------------------
@@ -132,11 +132,11 @@ read_xyz_frame(fstream &i, bool resetN)
     getline(i,line); // first line
     istringstream(line) >> a;
     N = stoi(a);
-    if(debug) cout << "\n  Line 1: " << N << " atoms\n";
+    if(debug) cerr << "\n  Line 1: " << N << " atoms\n";
     getline(i,line); // second line
     istringstream(line) >> b >> c >> d;
     timestep = stoi(d);
-    if(debug) cout << "  Line 2: Timestep " << timestep << endl;
+    if(debug) cerr << "  Line 2: Timestep " << timestep << endl;
     if(resetN) {
       ps.resize(N);
       nframes = nlines / (N+2);
@@ -146,7 +146,7 @@ read_xyz_frame(fstream &i, bool resetN)
     {
       getline(i, line);
       istringstream(line) >> a >> b >> c >> d;
-      //try { p.label = stoi(a); } except { cout << "[Warning: could not convert type to integer.]\n"; }
+      //try { p.label = stoi(a); } except { cerr << "[Warning: could not convert type to integer.]\n"; }
       ps[j].r[0] = stof(b);
       ps[j].r[1] = stof(c);
       ps[j].r[2] = stof(d);
@@ -158,11 +158,11 @@ read_xyz_frame(fstream &i, bool resetN)
       }
       else if(a!=cur_type_str)
       {
-        if(debug) cout << " Updating " << cur_type_str << "-->" << a << endl;
+        if(debug) cerr << " Updating " << cur_type_str << "-->" << a << endl;
         cur_type_str=a;
         cur_type++;
         if(cur_type>=MAX_N_TYPES) {
-          cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+          cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
           exit(1);
         }
         type_names[cur_type]=cur_type_str;
@@ -185,7 +185,7 @@ read_xyz_frame(fstream &i, bool resetN)
       getline(i,line); // first line
       istringstream(line) >> a;
       N = stoi(a);
-      if(debug) cout << "\n  Line 1: " << N << " atoms\n";
+      if(debug) cerr << "\n  Line 1: " << N << " atoms\n";
       getline(i,line); // second line
       ss << line;
       do {
@@ -195,11 +195,11 @@ read_xyz_frame(fstream &i, bool resetN)
           break;
         }
         catch (...) {
-          if(debug) cout << "a="<<a <<endl;
+          if(debug) cerr << "a="<<a <<endl;
           continue;
         }
       } while(true);
-      if(debug) cout << "  Line 2: Timestep " << timestep << endl;
+      if(debug) cerr << "  Line 2: Timestep " << timestep << endl;
       if(resetN) {
         ps.resize(N);
         nframes = nlines / (N+2);
@@ -208,7 +208,7 @@ read_xyz_frame(fstream &i, bool resetN)
       {
         getline(i, line);
         istringstream(line) >> a >> b >> c >> d;
-        //if(debug) cout << "Read particle: " << a << " @ " << b << " @ " << c << " @ " << d << endl;
+        //if(debug) cerr << "Read particle: " << a << " @ " << b << " @ " << c << " @ " << d << endl;
         if(j==0)
         {
           cur_type_str=a;
@@ -216,11 +216,11 @@ read_xyz_frame(fstream &i, bool resetN)
         }
         else if(a!=cur_type_str)
         {
-          if(debug) cout << " Updating " << cur_type_str << "-->" << a << endl;
+          if(debug) cerr << " Updating " << cur_type_str << "-->" << a << endl;
           cur_type_str=a;
           cur_type++;
           if(cur_type>=MAX_N_TYPES) {
-            cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+            cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
             exit(1);
           }
           type_names[cur_type]=cur_type_str;
@@ -244,12 +244,12 @@ read_contcar_frame(fstream &i, bool resetN)
     int format;
 
     getline(i,line); // line 1
-    if(debug) cout << "\n  Line 1: " << line << endl;
+    if(debug) cerr << "\n  Line 1: " << line << endl;
 
     getline(i,line); // line 2
     istringstream(line) >> a;
     s=stof(a);
-    if(debug) cout << "  Line 2: scaling factor = " << s << endl;
+    if(debug) cerr << "  Line 2: scaling factor = " << s << endl;
 
     getline(i,line); // line 3
     istringstream(line) >> a >> b >> c;
@@ -261,12 +261,12 @@ read_contcar_frame(fstream &i, bool resetN)
     istringstream(line) >> a >> b >> c;
     box[2] << s*stof(a), s*stof(b), s*stof(c);
     box = box.T(); // !!!!!!!!!!!
-    if(debug) cout << "  Line 3-5: lattice vectors\n";
+    if(debug) cerr << "  Line 3-5: lattice vectors\n";
     if(debug) box.show();
     if(debug) boxInv.show();
 
     getline(i,line); // line 6
-    if(debug) cout << "  Line 6: species = " << line << endl;
+    if(debug) cerr << "  Line 6: species = " << line << endl;
     if(resetN)
     {
       ss<<line;
@@ -281,7 +281,7 @@ read_contcar_frame(fstream &i, bool resetN)
     }
 
     getline(i,line); // line 7
-    if(debug) cout << "  Line 7: number of atoms per species = " << line << endl;
+    if(debug) cerr << "  Line 7: number of atoms per species = " << line << endl;
     if(resetN)
     {
       ss<<line;
@@ -295,10 +295,10 @@ read_contcar_frame(fstream &i, bool resetN)
     }
 
     getline(i,line); // line 8
-    if(debug) cout << "  Line 8: coordinates format = " << line << endl;
+    if(debug) cerr << "  Line 8: coordinates format = " << line << endl;
     if(line=="Direct" || line=="direct") format=0; // lattice units
     else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
-    else { cout << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
+    else { cerr << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
 
     if(resetN) {
       ps.resize(N);
@@ -335,12 +335,12 @@ read_poscar_frame(fstream &i, bool resetN)
     int format;
 
     getline(i,line); // line 1
-    if(debug) cout << "\n  Line 1: " << line << endl;
+    if(debug) cerr << "\n  Line 1: " << line << endl;
 
     getline(i,line); // line 2
     istringstream(line) >> a;
     s=stof(a);
-    if(debug) cout << "  Line 2: scaling factor = " << s << endl;
+    if(debug) cerr << "  Line 2: scaling factor = " << s << endl;
 
     getline(i,line); // line 3
     istringstream(line) >> a >> b >> c;
@@ -352,12 +352,12 @@ read_poscar_frame(fstream &i, bool resetN)
     istringstream(line) >> a >> b >> c;
     box[2] << s*stof(a), s*stof(b), s*stof(c);
     box = box.T(); // !!!!!!!!!!!
-    if(debug) cout << "  Line 3-5: lattice vectors\n";
+    if(debug) cerr << "  Line 3-5: lattice vectors\n";
     if(debug) box.show();
     if(debug) boxInv.show();
 
     getline(i,line); // line 6
-    if(debug) cout << "  Line 6: species = " << line << endl;
+    if(debug) cerr << "  Line 6: species = " << line << endl;
     if(resetN)
     {
       ss<<line;
@@ -372,7 +372,7 @@ read_poscar_frame(fstream &i, bool resetN)
     }
 
     getline(i,line); // line 7
-    if(debug) cout << "  Line 7: number of atoms per species = " << line << endl;
+    if(debug) cerr << "  Line 7: number of atoms per species = " << line << endl;
     if(resetN)
     {
       ss<<line;
@@ -386,10 +386,10 @@ read_poscar_frame(fstream &i, bool resetN)
     }
 
     getline(i,line); // line 8
-    if(debug) cout << "  Line 8: coordinates format = " << line << endl;
+    if(debug) cerr << "  Line 8: coordinates format = " << line << endl;
     if(line=="Direct" || line=="direct") format=0; // lattice units
     else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
-    else { cout << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
+    else { cerr << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
 
     if(resetN) {
       ps.resize(N);
@@ -423,12 +423,12 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
     int format;
     if(resetN || !constantBox) {
 	    getline(i,line); // line 1
-	    if(debug) cout << "\n  Line 1: " << line << endl;
+	    if(debug) cerr << "\n  Line 1: " << line << endl;
 
 	    getline(i,line); // line 2
 	    istringstream(line) >> a;
 	    s=stof(a);
-	    if(debug) cout << "  Line 2: scaling factor = " << s << endl;
+	    if(debug) cerr << "  Line 2: scaling factor = " << s << endl;
 
 	    getline(i,line); // line 3
 	    istringstream(line) >> a >> b >> c;
@@ -440,10 +440,10 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
 	    istringstream(line) >> a >> b >> c;
 	    box[2] << s*stof(a), s*stof(b), s*stof(c);
 	    box = box.T(); // box = (a|b|c) where a,b,c = lattice vectors as columns !!!!!!!!!!!
-	    if(debug) cout << "  Line 3-5: lattice vectors\n";
+	    if(debug) cerr << "  Line 3-5: lattice vectors\n";
 
 	    getline(i,line); // line 6
-	    if(debug) cout << "  Line 6: species = " << line << endl;
+	    if(debug) cerr << "  Line 6: species = " << line << endl;
       if(resetN)
       {
         ss<<line;
@@ -458,7 +458,7 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
       }
 
 	    getline(i,line); // line 7
-	    if(debug) cout << "  Line 7: number of atoms per species = " << line << endl;
+	    if(debug) cerr << "  Line 7: number of atoms per species = " << line << endl;
       if(resetN)
       {
         ss<<line;
@@ -480,15 +480,15 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
     // then get 2nd segment separed by a '='
     for(int foo=0;foo<2;foo++){
       if(!getline(ss, b, '=')) {
-        cout << "ERROR during reading of timestep in a xdatcar/xdatcarV frame.\n";
+        cerr << "ERROR during reading of timestep in a xdatcar/xdatcarV frame.\n";
         exit(1);
       }
     }
     timestep=stoi(b);
-    if(debug) cout << "  Line 8: coordinates format = " << a << " , timestep = " << timestep << endl;
+    if(debug) cerr << "  Line 8: coordinates format = " << a << " , timestep = " << timestep << endl;
     if(a=="Direct" || a=="direct") format=0; // lattice units
     else if(a=="Cartesian" || a=="cartesian") format=1; // cartesian units
-    else { cout << "[ERROR: coordinates format not recognized: " << a << "]\n"; exit(1); }
+    else { cerr << "[ERROR: coordinates format not recognized: " << a << "]\n"; exit(1); }
 
     if(resetN) {
       ps.resize(N);
@@ -522,7 +522,7 @@ read_alphanes_frame(fstream &i, bool resetN)
     int ncols=0, natom, nxyz;
 
     getline(i,line); // all frame (box+positions) is contained in one line
-    if(debug) cout << "\n  Line: " << line << endl;
+    if(debug) cerr << "\n  Line: " << line << endl;
 
     ss << line;
     while( ss >> x )
@@ -549,7 +549,7 @@ read_alphanes_frame(fstream &i, bool resetN)
       nframes = nlines;
       nTypes=1;
       Nt[0]=N;
-      cout << "WARNING: only monospecies input is implemented for alphanes format.\n";
+      cerr << "WARNING: only monospecies input is implemented for alphanes format.\n";
     }
 }
 
@@ -563,7 +563,7 @@ read_alphanes9_frame(fstream &i, bool resetN)
     int ncols=0, natom, nxyz;
 
     getline(i,line); // all frame (box+positions) is contained in one line
-    if(debug) cout << "\n  Line: " << line << endl;
+    if(debug) cerr << "\n  Line: " << line << endl;
 
     ss << line;
     while( ss >> x )
@@ -606,7 +606,7 @@ read_jmd_frame(fstream &i, bool resetN)
     nTypes = 1; // ONLY MONO-SPECIES IMPLEMENTED!!!
 
     getline(i,line);
-    if(debug) cout << "\n  Line 1: " << line << endl;
+    if(debug) cerr << "\n  Line 1: " << line << endl;
 
     ss << line;
     // count the number of columns
@@ -648,7 +648,7 @@ read_jmd_frame(fstream &i, bool resetN)
     }
     else if(ncols>0)
     {
-      cout << "ERROR: ncols="<<ncols<<" not accepted for Line 1 of JMD-formatted frame.\n";
+      cerr << "ERROR: ncols="<<ncols<<" not accepted for Line 1 of JMD-formatted frame.\n";
       exit(1);
     }
 
@@ -682,26 +682,26 @@ read_lammpstrj_frame(fstream &i, bool resetN)
   ntype xy,xz,yz;
 
   getline(i,line); // ITEM: TIMESTEP
-  if(debug) cout << "\n  Line 1: " << line << endl;
+  if(debug) cerr << "\n  Line 1: " << line << endl;
 
   getline(i,line);
   timestep = stoi(line);
-  if(debug) cout << timestep << endl;
+  if(debug) cerr << timestep << endl;
 
   getline(i,line); // ITEM: NUMBER OF ATOMS
-  if(debug) cout << "\n  Line 3: " << line << endl;
+  if(debug) cerr << "\n  Line 3: " << line << endl;
   getline(i,line);
   N = stoi(line);
-  if(debug) cout << N << endl;
+  if(debug) cerr << N << endl;
 
   // ITEM: BOX BOUNDS ...
   getline(i,line);
   ncols=0;
-  if(debug) cout << "\n  Line 5: " << line << endl;
+  if(debug) cerr << "\n  Line 5: " << line << endl;
   ss << line;
   while( ss >> x )
   {
-    if(ncols>=3) if(debug) cout << x << endl;
+    if(ncols>=3) if(debug) cerr << x << endl;
     ncols++;
   }
   ss.str(std::string()); ss.clear(); // clear the string stream!
@@ -709,7 +709,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
   xy=xz=yz=0.0;
   switch (ncols) {
     case 3:
-      cout << "WARNING: dump file has non-periodic cubic box\n";
+      cerr << "WARNING: dump file has non-periodic cubic box\n";
       getline(i,line); istringstream(line) >> a >> b;
       xlo = stof(a);
       xhi = stof(b);
@@ -758,7 +758,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
       yhi = yhib - max(0.0,yz);
       break;
     default:
-      cout << "[ Error: box format not recognized with "<<ncols<<" columns in ITEM]\n\n";
+      cerr << "[ Error: box format not recognized with "<<ncols<<" columns in ITEM]\n\n";
       exit(1);
   }
   box[0][0] = xhi - xlo;
@@ -776,7 +776,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
   }
 
   getline(i,line); // ITEM: ATOMS ...
-  if(debug) cout << "\n  Line 9: " << line << endl;
+  if(debug) cerr << "\n  Line 9: " << line << endl;
   ncols=0;
   x_count=xs_count=pi_count=xu_count=v_count=0;
   ss << line;
@@ -784,12 +784,12 @@ read_lammpstrj_frame(fstream &i, bool resetN)
   {
     if(ncols==1 && x!="ATOMS")
     {
-      cout << " [ERROR: I expected to find atoms but I found the following line:]\n"<<line<<endl;
+      cerr << " [ERROR: I expected to find atoms but I found the following line:]\n"<<line<<endl;
       exit(1);
     }
     if(ncols>=2)
     {
-      if(debug) cout << x << endl;
+      if(debug) cerr << x << endl;
       if      (x=="id")   { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::ID; }
       else if (x=="type") { entries[ncols-2]=LAMMPS_ATOM_ENTRIES::TYPE; }
 
@@ -815,7 +815,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
 
       else
       {
-        cout << " [ERROR: lammps entry '"<<x<<"' for atoms not recognized.]\n";
+        cerr << " [ERROR: lammps entry '"<<x<<"' for atoms not recognized.]\n";
         exit(1);
       }
     }
@@ -828,11 +828,11 @@ read_lammpstrj_frame(fstream &i, bool resetN)
   {
     getline(i,line);
     ss << line;
-    //if(debug) cout << line << endl;
+    //if(debug) cerr << line << endl;
     for(int j=0;j<num_atomic_entries;j++)
     {
       ss >> x;
-      //if(debug) cout << "j="<<j<<" ; x="<<x << endl;
+      //if(debug) cerr << "j="<<j<<" ; x="<<x << endl;
       switch( entries[j] )
       {
         case LAMMPS_ATOM_ENTRIES::ID : break; // atom number
@@ -853,7 +853,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
         case LAMMPS_ATOM_ENTRIES::VY : break;
         case LAMMPS_ATOM_ENTRIES::VZ : break;
         default:
-          cout << "[ERROR: lammps entry at column '"<<j<<"' not recognized while reading atom.]\n";
+          cerr << "[ERROR: lammps entry at column '"<<j<<"' not recognized while reading atom.]\n";
           exit(1);
       }
     }
@@ -900,7 +900,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
     {
       nTypes = max(nTypes,p.label+1);
       if(nTypes>MAX_N_TYPES) {
-        cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+        cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
         exit(1);
       }
       Nt[p.label]++;
@@ -921,40 +921,40 @@ read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame)
   if(isFirstFrame) // if first frame:
   {
     getline(i,line); // CONFIG
-    if(debug) cout << "\n  Line: " << line << endl;
+    if(debug) cerr << "\n  Line: " << line << endl;
 
     getline(i,line); // CONFIG details
-    if(debug) cout << "\n  Line: " << line << endl;
+    if(debug) cerr << "\n  Line: " << line << endl;
   }
 
   getline(i,line); // timestep timestep_value N
-  if(debug) cout << "\n  Line: " << line << endl;
+  if(debug) cerr << "\n  Line: " << line << endl;
   ss << line;
   ncols=0;
   while( ss >> x )
   {
-    //if(debug) cout << "x="<<x<< endl;
+    //if(debug) cerr << "x="<<x<< endl;
     switch(ncols)
     {
       case 0:
         if(x!="timestep") {
-          cout<<"[ERROR: expected 'timestep' at beginning of line; instead: "<<x<<"]\n";
+          cerr<<"[ERROR: expected 'timestep' at beginning of line; instead: "<<x<<"]\n";
           exit(1);
         }
         break;
       case 1:
         timestep = stoi(x);
-        if(debug) cout << "timestep="<<timestep<<endl;
+        if(debug) cerr << "timestep="<<timestep<<endl;
         break;
       case 2:
         N = stoi(x);
-        if(debug) cout << "N="<<N<<endl;
+        if(debug) cerr << "N="<<N<<endl;
       case 3: break; // I don't know the meaning
       case 4: break; // I don't know the meaning
       case 5: break; // I don't know the meaning
       case 6: break; // I don't know the meaning
       default:
-        cout<<"[ERROR: I did not expect more than 7 columns in Line 3]\n";
+        cerr<<"[ERROR: I did not expect more than 7 columns in Line 3]\n";
         exit(1);
     }
     ncols++;
@@ -1000,11 +1000,11 @@ read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame)
     }
     else if(a!=cur_type_str)
     {
-      if(debug) cout << " Updating " << cur_type_str << "-->" << a << endl;
+      if(debug) cerr << " Updating " << cur_type_str << "-->" << a << endl;
       cur_type_str=a;
       cur_type++;
       if(cur_type>=MAX_N_TYPES) {
-        cout << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+        cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
         exit(1);
       }
       type_names[cur_type]=cur_type_str;

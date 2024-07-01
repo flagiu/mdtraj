@@ -60,7 +60,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n     \t Defines crystalline particles by a threshold of %.2f on the BOC.",qldot_th);
   fprintf(stderr, "\n     \t Orbital angular momentum is provided by the option -l.");
   fprintf(stderr, "\n     \t OUTPUT: %s.l*.{dat,ave}, %s.l*.{dat,ave,local.ave}, %s.l*.{indexes,dat}.", s_bondorient.c_str(), s_bondcorr.c_str(), s_nxtal.c_str());
-  fprintf(stderr, "\n -clusters \t Clusterize the particles according to the BOC parameters. OUTPUT: %s{.dat,_size.dat}.", s_clusters.c_str());
+  fprintf(stderr, "\n -clusters \t Clusterize the particles if qdot>qdot_th AND distance<cutoff. Must be followed by a file where cutoff is specified: one row; one column for each type pair. OUTPUT: %s{.dat,_size.dat}.", s_clusters.c_str());
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st sphere, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
@@ -71,7 +71,9 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -sq \t Compute the Static Structure Factor S(q). ONLY FOR CUBIC BOXES. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sq.c_str(), qmodmin,qmodmax,qmodstep );
   fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. CONSIDERS ALL ATOMS AS SAME TYPE. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
-  fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters [default %d].", l);
+  fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters (2<=l<=6).");
+  fprintf(stderr, "\n       You can use combinations to do multiple computations in the same run");
+  fprintf(stderr, "\n       (e.g.: l=46 will execute both l=4 and l=6) [default l=%d].", l);
   fprintf(stderr, "\n -rcut \t File containing <=%d lines of cutoff radii for each pair of atom types, each line ordered by type pair (e.g. for 3 types: r00 r01 r02 r11 r12 r22).", MAX_NSPHERE);
   fprintf(stderr, "\n       \t They will be used for cutoff functions in neighbour-spheres. No need to specify higher order spheres if not required for calculation. [default %.2f;%.2f;%.2f for every pair].", defaultCutoff[0][0], defaultCutoff[1][0], defaultCutoff[2][0]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);
@@ -83,6 +85,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end.");
   fprintf(stderr, "\n        \t INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
+  fprintf(stderr, "\n -ignore_double_frames \t Skip a frame if timestep is the same as before. [default: raise an error]");
   fprintf(stderr, "\n -logtime \t Input has log-linear timesteps specified by the following file. [default: %s]",s_logtime.c_str());
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
   fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining");
@@ -133,7 +136,16 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	  else if ( !strcmp(argv[i], "-bo") )
 	      c_bondorient = true;
     else if ( !strcmp(argv[i], "-clusters") )
-	      c_clusters = true;
+	  	{
+	      i++;
+	      if (i == argc)
+		  {
+		  	fprintf(stderr, "ERROR: '-clusters' must be followed by file name!\n");
+		  	exit(-1);
+		  }
+      c_clusters = true;
+	    s_rcut_clusters = string(argv[i]);
+		}
 	  else if ( !strcmp(argv[i], "-cn") )
 	      c_coordnum = true;
     else if ( !strcmp(argv[i], "-nnd") )
@@ -469,6 +481,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
         filetype = FileType::YUHAN;
 	      s_in = string(argv[i]);
 	    }
+    else if ( !strcmp(argv[i], "-ignore_double_frames") )
+    	ignore_double_frames = true;
     else if ( !strcmp(argv[i], "-logtime") )
     {
        i++;

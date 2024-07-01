@@ -49,15 +49,17 @@ print_out_xyz() {
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
-init_out_lammpsdump() {
-  ss.str(std::string()); ss << s_out << tag << ".dump"; fout.open(ss.str(), ios::out);
+init_out_lammpsdump(string string_out) {
+  ss.str(std::string()); ss << string_out << tag << ".dump"; fout.open(ss.str(), ios::out);
+  if(debug) cerr<<"[ "<<myName<<" ] Initializing "<<ss.str()<<endl;
   fout.close();
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
-print_out_lammpsdump() {
-  ss.str(std::string()); ss << s_out << tag << ".dump"; fout.open(ss.str(), ios::app);
+print_out_lammpsdump(string string_out) {
+  ss.str(std::string()); ss << string_out << tag << ".dump"; fout.open(ss.str(), ios::app);
+  if(debug) cerr<<"[ "<<myName<<" ] Appending to "<<ss.str()<<endl;
   fout<<"ITEM: TIMESTEP\n";
   fout<<timestep<<endl;
 
@@ -86,9 +88,12 @@ print_out_lammpsdump() {
 
   fout<<"ITEM: ATOMS type x y z\n";
   for(auto &p : ps) {
-    if(pbc_out) p.r = p.r - box*round(boxInv*p.r); // apply PBC to the position
-    p.r += 0.5*box.diag(); // center inside the box [0,L] for better Ovito visualization
+    if(pbc_out) {
+      p.r = p.r - box*round(boxInv*p.r); // apply PBC to the position
+      p.r += 0.5*box.diag(); // center inside the box [0,L] for better Ovito visualization
+    }
     p.write_xyz(fout);
+    if(pbc_out) p.r -= 0.5*box.diag(); // undo
   }
   fout.close();
   return;

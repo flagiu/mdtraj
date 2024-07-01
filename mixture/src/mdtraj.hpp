@@ -16,6 +16,7 @@ using namespace std;
 
 const string root_path="/home/flavio/programmi/mdtraj/mixture_dev";
 #define MAX_N_TYPES 5
+#define MAX_N_ANGMOM 5
 enum class FileType {
   NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
 };
@@ -37,10 +38,10 @@ public:
   int nframes, timestep;
   bool c_coordnum, c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
   bool c_altbc, c_sq, c_sqt, c_edq, c_clusters; // compute or not
-  string s_in, s_out, s_rcut, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
+  string s_in, s_out, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
   string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
-  bool logtime, out_box, out_xyz, out_alphanes, out_lammpsdump;
+  bool ignore_double_frames, logtime, out_box, out_xyz, out_alphanes, out_lammpsdump;
   bool debug, verbose;
   //
   LogTimesteps logt;
@@ -49,10 +50,11 @@ public:
   vecflex<ntype> defaultCutoff[MAX_NSPHERE];
   Neigh_and_Bond_list<ntype,ptype> *n_b_list;
   //
-  int l;
+  int l, num_l, l_list[MAX_N_ANGMOM];
+  string s_l_list[MAX_N_ANGMOM];
   ntype qldot_th;
-  Bond_Parameters<ntype,ptype> *bond_parameters;
-  ED_Bond_Parameter<ntype,ptype> *ed_q_calculator;
+  Bond_Parameters<ntype,ptype>* bond_parameters[MAX_N_ANGMOM];
+  ED_Bond_Parameter<ntype,ptype>* ed_q_calculator;
   //
   ntype rdf_binw, rdf_rmax;
   PBC<ntype> *pbc;
@@ -114,49 +116,50 @@ public:
   void args(int argc, char** argv);
 
   void print_state(){
-    cout << "Summary of parameters:\n";
-    cout << " debug = \t " << debug << endl;
-    cout << " verbose = \t " << debug << endl;
-    cout << " c_coordnum = \t " << c_coordnum << endl;
-    cout << " c_bondorient = \t " << c_bondorient << endl;
-    cout << " c_msd = \t " << c_msd << endl;
-    cout << " c_rdf = \t " << c_rdf << endl;
-    cout << " c_adf = \t " << c_adf << endl;
-    cout << " c_rmin = \t " << c_rmin << endl;
-    cout << " c_rmax = \t " << c_rmax << endl;
-    cout << " c_altbc = \t " << c_altbc << endl;
-    cout << " c_sq = \t " << c_sq << endl;
-    cout << " c_sqt = \t " << c_sqt << endl;
-    cout << " c_edq = \t " << c_edq << endl;
-    cout << " c_nnd = \t " << c_nnd << endl;
-    cout << " c_clusters = \t " << c_clusters << endl;
-    cout << " angular momentum for ql: l = \t " << l << endl;
-    cout << " qldot threshold = \t " << qldot_th << endl;
-    cout << " box (a|b|c) = \t "; box.show();
-    cout << " total volume V = \t " << V << endl;
-    cout << " box inverse = \t "; boxInv.show();
-    cout << " L (length of each box vector) = \t "; L.show();
-    cout << " p1 = \t " << p1 << endl;
-    cout << " p2 = \t " << p2 << endl;
-    cout << " period for MSD & NGP & S(q,t) = \t " << period << endl;
-    cout << " logtime = \t " << logtime << endl;
-    cout << " s_logtime = \t " << s_logtime << endl;
-    cout << " rdf_binw = \t " << rdf_binw << endl;
-    cout << " rdf_rmax = \t " << rdf_rmax << endl;
-    cout << " adf_binw = \t " << adf_binw << endl;
-    cout << " q_mod_min,q_modmax,q_mod_step = \t " << qmodmin << ", " << qmodmax << ", "<< qmodstep << endl;
-    cout << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
-    cout << " out_box = \t " << out_box << endl;
-    cout << " out_xyz = \t " << out_xyz << endl;
-    cout << " out_lammpsdump = \t " << out_lammpsdump << endl;
-    cout << " out_alphanes = \t " << out_alphanes << endl;
-    cout << " pbc_out = \t " << pbc_out << endl;
-    cout << " fskip_from_beginning = \t " << fskip0 << endl;
-    cout << " fskip_from_end = \t " << fskip1 << endl;
-    cout << " timings = \t " << timings << endl;
-    cout << " tag = \t " << tag << endl;
-    cout << " s_in = \t " << s_in << endl;
-    cout << endl;
+    cerr << "Summary of parameters:\n";
+    cerr << " debug = \t " << debug << endl;
+    cerr << " verbose = \t " << debug << endl;
+    cerr << " c_coordnum = \t " << c_coordnum << endl;
+    cerr << " c_bondorient = \t " << c_bondorient << endl;
+    cerr << " c_msd = \t " << c_msd << endl;
+    cerr << " c_rdf = \t " << c_rdf << endl;
+    cerr << " c_adf = \t " << c_adf << endl;
+    cerr << " c_rmin = \t " << c_rmin << endl;
+    cerr << " c_rmax = \t " << c_rmax << endl;
+    cerr << " c_altbc = \t " << c_altbc << endl;
+    cerr << " c_sq = \t " << c_sq << endl;
+    cerr << " c_sqt = \t " << c_sqt << endl;
+    cerr << " c_edq = \t " << c_edq << endl;
+    cerr << " c_nnd = \t " << c_nnd << endl;
+    cerr << " c_clusters = \t " << c_clusters << endl;
+    cerr << " angular momentum for ql: l = \t " << l << endl;
+    cerr << " qldot threshold = \t " << qldot_th << endl;
+    cerr << " box (a|b|c) = \t "; box.show();
+    cerr << " total volume V = \t " << V << endl;
+    cerr << " box inverse = \t "; boxInv.show();
+    cerr << " L (length of each box vector) = \t "; L.show();
+    cerr << " p1 = \t " << p1 << endl;
+    cerr << " p2 = \t " << p2 << endl;
+    cerr << " period for MSD & NGP & S(q,t) = \t " << period << endl;
+    cerr << " ignore_double_frames = \t " << ignore_double_frames << endl;
+    cerr << " logtime = \t " << logtime << endl;
+    cerr << " s_logtime = \t " << s_logtime << endl;
+    cerr << " rdf_binw = \t " << rdf_binw << endl;
+    cerr << " rdf_rmax = \t " << rdf_rmax << endl;
+    cerr << " adf_binw = \t " << adf_binw << endl;
+    cerr << " q_mod_min,q_modmax,q_mod_step = \t " << qmodmin << ", " << qmodmax << ", "<< qmodstep << endl;
+    cerr << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
+    cerr << " out_box = \t " << out_box << endl;
+    cerr << " out_xyz = \t " << out_xyz << endl;
+    cerr << " out_lammpsdump = \t " << out_lammpsdump << endl;
+    cerr << " out_alphanes = \t " << out_alphanes << endl;
+    cerr << " pbc_out = \t " << pbc_out << endl;
+    cerr << " fskip_from_beginning = \t " << fskip0 << endl;
+    cerr << " fskip_from_end = \t " << fskip1 << endl;
+    cerr << " timings = \t " << timings << endl;
+    cerr << " tag = \t " << tag << endl;
+    cerr << " s_in = \t " << s_in << endl;
+    cerr << endl;
   }
 
   void init(int argc, char** argv){
@@ -203,6 +206,7 @@ public:
     s_log="log";
     s_atom_label="labels";
     s_rcut="__NOT_DEFINED__";
+    s_rcut_clusters="__NOT_DEFINED__";
     ss.str(std::string()); ss << s_log << tag; fout.open(ss.str(), ios::out);
     fout << "LOG SUMMARY"<<endl;
     fout.close();
@@ -213,6 +217,7 @@ public:
     out_box = false;
     out_xyz = false;
     out_lammpsdump = false;
+    ignore_double_frames = false;
     logtime = false;
     s_logtime="";
     out_alphanes = false;
@@ -232,7 +237,7 @@ public:
     defaultCutoff[1][0] = 5.15;
     defaultCutoff[2].resize(1); // 3rd sphere
     defaultCutoff[2][0] = 8.8;
-    l = 4;
+    l=4;
     p1half=6;
     qldot_th = 0.65;
     rdf_binw=0.0;
@@ -250,21 +255,23 @@ public:
     args(argc, argv);
 
     // Compute non-primitive parameters:
+    get_angular_momentum_list();
     p2half = 2*p1half;
     p1 = 2*p1half;
     p2 = 2*p2half;
-    if(c_bondorient)             maxsphere=MAX_NSPHERE; // init all neigh spheres
+    if(c_bondorient) maxsphere=MAX_NSPHERE; // init all neigh spheres
     else if(c_coordnum || c_nnd || c_adf || c_rmin || c_rmax || c_altbc || c_edq) maxsphere=1;       // init only first neigh sphere
     else                         maxsphere=0;       // do not init any
     if(c_clusters && !c_bondorient) {
-      cout << "ERROR: cannot compute clusters without computing BOC parameters!\n";
+      cerr << "ERROR: cannot compute clusters without computing BOC parameters!\n";
       exit(1);
     }
+
     // Print a recap:
-    if(debug) { cout << "State after reading args():\n"; print_state(); }
+    if(debug) { cerr << "State after reading args():\n"; print_state(); }
 
     if(filetype==FileType::NONE) {
-      cout << "ERROR: input file was not defined. Use -h for help\n";
+      cerr << "ERROR: input file was not defined. Use -h for help\n";
       exit(1);
     }
   }
@@ -287,12 +294,12 @@ public:
   void compute_volume() {
     V = box.det(); //determinant
     if(V<0.) {
-      cout << "[ Warning: det(box)="<<V<<" follows left-hand rule. ]\n";
+      cerr << "[ "<<myName<<" Warning ] det(box)="<<V<<" follows left-hand rule. ]\n";
       V=-V;
     }
     else if (V==0.) {
       box.show();
-      cout << "[ Error: det(box)=0.0 not supported. ]\n";
+      cerr << "[ "<<myName<<" Error ] det(box)=0.0 not supported. ]\n";
       exit(1);
     }
   }
@@ -315,9 +322,9 @@ public:
   void run()
   {
     PrintProgress printProgress;
-    if(verbose || debug) {cout << "Begin of run():\n"; print_state();}
+    if(verbose || debug) {cerr << "Begin of run():\n"; print_state();}
     nlines = getLineCount(s_in);
-    if(debug) cout << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
+    if(debug) cerr << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
     fin.open(s_in, ios::in);
 
     if(filetype==FileType::CONTCAR || filetype==FileType::POSCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
@@ -326,15 +333,15 @@ public:
     //---------- Read 1st frame -------------//
     read_frame(fin, true, 0);
     t0frame = timestep;
-    if(debug) cout << " I read first frame: set N = " << N << " (I assume it's constant) and t0frame = " << t0frame << "\n";
-    if(debug) cout << "  From N, I deduce nframes = " << nframes << "\n";
+    if(debug) cerr << " I read first frame: set N = " << N << " (I assume it's constant) and t0frame = " << t0frame << "\n";
+    if(debug) cerr << "  From N, I deduce nframes = " << nframes << "\n";
     print_types();
 
     nskip0=int(fskip0*nframes);
     nskip1=int(fskip1*nframes);
     nframes_original = nframes;
     nframes = nframes - nskip0 - nskip1;
-    if(nframes<1) { cout << "[ Error: skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
+    if(nframes<1) { cerr << "[ "<<myName<<" Error ] skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
 
     //---------- Read 2nd frame (if it exists) -------------//
     try
@@ -343,18 +350,18 @@ public:
       if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9){
         dtframe=timestep-t0frame;
       }
-      if(debug) cout << " I read the second frame: dtframe = "<<dtframe<<endl;
+      if(debug) cerr << " I read the second frame: dtframe = "<<dtframe<<endl;
     } catch (...) {
-      cout << "WARNING: only 1 frame in trajectory.\n";
+      cerr << "WARNING: only 1 frame in trajectory.\n";
       dtframe=last_dtframe=1; // this is meaningless, but it avoids nonsense later
     }
-    if(debug) cout << "Initialization of Computations STARTED\n";
+    if(debug) cerr << "Initialization of Computations STARTED\n";
     init_computations();
-    if(debug) cout << "Initialization of Computations COMPLETED\n";
+    if(debug) cerr << "Initialization of Computations COMPLETED\n";
     fin.close();
 
     // Restart reading!!
-    if(debug || verbose) cout << "#------- MAIN LOOP ------#\n";
+    if(debug || verbose) cerr << "#------- MAIN LOOP ------#\n";
     fin.open(s_in, ios::in);
     printProgress.init( nframes, 2000 ); // update % every 2000 ms
     if(filetype==FileType::CONTCAR || filetype==FileType::CONTCAR ||
@@ -365,36 +372,51 @@ public:
     for(int i=0; i<nframes_original; i++)
     {
       read_frame(fin, false, i);
-      if(N != ps.size()) { cout << "[Warning: N has changed]\n"; exit(1);}
+      if(N != ps.size()) { cerr << "[Warning: N has changed]\n"; exit(1);}
+
       if(i==0) dtframe=0;
       else     dtframe=timestep-last_timestep;
+
+      if(i>1 && dtframe==0) {
+        if(ignore_double_frames){
+          cerr<<"["<<myName<<" Warning] Skipping timestep= "<<timestep<<" because dt==0 and ignore_double_frames==true\n";
+          continue; //!!!
+        }else{
+          cerr<<"["<<myName<<" Error] dt==0 at timestep= "<<timestep<<" and ignore_double_frames==true\n";
+          exit(1);
+        }
+      }
+
       if(i>1 && !logtime && dtframe!=last_dtframe) {
-        cout<<"["<<myName<<" ERROR] logtime==false but timestep interval is not linearly spaced:\n";
-        cout<<"               last_dt = "<<last_dtframe<<", dt = "<<dtframe<<", at timestep = "<<timestep<<"\n";
+        cerr<<"["<<myName<<" Error] logtime==false but timestep interval is not linearly spaced:\n";
+        cerr<<"               last_dt = "<<last_dtframe<<", dt = "<<dtframe<<", at timestep = "<<timestep<<"\n";
         exit(1);
       }
-      if(i+1>nskip0 && i<nframes_original-nskip1) do_computations_and_output(i-nskip0);
+
+      if(i+1>nskip0 && i<nframes_original-nskip1)
+        do_computations_and_output(i-nskip0);
+
       printProgress.update( i+1-nskip0, timer.lap() );
       last_dtframe=dtframe;
       last_timestep=timestep;
     }
     printProgress.end();
     fin.close();
-    if(debug) cout << "Closed input file.\n";
+    if(debug) cerr << "Closed input file.\n";
     print_final_computations();
-    if(debug || verbose) cout << "\nExecution completed.\n\n";
+    if(debug || verbose) cerr << "\nExecution completed.\n\n";
   }
 
   void print_types() {
     if(nTypes<=0) {
-      cout << "ERROR: nTypes = "<<nTypes<<" is not admitted.\n";
+      cerr << "ERROR: nTypes = "<<nTypes<<" is not admitted.\n";
       exit(1);
     }
     nTypePairs = nTypes*(nTypes+1)/2;
-    if(debug) cout << " Found nTypes =" << nTypes << ", nTypePairs =" << nTypePairs << endl;
+    if(debug) cerr << " Found nTypes =" << nTypes << ", nTypePairs =" << nTypePairs << endl;
     if(debug)
      for(int j=0;j<nTypes;j++)
-        cout << "   n. atoms of type " << j << " = " << Nt[j] << " ("<< setw(3) << Nt[j]/(float)N*100 <<"%)" << endl;
+        cerr << "   n. atoms of type " << j << " = " << Nt[j] << " ("<< setw(3) << Nt[j]/(float)N*100 <<"%)" << endl;
 
     ss.str(std::string());  ss << s_atom_label << tag << ".dat"; fout.open(ss.str(), ios::out);
     for(auto a=0;a<nTypes;a++) {
@@ -411,7 +433,7 @@ public:
     init_density();
     if(out_box) init_box();
     if(out_xyz) init_out_xyz();
-    if(out_lammpsdump) init_out_lammpsdump();
+    if(out_lammpsdump&&!c_clusters) init_out_lammpsdump(s_out);
     if(out_alphanes) init_out_alphanes();
     if(logtime) {
       logt.deduce_fromfile(s_logtime);
@@ -437,10 +459,20 @@ public:
     if(c_rmax) n_b_list->init_rmax(s_rmax);
     if(c_bondorient)
     {
-      bond_parameters = new Bond_Parameters<ntype,ptype>();
-      bond_parameters->init(n_b_list, l, qldot_th, s_bondorient, s_bondcorr,
-        s_nxtal, tag, debug, verbose);
-      if(c_clusters) n_b_list->init_clusterize(s_clusters);
+      for(auto l_=0;l_<num_l;l_++){
+        bond_parameters[l_] = new Bond_Parameters<ntype,ptype>();
+        bond_parameters[l_]->init(n_b_list, l_list[l_], qldot_th, s_bondorient, s_bondcorr,
+          s_nxtal, tag, debug, verbose);
+        if(c_clusters) {
+          ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+          n_b_list->init_clusterize( ss.str(),
+                                    s_rcut_clusters, defaultCutoff[0]);
+          if(out_lammpsdump) {
+            ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+            init_out_lammpsdump(ss.str());
+          }
+        }
+      }
     }
     if(c_edq)
     {
@@ -486,10 +518,27 @@ public:
     if(c_rmin) n_b_list->compute_rmin(timestep, ps);
     if(c_rmax) n_b_list->print_rmax(timestep);
     if(c_bondorient) {
-      bond_parameters->compute(timestep, ps);
-      if(c_clusters) {
-        n_b_list->clusterize(timestep, ps,
-                            bond_parameters->ql_dot, bond_parameters->qldot_th);
+      for(auto l_=0;l_<num_l;l_++){
+        bond_parameters[l_]->compute(timestep, ps);
+        if(c_clusters) {
+          ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+          n_b_list->clusterize(timestep, ps, ss.str(),
+                              bond_parameters[l_]->ql_dot, bond_parameters[l_]->qldot_th);
+          if(out_lammpsdump){ // visualization of clusters
+            int c;
+            vector<int> original_labels;
+            original_labels.resize(ps.size());
+            for(auto i=0;i<ps.size();i++){
+              c=n_b_list->cluster_of_particle[i];
+              original_labels[i]=ps[i].label;
+              if(c>=0) ps[i].label = (int)(n_b_list->cluster_permutation_by_size[c]);
+              else     ps[i].label = c;
+            }
+            ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+            print_out_lammpsdump(ss.str());
+            for(auto i=0;i<ps.size();i++) ps[i].label=original_labels[i]; //!!!
+          }
+        }
       }
     }
     if(c_edq) ed_q_calculator->compute(timestep, ps);
@@ -505,17 +554,9 @@ public:
     }
     if(c_sqt) sqt_calculator->compute(i,nframes,timestep,ps);
 
-    if(c_bondorient && c_clusters && (out_xyz || out_lammpsdump) ) { // visualization of clusters
-      int c;
-      for(auto i=0;i<ps.size();i++){
-        c=n_b_list->cluster_of_particle[i];
-        if(c>=0) ps[i].label = (int)(n_b_list->cluster_permutation_by_size[c]);
-        else     ps[i].label = c;
-      }
-    }
     if(out_box) print_box();
-    if(out_xyz) print_out_xyz();
-    if(out_lammpsdump) print_out_lammpsdump();
+    if(out_xyz && !c_clusters) print_out_xyz();
+    if(out_lammpsdump && !c_clusters) print_out_lammpsdump(s_out);
     if(out_alphanes) print_out_alphanes();
   }
 
@@ -552,6 +593,35 @@ public:
     fout.close();
   }
 
+  void get_angular_momentum_list() {
+    //string l_string = std::to_string(l);
+    if(l>0&&l<=6){
+      num_l=1;
+      l_list[0]=l;
+    } else if(l==46 || l==64) {
+      num_l=2;
+      l_list[0]=6;
+      l_list[1]=4;
+    } else {
+      cerr<<"[ "<<myName<<" Error ] l="<<l<<" not supported. Multi-angular-momentum is still experimental.\n";
+      exit(1);
+    }
+
+    for(int l_=0;l_<num_l;l_++){
+      ss.str(std::string()); ss << ".l" << l_list[l_];
+      s_l_list[l_] = ss.str();
+    }
+
+    if(debug) {
+      cerr<<"[ "<<myName<<" ] Set angular momentum list:";
+      for(int l_=0;l_<num_l;l_++){
+        cerr<<" "<<l_list[l_];
+      }
+      cerr<<endl;
+    }
+    return;
+  }
+
 //-------------Trajectory output, implemented in io/output.cpp -----------------//
   void init_box();
   void print_box();
@@ -562,8 +632,8 @@ public:
   void init_out_alphanes();
   void print_out_alphanes();
 
-  void init_out_lammpsdump();
-  void print_out_lammpsdump();
+  void init_out_lammpsdump(string);
+  void print_out_lammpsdump(string);
 
 };
 

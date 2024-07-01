@@ -153,7 +153,7 @@ class Bond_Parameters
       complex<ntype> Yval;
       vec rij;
       int i,j,k,a,b,m,u, t;
-      if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
+      if(debug) cerr << "\n*** "<<myName<<" computation STARTED ***\n";
       //---- Reset counters ----//
       for(i=0;i<N;i++){
           ql.set(i, 0.0);
@@ -169,7 +169,7 @@ class Bond_Parameters
             for(t=0;t<nTypePairs;t++) nb_list->neigh[u][t][i] = 0.;
           }
       }
-      if(debug) cout << " * Reset counters DONE\n";
+      if(debug) cerr << " * Reset counters DONE\n";
 
       //---- Compute <Y_lm>'s (on 1st sphere) and neighs (on all spheres) ----//
       for(i=0;i<N;i++){
@@ -199,7 +199,7 @@ class Bond_Parameters
           }
         }
       }
-      if(debug) cout << " * Compute qlm(i) (to be normalized) and neigh(i) DONE\n";
+      if(debug) cerr << " * Compute qlm(i) (to be normalized) and neigh(i) DONE\n";
 
       // Normalize qlm
       u=0;
@@ -208,7 +208,7 @@ class Bond_Parameters
           for(a=0;a<l_deg; a++) qlm[a][i] /= nb_list->neigh_anytype[u][i];
         }
       }
-      if(debug) cout << " * Normalization of qlm(i) DONE\n";
+      if(debug) cerr << " * Normalization of qlm(i) DONE\n";
 
       // compute a locally averaged version of qlm(i) within the 1st sphere
       u=0;
@@ -230,7 +230,7 @@ class Bond_Parameters
         }
         // qlm_ave(i) = (local average of qlm(i) ) COMPLETED
       }
-      if(debug) cout << " * Compute ql(m,i), ql(m,i)_ave and neigh(i) DONE\n";
+      if(debug) cerr << " * Compute ql(m,i), ql(m,i)_ave and neigh(i) DONE\n";
 
       //---- Compute ql~qlm(i)*qlm(i) ----//
       Q = 0.0; //  <ql>
@@ -254,7 +254,7 @@ class Bond_Parameters
       ss.str(std::string()); ss << string_bondorient_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
       fout.close();
-      if(debug) cout << " * Compute ql(i) (BOO) DONE\n";
+      if(debug) cerr << " * Compute ql(i) (BOO) DONE\n";
 
       //---- Compute ql_ave~qlm_ave(i)*qlm_ave(i) ----//
       Q = 0.0; //  <ql>
@@ -278,7 +278,7 @@ class Bond_Parameters
       ss.str(std::string()); ss << string_bondorient_out << "_ave.l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
       fout.close();
-      if(debug) cout << " * Compute ql(i)_ave (averaged BOO) DONE\n";
+      if(debug) cerr << " * Compute ql(i)_ave (averaged BOO) DONE\n";
 
       //---- Compute Cl_ij~qlm(i)*qlm(j) (I take the real part) ----//
       u=1; // C_ij runs over 2nd-sphere bonds.
@@ -296,7 +296,7 @@ class Bond_Parameters
         else Cl_ij[b] *= (ql_factor*ql_factor)/(ql[i]*ql[j]); // normalization factors
         // Cl_ij[b] done.
       }
-      if(debug) cout << " * Compute C_l(i,j) DONE\n";
+      if(debug) cerr << " * Compute C_l(i,j) DONE\n";
 
       //---- Compute ql_dot(i) (BOC) ----//
       u=1; // q_l^dot is the average of C_l(ij) over the 2nd sphere
@@ -311,7 +311,7 @@ class Bond_Parameters
           ql_dot[j] += fval*Cl_ij[b] / nb_list->neigh_anytype[u][j];  // take into account i>j
         }
       }
-      if(debug) cout << " * Compute ql_dot(i) (BOC) DONE\n";
+      if(debug) cerr << " * Compute ql_dot(i) (BOC) DONE\n";
 
       //---- Compute global average of ql_dot(i) ----//
       if(verbose) {
@@ -328,7 +328,7 @@ class Bond_Parameters
       ss.str(std::string()); ss << string_bondcorr_out << ".l" << l << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep << " " << Q << " " << sqrt((Q2-Q*Q)/N) << endl;
       fout.close();
-      if(debug) cout << " * Compute global average of BOC DONE\n";
+      if(debug) cerr << " * Compute global average of BOC DONE\n";
 
       if(verbose) {
         //---- Compute a Locally Confined version of the global BOC ~ average <ql_dot(i)> around i ----//
@@ -345,7 +345,7 @@ class Bond_Parameters
           fout << timestep << " " << i << " " << Ql_dot[i] << endl;
         }
         fout.close();
-        if(debug) cout << " * Compute local average of BOC DONE\n";
+        if(debug) cerr << " * Compute local average of BOC DONE\n";
       }
 
       //----- Compute Number of crystalline particles -----//
@@ -363,7 +363,7 @@ class Bond_Parameters
       ss.str(std::string()); ss << string_nxtal_out << ".l" << l << tag << ".dat"; fout.open(ss.str(), ios::app);
       fout << timestep << " " << m << endl;
       fout.close();
-      if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
+      if(debug) cerr << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
   }
 
 };

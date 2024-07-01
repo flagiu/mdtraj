@@ -17,7 +17,7 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, string_nnd_out, string_rmin_out, string_rmax_out, string_cluster_out;
+    string string_cn_out, string_nnd_out, string_rmin_out, string_rmax_out;
     string log_file, myName, tag;
     fstream fout;
     stringstream ss;
@@ -43,8 +43,9 @@ class Neigh_and_Bond_list
     vector<int> bond_list[MAX_NSPHERE];  // stores all bonds (i,j), encoded into an integer through ij2int()
 
     vector<int> cluster_of_particle, head_of_cluster, next_of_particle, size_of_cluster;
-    int num_clusters, maxClusterSize;
+    int sphere_for_clustering, num_clusters, maxClusterSize;
     vector<std::size_t> cluster_permutation_by_size;
+    vecflex<ntype> rcut_clustering, rcutSq_clustering;
 
     Neigh_and_Bond_list(){
       myName = "NEIGH & BOND List";
@@ -60,7 +61,7 @@ class Neigh_and_Bond_list
       int bond_encoding = ij2int(i,j,N);
       int bond_idx = indexOf<int>(&(bond_list[shell]), bond_encoding); // indexOf is defined in "utility.hpp"
       if(bond_idx==-1) {
-        cout << "ERROR: bond not found with (i,j)=("<<i<<","<<j<<")\n";
+        cerr << "ERROR: bond not found with (i,j)=("<<i<<","<<j<<")\n";
         exit(1);
       }
       return bond_idx;
@@ -90,7 +91,7 @@ class Neigh_and_Bond_list
       int u,t;
       string line, x;
       if(s_rcut=="__NOT_DEFINED__") {
-        cout << "*** Using default RCUT for all type pairs ***\n";
+        cerr << "*** Using default RCUT for all type pairs ***\n";
         for(u=0;u<Nsphere;u++) {
           for(t=0;t<nTypePairs;t++){
             rcut[u][t]=cutoffDefault[u][0];
@@ -99,16 +100,17 @@ class Neigh_and_Bond_list
         }
       }
       else {
-        if(debug) cout << "*** Reading RCUT from file "<<s_rcut<<" ***\n";
+        if(debug) cerr << "*** Reading RCUT from file "<<s_rcut<<" ***\n";
         fout.open(s_rcut, ios::in);
         if(fout.fail()) // checks to see if file opended
         {
-          cout << "ERROR: could not open RCUT file '"<<s_rcut<<"'\n\n";
+          cerr << "ERROR: could not open RCUT file '"<<s_rcut<<"'\n\n";
           exit(1);
         }
         for(u=0;u<Nsphere;u++)
         {
           getline(fout,line);
+          ss.str(std::string()); ss.clear(); // clear the string stream!
           ss << line;
           for(t=0;t<nTypePairs;t++)
           {
@@ -119,15 +121,52 @@ class Neigh_and_Bond_list
           ss.str(std::string()); ss.clear(); // clear the string stream!
         }
         fout.close();
-        if(debug) cout << "*** Reading RCUT file DONE ***\n";
+        if(debug) cerr << "*** Reading RCUT file DONE ***\n";
       }
-      cout << "#-------- RCUT summary --------#\n";
+      cerr << "#-------- RCUT summary --------#\n";
       for(u=0;u<Nsphere;u++)
       {
-        cout << "SPHERE u="<<u<<" : ";
+        cerr << "SPHERE u="<<u<<" : ";
         rcut[u].show();
       }
-      cout << "#------------------------------#\n";
+      cerr << "#------------------------------#\n";
+    }
+
+    void read_rcut_clustering_from_file(string s_rcut, vecflex<ntype> cutoffDefault)
+    {
+      int u,t;
+      string line, x;
+      if(s_rcut=="__NOT_DEFINED__") {
+        cerr << "*** Using default RCUT_CLUSTERING for all type pairs ***\n";
+        for(t=0;t<nTypePairs;t++){
+          rcut_clustering[t]=cutoffDefault[0];
+          rcutSq_clustering[t]=SQUARE(rcut_clustering[t]);
+        }
+      }
+      else {
+        if(debug) cerr << "*** Reading RCUT_CLUSTERING from file "<<s_rcut<<" ***\n";
+        fout.open(s_rcut, ios::in);
+        if(fout.fail()) // checks to see if file opended
+        {
+          cerr << "ERROR: could not open RCUT_CLUSTERING file '"<<s_rcut<<"'\n\n";
+          exit(1);
+        }
+        getline(fout,line);
+        ss.str(std::string()); ss.clear(); // clear the string stream!
+        ss << line;
+        for(t=0;t<nTypePairs;t++)
+        {
+          ss >> x;
+          rcut_clustering[t] = stof(x);
+          rcutSq_clustering[t] = SQUARE(rcut_clustering[t]);
+        }
+        ss.str(std::string()); ss.clear(); // clear the string stream!
+        fout.close();
+        if(debug) cerr << "*** Reading RCUT_CLUSTERING file DONE ***\n";
+      }
+      cerr << "#--- RCUT_CLUSTERING summary ---#\n";
+      rcut_clustering.show();
+      cerr << "#-------------------------------#\n";
     }
 
     void print_bond_summary(vector<ptype> ps)
@@ -152,7 +191,7 @@ class Neigh_and_Bond_list
       }
       fout << "#--------------------------------------------------------------#\n";
       fout.close();
-      //cout << " Summary of neighbour and bond lists saved into log file: "<<log_file <<tag <<endl;
+      //cerr << " Summary of neighbour and bond lists saved into log file: "<<log_file <<tag <<endl;
     }
 
     void sort_by_distance_3vec(vector<ntype>* dist, vector<int>* a, vector<vec>* b)
@@ -228,7 +267,7 @@ class Neigh_and_Bond_list
       vec rij, rij_mic;
       ntype rijSq, rijSq_mic;
       vector<ntype> bond_list_rijSq[MAX_NSPHERE];
-      if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
+      if(debug) cerr << "\n*** "<<myName<<" computation STARTED ***\n";
 
       //---- Reset counters and lists ----//
       for(u=0;u<Nsphere;u++)
@@ -247,7 +286,7 @@ class Neigh_and_Bond_list
           for(t=0;t<nTypePairs;t++) neigh[u][t][i]=0.;
         }
       }
-      if(debug) cout << " * Reset counters and lists DONE\n";
+      if(debug) cerr << " * Reset counters and lists DONE\n";
 
       //---- Build neighbour list (and save rij vectors) and compute rmax ----//
       rmaxSq=0.0;
@@ -301,8 +340,8 @@ class Neigh_and_Bond_list
       if(debug || verbose) print_bond_summary(ps); // to the log file
       if(debug)
       {
-        cout << " * Build neighbour and bond lists DONE\n";
-        cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
+        cerr << " * Build neighbour and bond lists DONE\n";
+        cerr << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
       }
       return;
     }
@@ -310,7 +349,7 @@ class Neigh_and_Bond_list
     //----------------- Coordination Number (done on 1st sphere) ------------//
     void init_coordnum(string string_cn_out_)
     {
-      if(debug) cout<<"*** Initializing COORDNUM within "<<myName<<"***\n";
+      if(debug) cerr<<"*** Initializing COORDNUM within "<<myName<<"***\n";
       string_cn_out = string_cn_out_;
       if(verbose)
       {
@@ -333,12 +372,12 @@ class Neigh_and_Bond_list
         if(neigh[u][j].length()!=N) neigh[u][j].resize(N);
       }
       //for(int i=0;i<N;i++) neigh[0][i]=0.0 ; // start counter
-      if(debug) cout<<"*** Initialization completed ***\n";
+      if(debug) cerr<<"*** Initialization completed ***\n";
     }
 
     void compute_coordnum(int timestep, vector<ptype> ps)
     {
-      if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " STARTED ***\n";
+      if(debug) cerr << "*** COORDNUM computation for timestep " << timestep << " STARTED ***\n";
       int i, j, k, t, u;
       ntype fval, rijSq;
       vec rij;
@@ -384,27 +423,27 @@ class Neigh_and_Bond_list
       for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].std()/sqrt(N);
       fout << endl;
       fout.close();
-      if(debug) cout << "*** COORDNUM computation for timestep " << timestep << " ENDED ***\n";
+      if(debug) cerr << "*** COORDNUM computation for timestep " << timestep << " ENDED ***\n";
     }
 
     //----------------- Nearest Neighbours distances (done on 1st sphere) ------------//
     void init_nearest_neigh_dists(string string_nnd_out_, int max_num_nnd_)
     {
       max_num_nnd=max_num_nnd_;
-      if(debug) cout<<"*** Initializing NearestNeighDistances within "<<myName<<"***\n";
-      cout<<"WARNING: NearestNeighDistances produces a large output file\n";
+      if(debug) cerr<<"*** Initializing NearestNeighDistances within "<<myName<<"***\n";
+      cerr<<"WARNING: NearestNeighDistances produces a large output file\n";
       string_nnd_out = string_nnd_out_;
       ss.str(std::string()); ss << string_nnd_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#TimeStep | ParticleIdx | ParticleType | (NeighbourType, DistanceSquared) for the first "<<max_num_nnd<<" neighs, sorted by distance | # cutoffs = ";
       for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
       fout<<endl;
       fout.close();
-      if(debug) cout<<"*** Initialization completed ***\n";
+      if(debug) cerr<<"*** Initialization completed ***\n";
     }
 
     void compute_nearest_neigh_dists(int timestep, vector<ptype> ps)
     {
-      if(debug) cout << "*** NearestNeighDistances computation for timestep " << timestep << " STARTED ***\n";
+      if(debug) cerr << "*** NearestNeighDistances computation for timestep " << timestep << " STARTED ***\n";
       int i, j, k, u;
       ntype rijSq;
 
@@ -421,13 +460,13 @@ class Neigh_and_Bond_list
       }
 
       fout.close();
-      if(debug) cout << "*** NearestNeighDistances computation for timestep " << timestep << " ENDED ***\n";
+      if(debug) cerr << "*** NearestNeighDistances computation for timestep " << timestep << " ENDED ***\n";
     }
 
     //---------------------- Minimum atomic distance ---------------------------------//
     void init_rmin(string string_rmin_out_)
     {
-      if(debug) cout<<"*** Initializing RMIN within "<<myName<<"***\n";
+      if(debug) cerr<<"*** Initializing RMIN within "<<myName<<"***\n";
       string_rmin_out = string_rmin_out_;
       ss.str(std::string()); ss << string_rmin_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "# Minimum atomic distance. # cutoffs = ";
@@ -440,7 +479,7 @@ class Neigh_and_Bond_list
     {
       ntype rSq, rminSq = rcut[0].max();
       int i,j, k;
-      if(debug) cout << "*** RMIN computation for timestep " << timestep << " STARTED ***\n";
+      if(debug) cerr << "*** RMIN computation for timestep " << timestep << " STARTED ***\n";
       for(i=0;i<N;i++){
         for(k=0;k<ps[i].neigh_list[0].size();k++){
           j = ps[i].neigh_list[0][k];
@@ -452,14 +491,14 @@ class Neigh_and_Bond_list
       ss.str(std::string()); ss << string_rmin_out << tag << ".dat"; fout.open(ss.str(), ios::app);
       fout << sqrt(rminSq) << endl;
       fout.close();
-      if(debug) cout << "*** RMIN computation for timestep " << timestep << " ENDED ***\n";
+      if(debug) cerr << "*** RMIN computation for timestep " << timestep << " ENDED ***\n";
       return;
     }
 
     //-------------------- Maximum atomic distance --------------------------------------//
     void init_rmax(string string_rmax_out_)
     {
-      if(debug) cout<<"*** Initializing RMAX within "<<myName<<"***\n";
+      if(debug) cerr<<"*** Initializing RMAX within "<<myName<<"***\n";
       string_rmax_out = string_rmax_out_;
       ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "# Maximum atomic distance within PBC. # cutoffs = ";
@@ -469,46 +508,77 @@ class Neigh_and_Bond_list
     }
     void print_rmax(int timestep)
     {
-      if(debug) cout << "*** PRINT RMAX for timestep " << timestep << " STARTED ***\n";
+      if(debug) cerr << "*** PRINT RMAX for timestep " << timestep << " STARTED ***\n";
       ss.str(std::string()); ss << string_rmax_out << tag << ".dat"; fout.open(ss.str(), ios::app);
       fout << sqrt(rmaxSq) << endl;
       fout.close();
-      if(debug) cout << "*** PRINT RMAX for timestep " << timestep << " ENDED ***\n";
+      if(debug) cerr << "*** PRINT RMAX for timestep " << timestep << " ENDED ***\n";
       return;
     }
 
     //-------------------- Clusterize --------------------------------------//
-    void init_clusterize(string string_cluster_out_){
-      string_cluster_out = string_cluster_out_;
+    void init_clusterize(string string_cluster_out, string s_rcut_clusters, vecflex<ntype> cutoffDefault){
+      rcut_clustering.resize(nTypePairs);
+      rcutSq_clustering.resize(nTypePairs);
+      read_rcut_clustering_from_file(s_rcut_clusters, cutoffDefault);
+      // decide which neighbour list sphere fits the specified cutoff:
+      sphere_for_clustering=-1;
+      int bad_tp=-1;
+      bool ok=false;
+      for(int sphere=0;(sphere<Nsphere)&&(!ok);sphere++){
+        ok=true;
+        for(int tp=0;tp<(nTypePairs)&&(ok);tp++){
+          if(rcut_clustering[tp]>rcut[sphere][tp]) {
+            ok=false;
+            bad_tp=tp;
+          }
+        }
+        if(ok) sphere_for_clustering=sphere;
+      }
+
+      if(!ok) {
+        cerr<<"ERROR: rcut_clustering[tp] > rcut[sphere][tp] for all spheres";
+        cerr<<"(at least for type pair tp="<<bad_tp<<")!\n";
+        cerr<<"       Please specify a smaller rcut_clustering or a larger rcut\n";
+        exit(1);
+      }
 
       ss.str(std::string()); ss << string_cluster_out << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout<<"# Timestep, num_clusters, max_cluster_size\n";
+      fout<<"# Timestep, num_clusters\n";
       fout.close();
 
-      ss.str(std::string()); ss << string_cluster_out << "_size" << tag << ".dat"; fout.open(ss.str(), ios::out);
+      ss.str(std::string()); ss << string_cluster_out << tag << "maxsize.dat"; fout.open(ss.str(), ios::out);
+      fout<<"# Timestep, max_cluster_size\n";
+      fout.close();
+
+      ss.str(std::string()); ss << string_cluster_out << ".size" << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout<<"# Timestep, cluster_size_for_each_cluster\n";
       fout.close();
     }
 
-    void clusterize(int timestep, vector<ptype> particles,
+    void clusterize(int timestep, vector<ptype> particles, string string_cluster_out,
                     vecflex<ntype> particle_observable, ntype p_o_threshold){
-      const int sphere=0; // look at neighbours in 1st sphere
-      const int num_bonds=bond_list[sphere].size(); //ordered list i<j
+      // clustering criterion: particle_observable[i]>p_o_threshold AND |r[i]-r[j]|<rcutSq_clustering
+      if(sphere_for_clustering<0) {
+        cerr<<"ERROR: bad initialization of sphere_for_clustering in init_clusterize() !\n";
+        exit(1);
+      }
+      const int num_bonds=bond_list[sphere_for_clustering].size(); //ordered list i<j
       if(particles.size()!=N){
-        cout<<"ERROR: size of particles != N\n";
-        cout<<"       size of particles = "<<particles.size()<<endl;
-        cout<<"                       N = "<<N<<endl;
+        cerr<<"ERROR: size of particles != N\n";
+        cerr<<"       size of particles = "<<particles.size()<<endl;
+        cerr<<"                       N = "<<N<<endl;
         exit(1);
       }
       if(particle_observable.length()!=N){
-        cout<<"ERROR: size of particle_observable < size of particles\n";
-        cout<<"       size of particle_observable = "<<particle_observable.length()<<endl;
-        cout<<"       size of particles           = "<<N<<endl;
+        cerr<<"ERROR: size of particle_observable < size of particles\n";
+        cerr<<"       size of particle_observable = "<<particle_observable.length()<<endl;
+        cerr<<"       size of particles           = "<<N<<endl;
         exit(1);
       }
       int i,j,k, typePair, ci,cj,ck, bond_idx,bond_encoded;
 
-      if(debug) cout<<"*** STARTED computation of CLUSTERS ***\n";
+      if(debug) cerr<<"*** STARTED computation of CLUSTERS ***\n";
 
       // cluster to which each particle belongs to
       // (N elements, whose value is in [0,num_clusters-1] when assigned, -1 otherwise)
@@ -525,7 +595,7 @@ class Neigh_and_Bond_list
       num_clusters=0;
       for(i=0;i<N;i++){
         if(particle_observable[i]>p_o_threshold){
-          //if(debug) cout<<"  New cluster from 1 particle: i,Oi = "<<i<<" "<<particle_observable[i]<<endl;
+          //if(debug) cerr<<"  New cluster from 1 particle: i,Oi = "<<i<<" "<<particle_observable[i]<<endl;
           cluster_of_particle[i]=num_clusters;
           head_of_cluster[num_clusters]=i;
           size_of_cluster[num_clusters]=1;
@@ -539,36 +609,36 @@ class Neigh_and_Bond_list
       }
 
       for(bond_idx=0;bond_idx<num_bonds;bond_idx++){
-        bond_encoded=bond_list[sphere][bond_idx];
+        bond_encoded=bond_list[sphere_for_clustering][bond_idx];
         i = int2i(bond_encoded,N);
         j = int2j(bond_encoded,N);
         ci=cluster_of_particle[i];
         cj=cluster_of_particle[j];
 
-        // Requirement: both particles > threshold,
+        // Requirement 1: Both particles' observable > threshold,
         if(particle_observable[i]<p_o_threshold) continue;
         if(particle_observable[j]<p_o_threshold) continue;
 
         /*
         if(debug) {
-          cout<<"  i,j,ci,cj,Oi,Oj = "<<i<<" "<<j<<" "<<" "<<ci<<" "<<cj<<
+          cerr<<"  i,j,ci,cj,Oi,Oj = "<<i<<" "<<j<<" "<<" "<<ci<<" "<<cj<<
               " "<<particle_observable[i]<<" "<<particle_observable[j]<<endl;
         }
         */
 
-        // select neighbours closer than a type-dependent cutoff
-        /* questo dovrebbe essere gia' incluso nella neighbor list!!
+        // Requirement 2: Closer than a type-dependent cutoff:
         typePair = types2int(particles[i].label, particles[j].label);
-        for(k=0;k<particles[i].neigh_list[sphere].size();k++){
-          if(j==particles[i].neigh_list[sphere][k]) break;
+        // // 1) find j in i's neighbour list
+        for(k=0;k<particles[i].neigh_list[sphere_for_clustering].size();k++){
+          if(j==particles[i].neigh_list[sphere_for_clustering][k]) break;
         }
-        if(particles[i].rijSq_list[sphere][k]>rcutSq[sphere][typePair]) continue;
-        */
+        // // 2) check if they are close enough for clustering
+        if(particles[i].rijSq_list[sphere_for_clustering][k]>rcutSq_clustering[typePair]) continue;
 
-        // Cases:
+        // Cases (update: actually only the case ci>=0 && cj>=0 will occurr):
         if(ci<0 && cj<0) {
           // new cluster of 2 elements (not possible!)
-          //if(debug) cout<<"  New cluster from 2 independent particles\n";
+          //if(debug) cerr<<"  New cluster from 2 independent particles\n";
           cluster_of_particle[i]=cluster_of_particle[j]=num_clusters;
           head_of_cluster[num_clusters]=i; //take arbitrarily i as head...
           next_of_particle[i]=j; //... and j as next of i
@@ -576,7 +646,7 @@ class Neigh_and_Bond_list
           num_clusters++; // num of clusters increases
         } else if(ci>=0 && cj<0) {
           // prepend particle j to cluster of particle i
-          //if(debug) cout<<"  Prepending to cluster: ci<--j\n";
+          //if(debug) cerr<<"  Prepending to cluster: ci<--j\n";
           cluster_of_particle[j]=ci;
           next_of_particle[j]=head_of_cluster[ci]; // add j as head...
           head_of_cluster[ci]=j; //... and set the former head as j's next
@@ -584,7 +654,7 @@ class Neigh_and_Bond_list
           //num_clusters+=0;
         } else if(ci<0 && cj>=0) {
           // same with i<-->j
-          //if(debug) cout<<"  Prepending to cluster: i-->cj\n";
+          //if(debug) cerr<<"  Prepending to cluster: i-->cj\n";
           cluster_of_particle[i]=cj;
           next_of_particle[i]=head_of_cluster[cj];
           head_of_cluster[cj]=i;
@@ -592,7 +662,7 @@ class Neigh_and_Bond_list
           //num_clusters+=0;
         } else if(ci>=0 && cj>=0 && ci!=cj){
           // merge 2 DIFFERENT clusters into one (move j's into i's)
-          //if(debug) cout<<"  Merging clusters: ci<--cj\n";
+          //if(debug) cerr<<"  Merging clusters: ci<--cj\n";
           // prepend particles in j's cluster to i's cluster
           int head_of_cluster_i=head_of_cluster[ci]; // store the head of i's cluster
           k=head_of_cluster[cj]; // take j's head...
@@ -628,7 +698,7 @@ class Neigh_and_Bond_list
 
       sort_clusters_by_size_and_get_maxsize();
 
-      ss.str(std::string()); ss << string_cluster_out << "_size" << tag << ".dat"; fout.open(ss.str(), ios::app);
+      ss.str(std::string()); ss << string_cluster_out << ".size" << tag << ".dat"; fout.open(ss.str(), ios::app);
       fout<<timestep<<" ";
       for(ck=0;ck<num_clusters;ck++){
         fout<<size_of_cluster[cluster_permutation_by_size[ck]]<<" ";
@@ -636,37 +706,41 @@ class Neigh_and_Bond_list
       fout<<endl;
       fout.close();
 
-      ss.str(std::string()); ss << string_cluster_out << tag << ".dat"; fout.open(ss.str(), ios::app);
-      fout<<timestep<<" "<<num_clusters<<" "<<maxClusterSize<<endl;
+      ss.str(std::string()); ss << string_cluster_out << tag << ".num.dat"; fout.open(ss.str(), ios::app);
+      fout<<timestep<<" "<<num_clusters<<endl;
       fout.close();
-      if(debug) cout<<"*** COMPLETED computation of CLUSTERS ***\n";
+
+      ss.str(std::string()); ss << string_cluster_out << tag << ".maxsize.dat"; fout.open(ss.str(), ios::app);
+      fout<<timestep<<" "<<maxClusterSize<<endl;
+      fout.close();
+      if(debug) cerr<<"*** COMPLETED computation of CLUSTERS ***\n";
 
     }
 
     int get_cluster_size(int cluster_index){
       if(cluster_index>=num_clusters) {
-        cout<<"ERROR: cluster_index >= num_clusters\n";
-        cout<<"       cluster_index = "<<cluster_index<<endl;
-        cout<<"       num_clusters  = "<<num_clusters<<endl;
+        cerr<<"ERROR: cluster_index >= num_clusters\n";
+        cerr<<"       cluster_index = "<<cluster_index<<endl;
+        cerr<<"       num_clusters  = "<<num_clusters<<endl;
         exit(1);
       }
       int k, count=0;
-      //if(debug) { cout<<"  Cluster "<<cluster_index<<" : ";}
+      //if(debug) { cerr<<"  Cluster "<<cluster_index<<" : ";}
       k=head_of_cluster[cluster_index];
       if(k>=0) {
         count++;
-        //if(debug) { cout<<k<<" ";}
+        //if(debug) { cerr<<k<<" ";}
         while(next_of_particle[k]>=0) {
           k=next_of_particle[k];
           count++;
-          //if(debug) { cout<<k<<" ";}
+          //if(debug) { cerr<<k<<" ";}
         }
       }
-      //if(debug) { cout<<endl;}
+      //if(debug) { cerr<<endl;}
       if(count!=size_of_cluster[cluster_index]) {
-        cout<<"ERROR: unexpected size of cluster "<<cluster_index<<":\n";
-        cout<<"       from get_cluster_size() : "<<count<<endl;
-        cout<<"       from size_of_cluster    : "<<size_of_cluster[cluster_index]<<endl;
+        cerr<<"ERROR: unexpected size of cluster "<<cluster_index<<":\n";
+        cerr<<"       from get_cluster_size() : "<<count<<endl;
+        cerr<<"       from size_of_cluster    : "<<size_of_cluster[cluster_index]<<endl;
         exit(1);
       }
       return count;

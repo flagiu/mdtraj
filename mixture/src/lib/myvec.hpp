@@ -17,7 +17,7 @@ public:
       idx++;
       if (idx >= N)
         {
-          cout << "Too many elements in comma initialization!\n";
+          cerr << "Too many elements in comma initialization!\n";
           exit(-1);
         }
       v[idx]=val;
@@ -28,7 +28,7 @@ public:
       v[0] = val;
       idx=0;
       return (*this);
-    } 
+    }
   inline ntype& operator[](const int& i)
   {
     return v[i];
@@ -47,18 +47,18 @@ public:
     }
   void show(void) const
     {
-      cout << "(";
+      cerr << "(";
       for (int i = 0; i < length(); i++) {
-        cout << v[i];
+        cerr << v[i];
         if (i < length()-1)
-          cout << ",";
+          cerr << ",";
         else
-          cout << ")\n";
+          cerr << ")\n";
       }
     }
   void show(const char *str) const
   {
-    cout << str << ": ";
+    cerr << str << ": ";
     show();
   }
 
@@ -71,7 +71,7 @@ public:
 
   // overloaded operations returning THIS myvec
   //// operations with vectors - returning *this
-  
+
   inline myvec<ntype,N>& operator=(const myvec<ntype,N>& other) //assignment
     {
       for (int i=0; i < length(); i++)
@@ -99,7 +99,7 @@ public:
     if (n!=0)
       (*this)/=n;
   }
-  
+
   ////operations with scalars - returning *this
   inline myvec<ntype,N>& operator *= (const ntype& sc)
   {
@@ -180,10 +180,10 @@ public:
 	vv[2] = v[0]*other[1]-v[1]*other[0];
       }
     else
-      cout << "[Error: vector product is valid only in 3D! Returning null vector.]\n";
+      cerr << "[Error: vector product is valid only in 3D! Returning null vector.]\n";
     return vv;
   }
-  
+
   void set_zero()
   {
     for (int i=0;i<length();i++)
@@ -259,7 +259,7 @@ public:
       }
     return vec;
   }
-  
+
   myvec<ntype,N> abs(void) const
   {
     myvec<ntype,N> vec;
@@ -267,7 +267,7 @@ public:
 	vec[i]= fabs(v[i]);
     return vec;
   }
-  
+
   ntype min(void) const
   {
     ntype m=v[0];
@@ -276,7 +276,7 @@ public:
 	  m = v[i];
     return m;
   }
-  
+
   ntype max(void) const
   {
     ntype m=v[0];
@@ -285,7 +285,7 @@ public:
 	  m = v[i];
     return m;
   }
-  
+
   myvec()
     {}
   ~myvec()

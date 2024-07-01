@@ -24,7 +24,7 @@ public:
       idx++;
       if (idx >= N)
         {
-          cout << "Too many elements in comma initialization!\n";
+          cerr << "Too many elements in comma initialization!\n";
           exit(-1);
         }
       v[idx]=val;
@@ -54,25 +54,25 @@ public:
     }
   void show(void) const
     {
-      cout << "(";
+      cerr << "(";
       for (int i = 0; i < length(); i++) {
-        cout << v[i];
+        cerr << v[i];
         if (i < length()-1)
-          cout << ", ";
+          cerr << ", ";
         else
-          cout << ")\n";
+          cerr << ")\n";
       }
     }
   void show(const char *str) const
   {
-    cout << str << ": ";
+    cerr << str << ": ";
     show();
   }
 
   template<class ntype2>
   void to_array(ntype2* arr, int N2) const
   {
-    if(length()!=N2) { cout << "[ERROR: trying to convert a vecflex to a different-sized array]\n"; exit(1); }
+    if(length()!=N2) { cerr << "[ERROR: trying to convert a vecflex to a different-sized array]\n"; exit(1); }
     for (int i=0;i<length();i++)
 	arr[i] = (ntype2)(v[i]);
   }
@@ -82,14 +82,14 @@ public:
 
   inline vecflex<ntype>& operator=(const vecflex<ntype>& other) //assignment
     {
-      if(length()!=other.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+      if(length()!=other.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
       for (int i=0; i < length(); i++)
         v[i] = other[i]; //cast to non-const
       return (*this);
     }
   inline vecflex<ntype>& operator += (const vecflex<ntype>& other)
   {
-    if(length()!=other.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+    if(length()!=other.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
     int i;
     for (i=0; i < length(); i++)
       v[i] += other[i];
@@ -97,7 +97,7 @@ public:
   }
   inline vecflex<ntype>& operator -= (const vecflex<ntype>& other)
   {
-    if(length()!=other.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+    if(length()!=other.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
     int i;
     for (i=0; i < length(); i++)
       v[i] -= other[i];
@@ -157,7 +157,7 @@ public:
 
   inline ntype operator*(vecflex<ntype>& other) //dot product
   {
-    if(length()!=other.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+    if(length()!=other.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
     ntype sum=0;
     for (int i=0;i<length();i++)
 	sum += v[i]*other[i];
@@ -176,7 +176,7 @@ public:
 
   inline vecflex<ntype> project_on(vecflex<ntype>& other)
   {
-    if(length()!=other.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+    if(length()!=other.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
     vecflex<ntype> versor;
     versor.resize( length() );
     ntype proj;
@@ -186,7 +186,7 @@ public:
   }
   inline vecflex<ntype> cross(const vecflex<ntype>& other)
   {
-     if(length()!=other.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+     if(length()!=other.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
     vecflex<ntype> vv;
     vv.resize( length() );
     if (length()==3 && other.length()==3)
@@ -196,7 +196,7 @@ public:
 	vv[2] = v[0]*other[1]-v[1]*other[0];
       }
     else
-      cout << "Error: vector product is valid only in 3D!\nReturning null vector.\n";
+      cerr << "Error: vector product is valid only in 3D!\nReturning null vector.\n";
     return vv;
   }
 
@@ -295,13 +295,13 @@ public:
 template<class ntype>
 inline vecflex<ntype>& operator+(vecflex<ntype> v1, vecflex<ntype> v2)
 { // binary vector sum
-  if(v1.length()!=v2.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+  if(v1.length()!=v2.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
   return v1+=v2;
 }
 template<class ntype>
 inline vecflex<ntype>& operator-(vecflex<ntype> v1, vecflex<ntype> v2)
 { // binary vector sum
-  if(v1.length()!=v2.length()) { cout << "[ERROR: different-sized vecflex]\n"; exit(1); }
+  if(v1.length()!=v2.length()) { cerr << "[ERROR: different-sized vecflex]\n"; exit(1); }
   return v1-=v2;
 }
 

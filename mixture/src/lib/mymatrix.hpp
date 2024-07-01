@@ -16,7 +16,7 @@ public:
       idx++;
       if (idx >= Nr*Nc)
         {
-          cout << "Too many elements in comma initialization!\n";
+          cerr << "Too many elements in comma initialization!\n";
           exit(-1);
         }
       M[(int)idx/Nc][idx%Nc]=val;
@@ -55,14 +55,14 @@ public:
   }
   void show() const
   {
-    cout<<"[\n";
+    cerr<<"[\n";
     for (int i=0;i<rows();i++)
 	M[i].show();
-    cout<<"]\n";
+    cerr<<"]\n";
   }
   void show(const char *str) const
   {
-    cout<<str<<": ";
+    cerr<<str<<": ";
     show();
   }
   void write(fstream& o) const
@@ -180,7 +180,7 @@ public:
   ntype tr() const
   {
     ntype t=0.0;
-    if (rows()!=cols()) { cout << "Error: trace is defined only for square matrices."<<endl; exit(1); }
+    if (rows()!=cols()) { cerr << "Error: trace is defined only for square matrices."<<endl; exit(1); }
     for(auto i=0;i<rows();i++) t+=M[i][i];
     return t;
   }
@@ -188,7 +188,7 @@ public:
   ntype det() const
   {
     ntype d=0.0;
-    if (rows()!=cols()) { cout << "Error: determinant is defined only for square matrices."<<endl; exit(1);}
+    if (rows()!=cols()) { cerr << "Error: determinant is defined only for square matrices."<<endl; exit(1);}
     if (Nr==1) d=M[0][0];
     else
       {
@@ -219,7 +219,7 @@ public:
   }
   void set_identity()
   {
-    if (rows()!=cols()) { cout << "Error: identity is defined only for square matrices."<<endl; exit(1);}
+    if (rows()!=cols()) { cerr << "Error: identity is defined only for square matrices."<<endl; exit(1);}
     for (auto i=0;i<rows();i++) {
       for (auto j=0;j<rows();j++) {
         if(i==j) set(i,j, 1.0);
@@ -231,7 +231,7 @@ public:
 
   void set_diag(myvec<ntype,Nr> vec)
   {
-    if (rows()!=cols()) { cout << "Error: diagonal is defined only for square matrices."<<endl; exit(1);}
+    if (rows()!=cols()) { cerr << "Error: diagonal is defined only for square matrices."<<endl; exit(1);}
     for (auto i=0;i<rows();i++) {
       for (auto j=0;j<rows();j++) {
         if(i==j) set(i,j, vec[i]);
@@ -244,7 +244,7 @@ public:
   myvec<ntype,Nr> diag() const
   {
     myvec<ntype,Nr> vec;
-    if (rows()!=cols()) { cout << "Error: diagonal is defined only for square matrices."<<endl; exit(1);}
+    if (rows()!=cols()) { cerr << "Error: diagonal is defined only for square matrices."<<endl; exit(1);}
     for (auto i=0;i<rows();i++) vec[i] = M[i][i];
     return vec;
   }
@@ -255,7 +255,7 @@ public:
     ntype de;
     if (rows()==2 && cols()==2) {
        de = M[0][0]*M[1][1] - M[0][1]*M[1][0];
-       if( de==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+       if( de==0.0) { cerr << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
        m[0][0] =  M[1][1]/de;
        m[0][1] = -M[0][1]/de;
        m[1][0] = -M[1][0]/de;
@@ -284,7 +284,7 @@ public:
       H =-(a*f-c*d);
       I = (a*e-b*d);
       de = a*A + b*B + c*C;
-      if( de==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+      if( de==0.0) { cerr << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
       m[0][0]=A/de; // now transpose the entries!!
       m[1][0]=B/de;
       m[2][0]=C/de;
@@ -298,7 +298,7 @@ public:
       // Cayley method
       /*
        d = det();
-       if( d==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+       if( d==0.0) { cerr << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
        ntype trace, traceSq;
        mymatrix<ntype,Nr,Nc> self, sq, eye;
        self = (*this);
@@ -309,7 +309,7 @@ public:
        m = ( ( 0.5*(trace*trace - traceSq)*eye ) - ( trace*self ) + sq ) / d;
        */
     }
-    else { cout << "[ERROR: inverse() not yet implemented for " << rows() << "x" << cols() << " matrices.]"<<endl; exit(1); }
+    else { cerr << "[ERROR: inverse() not yet implemented for " << rows() << "x" << cols() << " matrices.]"<<endl; exit(1); }
     return m;
   }
 };
@@ -420,11 +420,11 @@ public:
   }
   void show()
   {
-    cout<<"["<<M[0][0]<<"]"<<endl;
+    cerr<<"["<<M[0][0]<<"]"<<endl;
   }
   void show(const char *str)
   {
-    cout<<str<<": ";
+    cerr<<str<<": ";
     show();
   }
   ntype det()
@@ -434,7 +434,7 @@ public:
   const mymatrix<ntype,1,1> inverse() const
   {
     mymatrix<ntype,1,1> m;
-    if( M[0][0]==0.0) { cout << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
+    if( M[0][0]==0.0) { cerr << "[ERROR: this matrix is not invertible.]"<<endl; show(); exit(1); }
     m[0][0] = 1.0/M[0][0];
     return m;
   }
