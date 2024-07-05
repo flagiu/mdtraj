@@ -14,7 +14,7 @@
 #include "lib/logtimesteps.hpp"
 using namespace std;
 
-const string root_path="/home/flavio/programmi/mdtraj/mixture_dev";
+const string root_path="/home/fg/programs/mdtraj/mixture";
 #define MAX_N_TYPES 5
 #define MAX_N_ANGMOM 5
 enum class FileType {

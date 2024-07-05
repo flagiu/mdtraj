@@ -4,7 +4,7 @@ using namespace std;
 //-------- Dynamic Structure Factor S(q,t), a.k.a. Intermediate Scattering Function F(q,t) -----------------------//
 //-------- Currently treats all particles as equal -----------------------//
 #ifndef _SQ_H_
-const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
+const string qvectors_path="/home/fg/programs/mdtraj/QVECTORS";
 #define MAX_QVECTORS 300
 #endif
 
