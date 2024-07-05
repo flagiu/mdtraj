@@ -543,15 +543,15 @@ class Neigh_and_Bond_list
         exit(1);
       }
 
-      ss.str(std::string()); ss << string_cluster_out << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout<<"# Timestep, num_clusters\n";
-      fout.close();
-
-      ss.str(std::string()); ss << string_cluster_out << tag << "maxsize.dat"; fout.open(ss.str(), ios::out);
+      ss.str(std::string()); ss<<string_cluster_out<<".maxsize"<<tag<<".dat"; fout.open(ss.str(), ios::out);
       fout<<"# Timestep, max_cluster_size\n";
       fout.close();
 
-      ss.str(std::string()); ss << string_cluster_out << ".size" << tag << ".dat"; fout.open(ss.str(), ios::out);
+      ss.str(std::string()); ss<<string_cluster_out<<".num"<<tag<<".dat"; fout.open(ss.str(), ios::out);
+      fout<<"# Timestep, num_clusters\n";
+      fout.close();
+
+      ss.str(std::string()); ss<<string_cluster_out<<".size"<<tag<<".dat"; fout.open(ss.str(), ios::out);
       fout<<"# Timestep, cluster_size_for_each_cluster\n";
       fout.close();
     }
@@ -577,8 +577,10 @@ class Neigh_and_Bond_list
         exit(1);
       }
       int i,j,k, typePair, ci,cj,ck, bond_idx,bond_encoded;
+      bool found;
 
       if(debug) cerr<<"*** STARTED computation of CLUSTERS ***\n";
+      if(debug) cerr<<"  string_cluster_out = "<<string_cluster_out<<endl;
 
       // cluster to which each particle belongs to
       // (N elements, whose value is in [0,num_clusters-1] when assigned, -1 otherwise)
@@ -590,10 +592,12 @@ class Neigh_and_Bond_list
       if(next_of_particle.size()<N) next_of_particle.resize(N);
       // size of cluster (num_clusters<=N elements, whose value is non-negative when assigned, 0 otherwise)
       if(size_of_cluster.size()<N) size_of_cluster.resize(N);
+      if(debug) cerr<<"  Resize check Done\n";
 
       // start with 1 single-particle-cluster for each crystalline particle
       num_clusters=0;
       for(i=0;i<N;i++){
+        next_of_particle[i]=-1;   // particle i don't have any next
         if(particle_observable[i]>p_o_threshold){
           //if(debug) cerr<<"  New cluster from 1 particle: i,Oi = "<<i<<" "<<particle_observable[i]<<endl;
           cluster_of_particle[i]=num_clusters;
@@ -603,10 +607,11 @@ class Neigh_and_Bond_list
         } else {
           cluster_of_particle[i]=-1; // the particle doesn't belong to any cluster
           head_of_cluster[i]=-1;    // the clusters don't have any head (they don't exist)
-          next_of_particle[i]=-1;   // particle i don't have any next
           size_of_cluster[i]=0;
         }
       }
+
+      if(debug) cerr<<"  Single-particle clusters initialization Done\n";
 
       for(bond_idx=0;bond_idx<num_bonds;bond_idx++){
         bond_encoded=bond_list[sphere_for_clustering][bond_idx];
@@ -621,7 +626,7 @@ class Neigh_and_Bond_list
 
         /*
         if(debug) {
-          cerr<<"  i,j,ci,cj,Oi,Oj = "<<i<<" "<<j<<" "<<" "<<ci<<" "<<cj<<
+          cerr<<"  bond_idx,i,j,ci,cj,Oi,Oj = "<<bond_idx<<" "<<i<<" "<<j<<" "<<" "<<ci<<" "<<cj<<
               " "<<particle_observable[i]<<" "<<particle_observable[j]<<endl;
         }
         */
@@ -629,8 +634,13 @@ class Neigh_and_Bond_list
         // Requirement 2: Closer than a type-dependent cutoff:
         typePair = types2int(particles[i].label, particles[j].label);
         // // 1) find j in i's neighbour list
-        for(k=0;k<particles[i].neigh_list[sphere_for_clustering].size();k++){
-          if(j==particles[i].neigh_list[sphere_for_clustering][k]) break;
+        found=false;
+        for(k=0;(!found) && k<particles[i].neigh_list[sphere_for_clustering].size();k++){
+          if(j==particles[i].neigh_list[sphere_for_clustering][k]) found=true;
+        }
+        if(!found) {
+          cerr<<"ERROR: i's list does not contain neighbour j. i="<<i<<" j="<<j<<endl;
+          exit(1);
         }
         // // 2) check if they are close enough for clustering
         if(particles[i].rijSq_list[sphere_for_clustering][k]>rcutSq_clustering[typePair]) continue;
@@ -696,9 +706,13 @@ class Neigh_and_Bond_list
 
       }
 
+      if(debug) cerr<<"  Clusterization Done\n";
+
       sort_clusters_by_size_and_get_maxsize();
 
-      ss.str(std::string()); ss << string_cluster_out << ".size" << tag << ".dat"; fout.open(ss.str(), ios::app);
+      if(debug) cerr<<"  Sorting by size Done\n";
+
+      ss.str(std::string()); ss<<string_cluster_out<<".size"<<tag<<".dat"; fout.open(ss.str(), ios::app);
       fout<<timestep<<" ";
       for(ck=0;ck<num_clusters;ck++){
         fout<<size_of_cluster[cluster_permutation_by_size[ck]]<<" ";
@@ -706,13 +720,16 @@ class Neigh_and_Bond_list
       fout<<endl;
       fout.close();
 
-      ss.str(std::string()); ss << string_cluster_out << tag << ".num.dat"; fout.open(ss.str(), ios::app);
+      ss.str(std::string()); ss<<string_cluster_out<<".num"<<tag<<".dat"; fout.open(ss.str(), ios::app);
       fout<<timestep<<" "<<num_clusters<<endl;
       fout.close();
 
-      ss.str(std::string()); ss << string_cluster_out << tag << ".maxsize.dat"; fout.open(ss.str(), ios::app);
+      ss.str(std::string()); ss<<string_cluster_out<<".maxsize"<<tag<<".dat"; fout.open(ss.str(), ios::app);
       fout<<timestep<<" "<<maxClusterSize<<endl;
       fout.close();
+
+      if(debug) cerr<<"  Output Done\n";
+
       if(debug) cerr<<"*** COMPLETED computation of CLUSTERS ***\n";
 
     }

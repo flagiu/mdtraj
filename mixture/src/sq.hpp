@@ -2,7 +2,7 @@
 #define _SQ_H_
 using namespace std;
 //------------------------------- Static Structure Factor ----------------------------------//
-const string qvectors_path="/home/fg/programs/mdtraj/QVECTORS";
+const string qvectors_path="/home/flavio/programmi/mdtraj/QVECTORS";
 #define MAX_QVECTORS 300
 template <class ntype, class ptype>
 class SQ_Calculator

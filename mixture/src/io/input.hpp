@@ -70,15 +70,15 @@ removeRotDof()
   vec u, xdir;
   ntype a_xy_radius, c, s, t, angle;
   if(debug) cerr <<"\n*------ Removing the 3 rotational degrees of freedom ------*\n";
-  if(debug) cerr <<"Pss: Remember that box=(a|b|c)\n";
+  if(debug) cerr <<"  Pss: Remember that box=(a|b|c)\n";
   // Remove rounding errors
   if( abs(box[1][0])<1e-15 ) box[1][0]=0.0;
   if( abs(box[2][0])<1e-15 ) box[2][0]=0.0;
   if( abs(box[2][1])<1e-15 ) box[2][1]=0.0;
-  if(debug) { cerr << "Raw box = "; box.show(); }
+  if(debug) { cerr << "  Raw box = "; box.show(); }
   if( box[1][0]==box[2][0]==box[2][1]==0.0 ) {
     if(debug) {
-      cerr <<"Box has already the correct <=6 degrees of freedom!\n";
+      cerr <<"  Box has already the correct <=6 degrees of freedom!\n";
       cerr <<"*----------------------------------------------------------*\n";
     }
     return;
@@ -87,33 +87,33 @@ removeRotDof()
   // 1) Align a to x-axis
   // u=(0,az,-ay) or (0,-az,ay) is the axis of rotation (to be normalized)
 
-  if(debug) { cerr << "Raw volume (with sign)= "<< box.det()<<endl; }
+  if(debug) { cerr << "  Raw volume (with sign)= "<< box.det()<<endl; }
   u << 0.0, box[2][0], -1*box[1][0];
-  if(debug) { cerr << "  axis1 = "; u.show(); }
+  if(debug) { cerr << "    axis1 = "; u.show(); }
   // c = cos(angle) = ax/|a| ; s = sin(angle)
   c = box[0][0] / sqrt( box[0][0]*box[0][0] + box[1][0]*box[1][0] + box[2][0]*box[2][0] );
   s = sqrt( 1.0 - c*c ); // + or - ? with the choice of u=(0,az,-ay) it should be +
-  if(debug) { cerr << "  cos1 = "<< c << endl; }
-  if(debug) { cerr << "  sin1 = "<< s << endl; }
+  if(debug) { cerr << "    cos1 = "<< c << endl; }
+  if(debug) { cerr << "    sin1 = "<< s << endl; }
   // build the rotation matrix
   R1 = rotation_matrix_axis_cossin( u, c, s ); // declared in lib/matrix.hpp
   if(box.det()<0) R1 *= -1.; // invert to go back to right-hand rule
-  if(debug) { cerr << "Rotation matrix R1 = "; R1.show(); }
+  if(debug) { cerr << "  Rotation matrix R1 = "; R1.show(); }
   box = R1*box;
-  if(debug) { cerr << "box (after R1) = "; box.show(); }
+  if(debug) { cerr << "  box (after R1) = "; box.show(); }
   // 2) Rotate around the x-axis to bring the new b within the x-y plane
   xdir << 1.0, 0.0, 0.0;
-  if(debug) { cerr << "  axis2 (x-axis) = "; xdir.show(); }
+  if(debug) { cerr << "    axis2 (x-axis) = "; xdir.show(); }
   // tan(angle) = -bz / by
   angle = -atan2( box[2][1], box[1][1] );
-  if(debug) { cerr << "  angle2 (deg) = "<<angle*180/M_PI<<endl; }
+  if(debug) { cerr << "    angle2 (deg) = "<<angle*180/M_PI<<endl; }
   R2 = rotation_matrix_axis_cossin( xdir, cos(angle), sin(angle) );
-  if(debug) { cerr << "Rotation matrix R2 = "; R2.show(); }
+  if(debug) { cerr << "  Rotation matrix R2 = "; R2.show(); }
   box = R2*box;
   if( abs(box[1][1])<1e-15 ) box[1][1]=0.0; // remove rounding errors
   if( abs(box[1][1])<1e-15 ) box[2][1]=0.0;
   if( abs(box[2][2])<1e-15 ) box[2][2]=0.0;
-  if(debug) { cerr << "box (after R2) = "; box.show(); }
+  if(debug) { cerr << "  box (after R2) = "; box.show(); }
   // 3) Apply both rotations to each particle
   Rtot=R2*R1;
   for(auto &p: ps) p.r = Rtot*p.r;

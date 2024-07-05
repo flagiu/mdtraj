@@ -14,7 +14,7 @@
 #include "lib/logtimesteps.hpp"
 using namespace std;
 
-const string root_path="/home/fg/programs/mdtraj/mixture";
+const string root_path="/home/flavio/programmi/mdtraj/mixture";
 #define MAX_N_TYPES 5
 #define MAX_N_ANGMOM 5
 enum class FileType {
@@ -379,10 +379,10 @@ public:
 
       if(i>1 && dtframe==0) {
         if(ignore_double_frames){
-          cerr<<"["<<myName<<" Warning] Skipping timestep= "<<timestep<<" because dt==0 and ignore_double_frames==true\n";
+          cerr<<"["<<myName<<" Warning] Skipping timestep= "<<timestep<<" because dt==0 and ignore_double_frames=="<<ignore_double_frames<<"\n";
           continue; //!!!
         }else{
-          cerr<<"["<<myName<<" Error] dt==0 at timestep= "<<timestep<<" and ignore_double_frames==true\n";
+          cerr<<"["<<myName<<" Error] dt==0 at timestep= "<<timestep<<" and ignore_double_frames=="<<ignore_double_frames<<"\n";
           exit(1);
         }
       }
@@ -464,11 +464,11 @@ public:
         bond_parameters[l_]->init(n_b_list, l_list[l_], qldot_th, s_bondorient, s_bondcorr,
           s_nxtal, tag, debug, verbose);
         if(c_clusters) {
-          ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+          ss.str(std::string()); ss<<s_clusters<<s_l_list[l_];
           n_b_list->init_clusterize( ss.str(),
                                     s_rcut_clusters, defaultCutoff[0]);
           if(out_lammpsdump) {
-            ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+            ss.str(std::string()); ss<<s_clusters<<s_l_list[l_];
             init_out_lammpsdump(ss.str());
           }
         }
@@ -518,10 +518,10 @@ public:
     if(c_rmin) n_b_list->compute_rmin(timestep, ps);
     if(c_rmax) n_b_list->print_rmax(timestep);
     if(c_bondorient) {
-      for(auto l_=0;l_<num_l;l_++){
+      for(int l_=0;l_<num_l;l_++){
         bond_parameters[l_]->compute(timestep, ps);
         if(c_clusters) {
-          ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+          ss.str(std::string()); ss<<s_clusters<<s_l_list[l_];
           n_b_list->clusterize(timestep, ps, ss.str(),
                               bond_parameters[l_]->ql_dot, bond_parameters[l_]->qldot_th);
           if(out_lammpsdump){ // visualization of clusters
@@ -534,7 +534,7 @@ public:
               if(c>=0) ps[i].label = (int)(n_b_list->cluster_permutation_by_size[c]);
               else     ps[i].label = c;
             }
-            ss.str(string()); ss<<s_clusters<<s_l_list[l_];
+            ss.str(std::string()); ss<<s_clusters<<s_l_list[l_];
             print_out_lammpsdump(ss.str());
             for(auto i=0;i<ps.size();i++) ps[i].label=original_labels[i]; //!!!
           }
@@ -594,7 +594,24 @@ public:
   }
 
   void get_angular_momentum_list() {
-    //string l_string = std::to_string(l);
+    // split the input value into digits, e.g. l=46 into a vector containing 4,6
+    string segment;
+    stringstream sss;
+    ss.str(std::string()); ss<<std::to_string(l);
+    int i=0;
+    while(std::getline(ss, segment, '_') && i<MAX_N_ANGMOM)
+    {
+      // vector of integers
+      l_list[i] = stoi(segment);
+      // vector of file tags
+      sss.str(std::string()); sss<<".l"<<stoi(segment);
+      s_l_list[i] = sss.str();
+      i++;
+    }
+    ss.clear(); //!!!
+    num_l=i;
+
+    /* // old method
     if(l>0&&l<=6){
       num_l=1;
       l_list[0]=l;
@@ -606,16 +623,17 @@ public:
       cerr<<"[ "<<myName<<" Error ] l="<<l<<" not supported. Multi-angular-momentum is still experimental.\n";
       exit(1);
     }
-
-    for(int l_=0;l_<num_l;l_++){
-      ss.str(std::string()); ss << ".l" << l_list[l_];
-      s_l_list[l_] = ss.str();
-    }
+    */
 
     if(debug) {
       cerr<<"[ "<<myName<<" ] Set angular momentum list:";
       for(int l_=0;l_<num_l;l_++){
         cerr<<" "<<l_list[l_];
+      }
+      cerr<<endl;
+      cerr<<"[ "<<myName<<" ] with the following file tags:";
+      for(int l_=0;l_<num_l;l_++){
+        cerr<<" "<<s_l_list[l_];
       }
       cerr<<endl;
     }

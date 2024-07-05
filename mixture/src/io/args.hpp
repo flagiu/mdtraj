@@ -72,8 +72,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -sqt \t Compute the Dynamic Structure Factor S(q,t). ONLY FOR CUBIC BOXES. CONSIDERS ALL ATOMS AS SAME TYPE. INPUT: q_mod_min q_mod_max q_mod_step. OUTPUT: %s.{traj,ave}. [default %d %d %d]", s_sqt.c_str(), qmodmin,qmodmax,qmodstep);
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -l \t Angular momentum for the computed bond order parameters (2<=l<=6).");
-  fprintf(stderr, "\n       You can use combinations to do multiple computations in the same run");
-  fprintf(stderr, "\n       (e.g.: l=46 will execute both l=4 and l=6) [default l=%d].", l);
+  fprintf(stderr, "\n       You can use combinations of digits to do multiple computations in the same run");
+  fprintf(stderr, "\n       (e.g. l=46 will execute both l=4 and l=6) [default l=%d].", l);
   fprintf(stderr, "\n -rcut \t File containing <=%d lines of cutoff radii for each pair of atom types, each line ordered by type pair (e.g. for 3 types: r00 r01 r02 r11 r12 r22).", MAX_NSPHERE);
   fprintf(stderr, "\n       \t They will be used for cutoff functions in neighbour-spheres. No need to specify higher order spheres if not required for calculation. [default %.2f;%.2f;%.2f for every pair].", defaultCutoff[0][0], defaultCutoff[1][0], defaultCutoff[2][0]);
   fprintf(stderr, "\n -p1half \t Half the power for the radial cutoff function f(x) = (1-x^p1)/(1-x^p2) with p2=2*p1, p1=2*p1half. Must be integer [default %d].", p1half);

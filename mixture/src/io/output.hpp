@@ -51,7 +51,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 init_out_lammpsdump(string string_out) {
   ss.str(std::string()); ss << string_out << tag << ".dump"; fout.open(ss.str(), ios::out);
-  if(debug) cerr<<"[ "<<myName<<" ] Initializing "<<ss.str()<<endl;
+  if(debug) cerr<<"[ "<<myName<<" ] Initializing trajectory "<<ss.str()<<endl;
   fout.close();
 }
 
@@ -59,7 +59,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 print_out_lammpsdump(string string_out) {
   ss.str(std::string()); ss << string_out << tag << ".dump"; fout.open(ss.str(), ios::app);
-  if(debug) cerr<<"[ "<<myName<<" ] Appending to "<<ss.str()<<endl;
+  if(debug) cerr<<"[ "<<myName<<" ] Appending trajectory to "<<ss.str()<<endl;
   fout<<"ITEM: TIMESTEP\n";
   fout<<timestep<<endl;
 
