@@ -18,6 +18,13 @@ parser.add_argument('--y', type=int, default=1, required=False,
                      help="Index of the column of y data (1,2,...). [default: %(default)s]"
 )
 
+parser.add_argument('--xlabel', type=str, default="x", required=False,
+                     help="Label for x. [default: %(default)s]")
+parser.add_argument('--ylabel', type=str, default="y", required=False,
+                     help="Label for y. [default: %(default)s]")
+parser.add_argument('--tlabel', type=str, default="t", required=False,
+                     help="Label for t. [default: %(default)s]")
+
 parser.add_argument('--fskip0', type=float, default=0.0, required=False,
                      help="Fraction of data to be skipped from the start. [default: %(default)s]"
 )
@@ -27,8 +34,8 @@ parser.add_argument('--fskip1', type=float, default=0.0, required=False,
 
 args = parser.parse_args()
 
-plt.xlabel('x')
-plt.ylabel('y')
+plt.xlabel(r"%s"%args.xlabel)
+plt.ylabel(r"%s"%args.ylabel)
 
 t,x  = np.loadtxt(args.fileX, unpack=True, usecols=(0,args.x), comments="#")
 ty,y = np.loadtxt(args.fileY, unpack=True, usecols=(0,args.y), comments="#")
@@ -45,6 +52,6 @@ y = y[n0:n-n1]
 
 #plt.plot(x, y, "k-", alpha=0.7)
 plt.scatter(x, y, marker="x", c=t, alpha=0.3)
-plt.colorbar().set_label("t")
+plt.colorbar().set_label(r"%s"%args.tlabel)
 
 plt.show()

@@ -18,7 +18,7 @@ const string root_path="/home/flavio/programmi/mdtraj/mixture";
 #define MAX_N_TYPES 5
 #define MAX_N_ANGMOM 5
 enum class FileType {
-  NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN
+  NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN, RUNNER
 };
 
 template<class ntype, class ptype>
@@ -316,6 +316,7 @@ public:
   void read_jmd_frame(fstream &i, bool resetN);
   void read_lammpstrj_frame(fstream &i, bool resetN);
   void read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame);
+  void read_runner_frame(fstream &i, bool resetN);
 
   //------- COMPUTE things ---------------//
 
@@ -594,17 +595,18 @@ public:
   }
 
   void get_angular_momentum_list() {
-    // split the input value into digits, e.g. l=46 into a vector containing 4,6
+    // split the input INTEGER into digits, e.g. l=46 into a vector containing 4,6
     string segment;
     stringstream sss;
     ss.str(std::string()); ss<<std::to_string(l);
-    int i=0;
-    while(std::getline(ss, segment, '_') && i<MAX_N_ANGMOM)
-    {
+    int i=0, ic;
+    char c;
+    while (ss.get(c) && i<MAX_N_ANGMOM){
       // vector of integers
-      l_list[i] = stoi(segment);
+      ic = c - '0';
+      l_list[i] = ic;//stoi(segment);
       // vector of file tags
-      sss.str(std::string()); sss<<".l"<<stoi(segment);
+      sss.str(std::string()); sss<<".l"<<ic;//stoi(segment);
       s_l_list[i] = sss.str();
       i++;
     }

@@ -4,63 +4,66 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_frame(fstream &i, bool resetN, int frameIdx)
-  {
-    if(resetN){
-      nTypes=0;
-      for(auto a=0;a<MAX_N_TYPES;a++) Nt[a]=0;
-    }
-    switch(filetype)
-    {
-      case FileType::XYZ:
-        read_xyz_frame(i, resetN);
-        break;
-      case FileType::XYZ_CP2K:
-        read_xyz_cp2k_frame(i, resetN);
-        break;
-      case FileType::XDATCAR:
-        read_xdatcar_frame(i, resetN, false);
-        break;
-      case FileType::XDATCARV:
-        read_xdatcar_frame(i, resetN, true);
-        break;
-      case FileType::CONTCAR:
-        read_contcar_frame(i, resetN);
-        timestep+=dtframe; // artificial time
-        break;
-      case FileType::POSCAR:
-        read_poscar_frame(i, resetN);
-        timestep+=dtframe; // artificial time
-        break;
-      case FileType::ALPHANES:
-        read_alphanes_frame(i, resetN);
-        timestep+=dtframe; // artificial time
-        break;
-      case FileType::ALPHANES9:
-        read_alphanes9_frame(i, resetN);
-        timestep+=dtframe; // artificial time
-        break;
-      case FileType::JMD:
-        read_jmd_frame(i, resetN);
-        break;
-      case FileType::LAMMPSTRJ:
-        read_lammpstrj_frame(i, resetN);
-        break;
-      case FileType::YUHAN:
-        read_yuhan_frame(i, resetN, frameIdx==0);
-        break;
-      default:
-        cerr << "[ERROR: filetype = " << static_cast<int>(filetype) << " not recognized]\n";
-        exit(1);
-    }
-    if(remove_rot_dof) removeRotDof();
-    boxInv = box.inverse();
-    set_L_from_box();
-    if(c_sq || c_sqt)
-    {
-      for(auto &p: ps) p.s = boxInv * p.r; // pre-compute fractional coordinates
-    }
-    if(debug) cerr << "  Read frame at timestep " << timestep << " DONE.\n";
+{
+  if(resetN){
+    nTypes=0;
+    for(auto a=0;a<MAX_N_TYPES;a++) Nt[a]=0;
   }
+  switch(filetype)
+  {
+    case FileType::XYZ:
+      read_xyz_frame(i, resetN);
+      break;
+    case FileType::XYZ_CP2K:
+      read_xyz_cp2k_frame(i, resetN);
+      break;
+    case FileType::XDATCAR:
+      read_xdatcar_frame(i, resetN, false);
+      break;
+    case FileType::XDATCARV:
+      read_xdatcar_frame(i, resetN, true);
+      break;
+    case FileType::CONTCAR:
+      read_contcar_frame(i, resetN);
+      timestep+=dtframe; // artificial time
+      break;
+    case FileType::POSCAR:
+      read_poscar_frame(i, resetN);
+      timestep+=dtframe; // artificial time
+      break;
+    case FileType::ALPHANES:
+      read_alphanes_frame(i, resetN);
+      timestep+=dtframe; // artificial time
+      break;
+    case FileType::ALPHANES9:
+      read_alphanes9_frame(i, resetN);
+      timestep+=dtframe; // artificial time
+      break;
+    case FileType::JMD:
+      read_jmd_frame(i, resetN);
+      break;
+    case FileType::LAMMPSTRJ:
+      read_lammpstrj_frame(i, resetN);
+      break;
+    case FileType::YUHAN:
+      read_yuhan_frame(i, resetN, frameIdx==0);
+      break;
+    case FileType::RUNNER:
+      read_runner_frame(i, resetN);
+      break;
+    default:
+      cerr << "[ERROR: filetype = " << static_cast<int>(filetype) << " not recognized]\n";
+      exit(1);
+  }
+  if(remove_rot_dof) removeRotDof();
+  boxInv = box.inverse();
+  set_L_from_box();
+  if(c_sq || c_sqt)
+  {
+    for(auto &p: ps) p.s = boxInv * p.r; // pre-compute fractional coordinates
+  }
+  if(debug) cerr << "  Read frame at timestep " << timestep << " DONE.\n";
+}
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
@@ -126,214 +129,302 @@ removeRotDof()
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_xyz_frame(fstream &i, bool resetN)
+{
+  // any string labels, but must be ordered by type
+  string line, a,b,c,d, cur_type_str;
+  getline(i,line); // first line
+  istringstream(line) >> a;
+  N = stoi(a);
+  if(debug) cerr << "\n  Line 1: " << N << " atoms\n";
+  getline(i,line); // second line
+  istringstream(line) >> b >> c >> d;
+  timestep = stoi(d);
+  if(debug) cerr << "  Line 2: Timestep " << timestep << endl;
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines / (N+2);
+  }
+  int cur_type=0;
+  for(int j=0;j<N;j++)
   {
-    // any string labels, but must be ordered by type
-    string line, a,b,c,d, cur_type_str;
-    getline(i,line); // first line
-    istringstream(line) >> a;
-    N = stoi(a);
-    if(debug) cerr << "\n  Line 1: " << N << " atoms\n";
-    getline(i,line); // second line
-    istringstream(line) >> b >> c >> d;
-    timestep = stoi(d);
-    if(debug) cerr << "  Line 2: Timestep " << timestep << endl;
-    if(resetN) {
-      ps.resize(N);
-      nframes = nlines / (N+2);
-    }
-    int cur_type=0;
-    for(int j=0;j<N;j++)
+    getline(i, line);
+    istringstream(line) >> a >> b >> c >> d;
+    //try { p.label = stoi(a); } except { cerr << "[Warning: could not convert type to integer.]\n"; }
+    ps[j].r[0] = stof(b);
+    ps[j].r[1] = stof(c);
+    ps[j].r[2] = stof(d);
+
+    if(j==0)
     {
-      getline(i, line);
-      istringstream(line) >> a >> b >> c >> d;
-      //try { p.label = stoi(a); } except { cerr << "[Warning: could not convert type to integer.]\n"; }
-      ps[j].r[0] = stof(b);
-      ps[j].r[1] = stof(c);
-      ps[j].r[2] = stof(d);
-
-      if(j==0)
-      {
-        cur_type_str=a;
-        type_names[cur_type]=cur_type_str;
-      }
-      else if(a!=cur_type_str)
-      {
-        if(debug) cerr << " Updating " << cur_type_str << "-->" << a << endl;
-        cur_type_str=a;
-        cur_type++;
-        if(cur_type>=MAX_N_TYPES) {
-          cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
-          exit(1);
-        }
-        type_names[cur_type]=cur_type_str;
-      }
-      ps[j].label = cur_type;
-      if(resetN) Nt[ps[j].label]++;
+      cur_type_str=a;
+      type_names[cur_type]=cur_type_str;
     }
-
-    if(resetN) nTypes = cur_type+1;
+    else if(a!=cur_type_str)
+    {
+      if(debug) cerr << " Updating " << cur_type_str << "-->" << a << endl;
+      cur_type_str=a;
+      cur_type++;
+      if(cur_type>=MAX_N_TYPES) {
+        cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+        exit(1);
+      }
+      type_names[cur_type]=cur_type_str;
+    }
+    ps[j].label = cur_type;
+    if(resetN) Nt[ps[j].label]++;
   }
 
-  template <class ntype, class ptype>
-  void Trajectory<ntype, ptype>::
-  read_xyz_cp2k_frame(fstream &i, bool resetN)
-    {
-      // assumes particles are ordered by type !!
-      string line, a,b,c,d,e, cur_type_str;
-      stringstream ss;
-      int cur_type=0;
-      getline(i,line); // first line
-      istringstream(line) >> a;
-      N = stoi(a);
-      if(debug) cerr << "\n  Line 1: " << N << " atoms\n";
-      getline(i,line); // second line
-      ss << line;
-      do {
-        try {
-          ss >> a;
-          timestep = stoi(a);
-          break;
-        }
-        catch (...) {
-          if(debug) cerr << "a="<<a <<endl;
-          continue;
-        }
-      } while(true);
-      if(debug) cerr << "  Line 2: Timestep " << timestep << endl;
-      if(resetN) {
-        ps.resize(N);
-        nframes = nlines / (N+2);
-      }
-      for(int j=0;j<N;j++)
-      {
-        getline(i, line);
-        istringstream(line) >> a >> b >> c >> d;
-        //if(debug) cerr << "Read particle: " << a << " @ " << b << " @ " << c << " @ " << d << endl;
-        if(j==0)
-        {
-          cur_type_str=a;
-          type_names[cur_type]=cur_type_str;
-        }
-        else if(a!=cur_type_str)
-        {
-          if(debug) cerr << " Updating " << cur_type_str << "-->" << a << endl;
-          cur_type_str=a;
-          cur_type++;
-          if(cur_type>=MAX_N_TYPES) {
-            cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
-            exit(1);
-          }
-          type_names[cur_type]=cur_type_str;
-        }
-        ps[j].label = cur_type;
-        ps[j].r[0] = stof(b);
-        ps[j].r[1] = stof(c);
-        ps[j].r[2] = stof(d);
-        if(resetN) Nt[cur_type]++;
-      }
-      if(resetN) nTypes = cur_type+1;
+  if(resetN) nTypes = cur_type+1;
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_xyz_cp2k_frame(fstream &i, bool resetN)
+{
+  // assumes particles are ordered by type !!
+  string line, a,b,c,d,e, cur_type_str;
+  stringstream ss;
+  int cur_type=0;
+  getline(i,line); // first line
+  istringstream(line) >> a;
+  N = stoi(a);
+  if(debug) cerr << "\n  Line 1: " << N << " atoms\n";
+  getline(i,line); // second line
+  ss << line;
+  do {
+    try {
+      ss >> a;
+      timestep = stoi(a);
+      break;
     }
+    catch (...) {
+      if(debug) cerr << "a="<<a <<endl;
+      continue;
+    }
+  } while(true);
+  if(debug) cerr << "  Line 2: Timestep " << timestep << endl;
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines / (N+2);
+  }
+  for(int j=0;j<N;j++)
+  {
+    getline(i, line);
+    istringstream(line) >> a >> b >> c >> d;
+    //if(debug) cerr << "Read particle: " << a << " @ " << b << " @ " << c << " @ " << d << endl;
+    if(j==0)
+    {
+      cur_type_str=a;
+      type_names[cur_type]=cur_type_str;
+    }
+    else if(a!=cur_type_str)
+    {
+      if(debug) cerr << " Updating " << cur_type_str << "-->" << a << endl;
+      cur_type_str=a;
+      cur_type++;
+      if(cur_type>=MAX_N_TYPES) {
+        cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+        exit(1);
+      }
+      type_names[cur_type]=cur_type_str;
+    }
+    ps[j].label = cur_type;
+    ps[j].r[0] = stof(b);
+    ps[j].r[1] = stof(c);
+    ps[j].r[2] = stof(d);
+    if(resetN) Nt[cur_type]++;
+  }
+  if(resetN) nTypes = cur_type+1;
+}
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_contcar_frame(fstream &i, bool resetN)
 {
-    string line, a,b,c,d;
-    stringstream ss;
-    ntype s;
-    int format;
+  string line, a,b,c,d;
+  stringstream ss;
+  ntype s;
+  int format;
 
-    getline(i,line); // line 1
-    if(debug) cerr << "\n  Line 1: " << line << endl;
+  getline(i,line); // line 1
+  if(debug) cerr << "\n  Line 1: " << line << endl;
 
-    getline(i,line); // line 2
-    istringstream(line) >> a;
-    s=stof(a);
-    if(debug) cerr << "  Line 2: scaling factor = " << s << endl;
+  getline(i,line); // line 2
+  istringstream(line) >> a;
+  s=stof(a);
+  if(debug) cerr << "  Line 2: scaling factor = " << s << endl;
 
-    getline(i,line); // line 3
-    istringstream(line) >> a >> b >> c;
-    box[0] << s*stof(a), s*stof(b), s*stof(c);
-    getline(i,line); // line 4
-    istringstream(line) >> a >> b >> c;
-    box[1] << s*stof(a), s*stof(b), s*stof(c);
-    getline(i,line); // line 5
-    istringstream(line) >> a >> b >> c;
-    box[2] << s*stof(a), s*stof(b), s*stof(c);
-    box = box.T(); // !!!!!!!!!!!
-    if(debug) cerr << "  Line 3-5: lattice vectors\n";
-    if(debug) box.show();
-    if(debug) boxInv.show();
+  getline(i,line); // line 3
+  istringstream(line) >> a >> b >> c;
+  box[0] << s*stof(a), s*stof(b), s*stof(c);
+  getline(i,line); // line 4
+  istringstream(line) >> a >> b >> c;
+  box[1] << s*stof(a), s*stof(b), s*stof(c);
+  getline(i,line); // line 5
+  istringstream(line) >> a >> b >> c;
+  box[2] << s*stof(a), s*stof(b), s*stof(c);
+  box = box.T(); // !!!!!!!!!!!
+  if(debug) cerr << "  Line 3-5: lattice vectors\n";
+  if(debug) box.show();
+  if(debug) boxInv.show();
 
-    getline(i,line); // line 6
-    if(debug) cerr << "  Line 6: species = " << line << endl;
-    if(resetN)
-    {
-      ss<<line;
-      int cur_type=0;
-      while(ss>>a)
-      {
-        type_names[cur_type]=a;
-        cur_type++;
-      }
-      nTypes = cur_type;
-      ss.str(std::string()); ss.clear(); // clear the string stream!
-    }
-
-    getline(i,line); // line 7
-    if(debug) cerr << "  Line 7: number of atoms per species = " << line << endl;
-    if(resetN)
-    {
-      ss<<line;
-      N=0;
-      for(int cur_type=0;cur_type<nTypes;cur_type++)
-      {
-        ss>>a;
-        Nt[cur_type]=stoi(a);
-        N += Nt[cur_type];
-      }
-    }
-
-    getline(i,line); // line 8
-    if(debug) cerr << "  Line 8: coordinates format = " << line << endl;
-    if(line=="Direct" || line=="direct") format=0; // lattice units
-    else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
-    else { cerr << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
-
-    if(resetN) {
-      ps.resize(N);
-      nframes = nlines / (8+N+ 9+N+ 4+3*N); // N positions, N velocities, 3*N predictor-corrector
-    }
+  getline(i,line); // line 6
+  if(debug) cerr << "  Line 6: species = " << line << endl;
+  if(resetN)
+  {
+    ss<<line;
     int cur_type=0;
-    int cumulative_Nt=Nt[cur_type];
-    for(int j=0;j<N;j++)
+    while(ss>>a)
     {
-      if(j==cumulative_Nt)
-      {
-        cur_type++;
-        cumulative_Nt+=Nt[cur_type];
-      }
-      ps[j].read_3cols(i); // N particle lines
-      ps[j].label = cur_type;
-      // from direct to cartesian
-      if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
-      // already cartesian: must only be scaled by s
-      else if(format==1) ps[j].r*=s;
+      type_names[cur_type]=a;
+      cur_type++;
     }
+    nTypes = cur_type;
+    ss.str(std::string()); ss.clear(); // clear the string stream!
+  }
 
-    for(auto j=0;j<9+N;j++) getline(i,line); // skip velocities
-    for(auto j=0;j<4+3*N;j++) getline(i,line); // skip predictor-corrector
+  getline(i,line); // line 7
+  if(debug) cerr << "  Line 7: number of atoms per species = " << line << endl;
+  if(resetN)
+  {
+    ss<<line;
+    N=0;
+    for(int cur_type=0;cur_type<nTypes;cur_type++)
+    {
+      ss>>a;
+      Nt[cur_type]=stoi(a);
+      N += Nt[cur_type];
+    }
+  }
+
+  getline(i,line); // line 8
+  if(debug) cerr << "  Line 8: coordinates format = " << line << endl;
+  if(line=="Direct" || line=="direct") format=0; // lattice units
+  else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
+  else { cerr << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
+
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines / (8+N+ 9+N+ 4+3*N); // N positions, N velocities, 3*N predictor-corrector
+  }
+  int cur_type=0;
+  int cumulative_Nt=Nt[cur_type];
+  for(int j=0;j<N;j++)
+  {
+    if(j==cumulative_Nt)
+    {
+      cur_type++;
+      cumulative_Nt+=Nt[cur_type];
+    }
+    ps[j].read_3cols(i); // N particle lines
+    ps[j].label = cur_type;
+    // from direct to cartesian
+    if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
+    // already cartesian: must only be scaled by s
+    else if(format==1) ps[j].r*=s;
+  }
+
+  for(auto j=0;j<9+N;j++) getline(i,line); // skip velocities
+  for(auto j=0;j<4+3*N;j++) getline(i,line); // skip predictor-corrector
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_poscar_frame(fstream &i, bool resetN)
 {
-    string line, a,b,c,d;
-    stringstream ss;
-    ntype s;
-    int format;
+  string line, a,b,c,d;
+  stringstream ss;
+  ntype s;
+  int format;
 
+  getline(i,line); // line 1
+  if(debug) cerr << "\n  Line 1: " << line << endl;
+
+  getline(i,line); // line 2
+  istringstream(line) >> a;
+  s=stof(a);
+  if(debug) cerr << "  Line 2: scaling factor = " << s << endl;
+
+  getline(i,line); // line 3
+  istringstream(line) >> a >> b >> c;
+  box[0] << s*stof(a), s*stof(b), s*stof(c);
+  getline(i,line); // line 4
+  istringstream(line) >> a >> b >> c;
+  box[1] << s*stof(a), s*stof(b), s*stof(c);
+  getline(i,line); // line 5
+  istringstream(line) >> a >> b >> c;
+  box[2] << s*stof(a), s*stof(b), s*stof(c);
+  box = box.T(); // !!!!!!!!!!!
+  if(debug) cerr << "  Line 3-5: lattice vectors\n";
+  if(debug) box.show();
+  if(debug) boxInv.show();
+
+  getline(i,line); // line 6
+  if(debug) cerr << "  Line 6: species = " << line << endl;
+  if(resetN)
+  {
+    ss<<line;
+    int cur_type=0;
+    while(ss>>a)
+    {
+      type_names[cur_type]=a;
+      cur_type++;
+    }
+    nTypes = cur_type;
+    ss.str(std::string()); ss.clear(); // clear the string stream!
+  }
+
+  getline(i,line); // line 7
+  if(debug) cerr << "  Line 7: number of atoms per species = " << line << endl;
+  if(resetN)
+  {
+    ss<<line;
+    N=0;
+    for(int cur_type=0;cur_type<nTypes;cur_type++)
+    {
+      ss>>a;
+      Nt[cur_type]=stoi(a);
+      N += Nt[cur_type];
+    }
+  }
+
+  getline(i,line); // line 8
+  if(debug) cerr << "  Line 8: coordinates format = " << line << endl;
+  if(line=="Direct" || line=="direct") format=0; // lattice units
+  else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
+  else { cerr << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
+
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines / (8+N);
+  }
+  int cur_type=0;
+  int cumulative_Nt=Nt[cur_type];
+  for(int j=0;j<N;j++)
+  {
+    if(j==cumulative_Nt)
+    {
+      cur_type++;
+      cumulative_Nt+=Nt[cur_type];
+    }
+    ps[j].read_3cols(i); // N particle lines
+    ps[j].label = cur_type;
+    // from direct to cartesian
+    if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
+    // already cartesian: must only be scaled by s
+    else if(format==1) ps[j].r*=s;
+  }
+}
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
+{
+  string line, a,b,c,d;
+  stringstream ss;
+  ntype s;
+  int format;
+  if(resetN || !constantBox) {
     getline(i,line); // line 1
     if(debug) cerr << "\n  Line 1: " << line << endl;
 
@@ -351,10 +442,8 @@ read_poscar_frame(fstream &i, bool resetN)
     getline(i,line); // line 5
     istringstream(line) >> a >> b >> c;
     box[2] << s*stof(a), s*stof(b), s*stof(c);
-    box = box.T(); // !!!!!!!!!!!
+    box = box.T(); // box = (a|b|c) where a,b,c = lattice vectors as columns !!!!!!!!!!!
     if(debug) cerr << "  Line 3-5: lattice vectors\n";
-    if(debug) box.show();
-    if(debug) boxInv.show();
 
     getline(i,line); // line 6
     if(debug) cerr << "  Line 6: species = " << line << endl;
@@ -384,284 +473,198 @@ read_poscar_frame(fstream &i, bool resetN)
         N += Nt[cur_type];
       }
     }
+  }
 
-    getline(i,line); // line 8
-    if(debug) cerr << "  Line 8: coordinates format = " << line << endl;
-    if(line=="Direct" || line=="direct") format=0; // lattice units
-    else if(line=="Cartesian" || line=="cartesian") format=1; // cartesian units
-    else { cerr << "[ERROR: coordinates format not recognized: " << line << "]\n"; exit(1); }
-
-    if(resetN) {
-      ps.resize(N);
-      nframes = nlines / (8+N);
+  getline(i,line); // line 8
+  ss.str(std::string()); ss.clear(); // clear the string stream!
+  ss<<line;
+  // get first segment separed by a whitespace
+  ss>>a;
+  // then get 2nd segment separed by a '='
+  for(int foo=0;foo<2;foo++){
+    if(!getline(ss, b, '=')) {
+      cerr << "ERROR during reading of timestep in a xdatcar/xdatcarV frame.\n";
+      exit(1);
     }
-    int cur_type=0;
-    int cumulative_Nt=Nt[cur_type];
-    for(int j=0;j<N;j++)
+  }
+  timestep=stoi(b);
+  if(debug) cerr << "  Line 8: coordinates format = " << a << " , timestep = " << timestep << endl;
+  if(a=="Direct" || a=="direct") format=0; // lattice units
+  else if(a=="Cartesian" || a=="cartesian") format=1; // cartesian units
+  else { cerr << "[ERROR: coordinates format not recognized: " << a << "]\n"; exit(1); }
+
+  if(resetN) {
+    ps.resize(N);
+    if(constantBox) nframes = (nlines - 7) / (1+N);
+    else            nframes = nlines / (8+N); // 8 system info + N position lines
+  }
+  int cur_type=0;
+  int cumulative_Nt=Nt[cur_type];
+  for(int j=0;j<N;j++) {
+    if(j==cumulative_Nt)
     {
-      if(j==cumulative_Nt)
-      {
-        cur_type++;
-        cumulative_Nt+=Nt[cur_type];
-      }
-      ps[j].read_3cols(i); // N particle lines
-      ps[j].label = cur_type;
-      // from direct to cartesian
-      if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
-      // already cartesian: must only be scaled by s
-      else if(format==1) ps[j].r*=s;
+      cur_type++;
+      cumulative_Nt+=Nt[cur_type];
     }
-}
-
-template <class ntype, class ptype>
-void Trajectory<ntype, ptype>::
-read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
-{
-    string line, a,b,c,d;
-    stringstream ss;
-    ntype s;
-    int format;
-    if(resetN || !constantBox) {
-	    getline(i,line); // line 1
-	    if(debug) cerr << "\n  Line 1: " << line << endl;
-
-	    getline(i,line); // line 2
-	    istringstream(line) >> a;
-	    s=stof(a);
-	    if(debug) cerr << "  Line 2: scaling factor = " << s << endl;
-
-	    getline(i,line); // line 3
-	    istringstream(line) >> a >> b >> c;
-	    box[0] << s*stof(a), s*stof(b), s*stof(c);
-	    getline(i,line); // line 4
-	    istringstream(line) >> a >> b >> c;
-	    box[1] << s*stof(a), s*stof(b), s*stof(c);
-	    getline(i,line); // line 5
-	    istringstream(line) >> a >> b >> c;
-	    box[2] << s*stof(a), s*stof(b), s*stof(c);
-	    box = box.T(); // box = (a|b|c) where a,b,c = lattice vectors as columns !!!!!!!!!!!
-	    if(debug) cerr << "  Line 3-5: lattice vectors\n";
-
-	    getline(i,line); // line 6
-	    if(debug) cerr << "  Line 6: species = " << line << endl;
-      if(resetN)
-      {
-        ss<<line;
-        int cur_type=0;
-        while(ss>>a)
-        {
-          type_names[cur_type]=a;
-          cur_type++;
-        }
-        nTypes = cur_type;
-        ss.str(std::string()); ss.clear(); // clear the string stream!
-      }
-
-	    getline(i,line); // line 7
-	    if(debug) cerr << "  Line 7: number of atoms per species = " << line << endl;
-      if(resetN)
-      {
-        ss<<line;
-        N=0;
-        for(int cur_type=0;cur_type<nTypes;cur_type++)
-        {
-          ss>>a;
-          Nt[cur_type]=stoi(a);
-          N += Nt[cur_type];
-        }
-      }
-    }
-
-    getline(i,line); // line 8
-    ss.str(std::string()); ss.clear(); // clear the string stream!
-    ss<<line;
-    // get first segment separed by a whitespace
-    ss>>a;
-    // then get 2nd segment separed by a '='
-    for(int foo=0;foo<2;foo++){
-      if(!getline(ss, b, '=')) {
-        cerr << "ERROR during reading of timestep in a xdatcar/xdatcarV frame.\n";
-        exit(1);
-      }
-    }
-    timestep=stoi(b);
-    if(debug) cerr << "  Line 8: coordinates format = " << a << " , timestep = " << timestep << endl;
-    if(a=="Direct" || a=="direct") format=0; // lattice units
-    else if(a=="Cartesian" || a=="cartesian") format=1; // cartesian units
-    else { cerr << "[ERROR: coordinates format not recognized: " << a << "]\n"; exit(1); }
-
-    if(resetN) {
-      ps.resize(N);
-      if(constantBox) nframes = (nlines - 7) / (1+N);
-      else            nframes = nlines / (8+N); // 8 system info + N position lines
-    }
-    int cur_type=0;
-    int cumulative_Nt=Nt[cur_type];
-    for(int j=0;j<N;j++) {
-      if(j==cumulative_Nt)
-      {
-        cur_type++;
-        cumulative_Nt+=Nt[cur_type];
-      }
-      ps[j].read_3cols(i); // N particle lines
-      ps[j].label = cur_type;
-      // from direct to cartesian
-      if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
-      // already cartesian: must only be scaled by s
-      else if(format==1) ps[j].r*=s;
-    }
+    ps[j].read_3cols(i); // N particle lines
+    ps[j].label = cur_type;
+    // from direct to cartesian
+    if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
+    // already cartesian: must only be scaled by s
+    else if(format==1) ps[j].r*=s;
+  }
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_alphanes_frame(fstream &i, bool resetN)
 {
-    string line;
-    stringstream ss;
-    ntype x;
-    int ncols=0, natom, nxyz;
+  string line;
+  stringstream ss;
+  ntype x;
+  int ncols=0, natom, nxyz;
 
-    getline(i,line); // all frame (box+positions) is contained in one line
-    if(debug) cerr << "\n  Line: " << line << endl;
+  getline(i,line); // all frame (box+positions) is contained in one line
+  if(debug) cerr << "\n  Line: " << line << endl;
 
-    ss << line;
-    while( ss >> x )
-    {
-      if(ncols==0)      box[0][0] = x; // ax
-      else if(ncols==1) box[0][1] = x; // bx
-      else if(ncols==2) box[0][2] = x; // cx
-      else if(ncols==3) box[1][1] = x; // by
-      else if(ncols==4) box[1][2] = x; // cy
-      else if(ncols==5) box[2][2] = x; // cz
-      else if(!resetN) { // assign positions only after they are allocated
-        natom=int((ncols-6)/3);
-        nxyz=(ncols-6)%3;
-        ps[natom].r[nxyz] = x;
-      }
-      ncols++;
+  ss << line;
+  while( ss >> x )
+  {
+    if(ncols==0)      box[0][0] = x; // ax
+    else if(ncols==1) box[0][1] = x; // bx
+    else if(ncols==2) box[0][2] = x; // cx
+    else if(ncols==3) box[1][1] = x; // by
+    else if(ncols==4) box[1][2] = x; // cy
+    else if(ncols==5) box[2][2] = x; // cz
+    else if(!resetN) { // assign positions only after they are allocated
+      natom=int((ncols-6)/3);
+      nxyz=(ncols-6)%3;
+      ps[natom].r[nxyz] = x;
     }
-    box[1][0]=box[2][0]=box[2][1] = 0.0; //  ay=az=bz=0.0
-    natom=int((ncols-6)/3);
-    N = natom;
+    ncols++;
+  }
+  box[1][0]=box[2][0]=box[2][1] = 0.0; //  ay=az=bz=0.0
+  natom=int((ncols-6)/3);
+  N = natom;
 
-    if(resetN) {
-      ps.resize(N);
-      nframes = nlines;
-      nTypes=1;
-      Nt[0]=N;
-      cerr << "WARNING: only monospecies input is implemented for alphanes format.\n";
-    }
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines;
+    nTypes=1;
+    Nt[0]=N;
+    cerr << "WARNING: only monospecies input is implemented for alphanes format.\n";
+  }
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_alphanes9_frame(fstream &i, bool resetN)
 {
-    string line;
-    stringstream ss;
-    ntype x;
-    int ncols=0, natom, nxyz;
+  string line;
+  stringstream ss;
+  ntype x;
+  int ncols=0, natom, nxyz;
 
-    getline(i,line); // all frame (box+positions) is contained in one line
-    if(debug) cerr << "\n  Line: " << line << endl;
+  getline(i,line); // all frame (box+positions) is contained in one line
+  if(debug) cerr << "\n  Line: " << line << endl;
 
-    ss << line;
-    while( ss >> x )
-    {
-      if(ncols==0)      box[0][0] = x; // ax
-      else if(ncols==1) box[0][1] = x; // bx
-      else if(ncols==2) box[0][2] = x; // cx
-      else if(ncols==3) box[1][0] = x; // ay
-      else if(ncols==4) box[1][1] = x; // by
-      else if(ncols==5) box[1][2] = x; // cy
-      else if(ncols==6) box[2][0] = x; // az
-      else if(ncols==7) box[2][1] = x; // bz
-      else if(ncols==8) box[2][2] = x; // cz
-      else if(!resetN) { // assign positions only after they are allocated
-        natom=int((ncols-9)/3);
-        nxyz=(ncols-9)%3;
-        ps[natom].r[nxyz] = x;
-      }
-      ncols++;
+  ss << line;
+  while( ss >> x )
+  {
+    if(ncols==0)      box[0][0] = x; // ax
+    else if(ncols==1) box[0][1] = x; // bx
+    else if(ncols==2) box[0][2] = x; // cx
+    else if(ncols==3) box[1][0] = x; // ay
+    else if(ncols==4) box[1][1] = x; // by
+    else if(ncols==5) box[1][2] = x; // cy
+    else if(ncols==6) box[2][0] = x; // az
+    else if(ncols==7) box[2][1] = x; // bz
+    else if(ncols==8) box[2][2] = x; // cz
+    else if(!resetN) { // assign positions only after they are allocated
+      natom=int((ncols-9)/3);
+      nxyz=(ncols-9)%3;
+      ps[natom].r[nxyz] = x;
     }
-    natom=int((ncols-9)/3);
-    N = natom;
+    ncols++;
+  }
+  natom=int((ncols-9)/3);
+  N = natom;
 
-    if(resetN) {
-      ps.resize(N);
-      nframes = nlines;
-      nTypes=1;
-      Nt[0]=N;
-    }
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines;
+    nTypes=1;
+    Nt[0]=N;
+  }
 }
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
 read_jmd_frame(fstream &i, bool resetN)
 {
-    string line, x;
-    stringstream ss;
-    int ncols, ncol;
+  string line, x;
+  stringstream ss;
+  int ncols, ncol;
 
-    nTypes = 1; // ONLY MONO-SPECIES IMPLEMENTED!!!
+  nTypes = 1; // ONLY MONO-SPECIES IMPLEMENTED!!!
 
-    getline(i,line);
-    if(debug) cerr << "\n  Line 1: " << line << endl;
+  getline(i,line);
+  if(debug) cerr << "\n  Line 1: " << line << endl;
 
-    ss << line;
-    // count the number of columns
-    ncols=0;
-    while( ss >> x ) {ncols++;};
-    ss.str(std::string()); ss.clear(); // clear the string stream!
-    ss << line; // reset the string string stream
+  ss << line;
+  // count the number of columns
+  ncols=0;
+  while( ss >> x ) {ncols++;};
+  ss.str(std::string()); ss.clear(); // clear the string stream!
+  ss << line; // reset the string string stream
 
-    if(ncols==5) // box is written as Lx Ly Lz
+  if(ncols==5) // box is written as Lx Ly Lz
+  {
+    ncol=0;
+    while( ss >> x )
     {
-      ncol=0;
-      while( ss >> x )
-      {
-        if     (ncol==0) timestep = stoi(x);
-        else if(ncol==1) N = stoi(x);
-        else if(ncol==2) box[0][0] = stof(x); // Lx
-        else if(ncol==3) box[1][1] = stof(x); // Ly
-        else if(ncol==4) box[2][2] = stof(x); // Lz
-        ncol++;
-      }
-      box[0][1]=box[0][2]=box[1][0]=box[1][2]=box[2][0]=box[2][1] = 0.0;
+      if     (ncol==0) timestep = stoi(x);
+      else if(ncol==1) N = stoi(x);
+      else if(ncol==2) box[0][0] = stof(x); // Lx
+      else if(ncol==3) box[1][1] = stof(x); // Ly
+      else if(ncol==4) box[2][2] = stof(x); // Lz
+      ncol++;
     }
-    else if(ncols==8) // box is written as Ax Bx, Cx, By, Cy, Cz
+    box[0][1]=box[0][2]=box[1][0]=box[1][2]=box[2][0]=box[2][1] = 0.0;
+  }
+  else if(ncols==8) // box is written as Ax Bx, Cx, By, Cy, Cz
+  {
+    ncol=0;
+    while( ss >> x )
     {
-      ncol=0;
-      while( ss >> x )
-      {
-        if     (ncol==0) timestep = stoi(x);
-        else if(ncol==1) N = stoi(x);
-        else if(ncol==2) box[0][0] = stof(x); // Ax
-        else if(ncol==3) box[0][1] = stof(x); // Bx
-        else if(ncol==4) box[0][2] = stof(x); // Cx
-        else if(ncol==5) box[1][1] = stof(x); // By
-        else if(ncol==6) box[1][2] = stof(x); // Cy
-        else if(ncol==7) box[2][2] = stof(x); // Cz
-        ncol++;
-      }
-      box[1][0]=box[2][0]=box[2][1] = 0.0; // Ay,Az,Bz=0
+      if     (ncol==0) timestep = stoi(x);
+      else if(ncol==1) N = stoi(x);
+      else if(ncol==2) box[0][0] = stof(x); // Ax
+      else if(ncol==3) box[0][1] = stof(x); // Bx
+      else if(ncol==4) box[0][2] = stof(x); // Cx
+      else if(ncol==5) box[1][1] = stof(x); // By
+      else if(ncol==6) box[1][2] = stof(x); // Cy
+      else if(ncol==7) box[2][2] = stof(x); // Cz
+      ncol++;
     }
-    else if(ncols>0)
-    {
-      cerr << "ERROR: ncols="<<ncols<<" not accepted for Line 1 of JMD-formatted frame.\n";
-      exit(1);
-    }
+    box[1][0]=box[2][0]=box[2][1] = 0.0; // Ay,Az,Bz=0
+  }
+  else if(ncols>0)
+  {
+    cerr << "ERROR: ncols="<<ncols<<" not accepted for Line 1 of JMD-formatted frame.\n";
+    exit(1);
+  }
 
-    set_L_from_box();
+  set_L_from_box();
 
-    if(resetN) {
-      ps.resize(N);
-      nframes = nlines / (N+1);
-      Nt[0]=N; // ONLY MONOSPECIES IMPLEMENTED
-    }
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines / (N+1);
+    Nt[0]=N; // ONLY MONOSPECIES IMPLEMENTED
+  }
 
-    for(auto &p: ps) p.read_3cols(i); // N particle lines
-    return;
+  for(auto &p: ps) p.read_3cols(i); // N particle lines
+  return;
 }
 
 template <class ntype, class ptype>
@@ -1023,4 +1026,48 @@ read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame)
   }
 
   if(resetN) nTypes = cur_type+1;
+}
+
+//------------------------------------------------------------//
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_runner_frame(fstream &i, bool resetN)
+{
+  string line, x, a,b,c, cur_type_str;
+  int cur_type;
+  stringstream ss;
+  int ncols;
+
+  getline(i,line); // begin
+  if(debug) cerr << "\n  Line: " << line << endl;
+
+  getline(i,line); // comment
+  if(debug) cerr << "\n  Line: " << line << endl;
+
+  getline(i,line); // lattice vector 'a'
+  istringstream(line) >> x >> a >> b >> c;
+  box[0][0] = stof(a);
+  box[1][0] = stof(b);
+  box[2][0] = stof(c);
+
+  getline(i,line); // lattice vector 'b'
+  istringstream(line) >> x >> a >> b >> c;
+  box[0][1] = stof(a);
+  box[1][1] = stof(b);
+  box[2][1] = stof(c);
+
+  getline(i,line); // lattice vector 'c'
+  istringstream(line) >> x >> a >> b >> c;
+  box[0][2] = stof(a);
+  box[1][2] = stof(b);
+  box[2][2] = stof(c);
+
+  set_L_from_box();
+
+  if(resetN) {
+    ps.resize(N);
+    nframes = (nlines-2) / (4*N+4);
+  }
+  /*  to be completed */
+  return;
 }
