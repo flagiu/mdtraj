@@ -12,7 +12,7 @@ cat > $HEADER << EOF
 #include "lib/vecflex.hpp"
 #include "lib/particle.hpp"
 #include "lib/mymatrix.hpp"
-#include "lib/Ycomplex.hpp"
+#include "lib/Ycomplex_builtin.hpp"
 #include "lib/pbc.hpp"
 #include "lib/logtimesteps.hpp"
 EOF

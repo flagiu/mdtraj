@@ -3,8 +3,8 @@
 https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
 */
 
-#ifndef _YCOMPLEX_H_
-#define _YCOMPLEX_H_
+#ifndef _YCOMPLEX_MANUAL_H_
+#define _YCOMPLEX_MANUAL_H_
 #include<cstdlib>
 #include<complex>
 #include<cmath>
@@ -14,18 +14,17 @@ using namespace std;
 template<class ntype>
 complex<ntype> Y(int l, int m, myvec<ntype,3> R)
 {
-  ntype r=R.norm();
-  return Y(l,m,R,r);
+  return Y(l,m,R,R.norm());
 }
 
 template<class ntype>
 complex<ntype> Y(int l, int m, myvec<ntype,3> R, ntype r)
 {
   ntype pi=M_PI, x=R[0], y=R[1], z=R[2];
-  if(!(l>=0)) { cout << "[ERROR: negative angular momentum selected in Y(): l = " << l << "]\n"; exit(1); }
-  if(!(l<=6)) { cout << "[ERROR: l>6 not yet implemented in Y(): l = " << l << "]\n"; exit(1); }
-  if(!(l>=abs(m))) { cout << "[ERROR: condition l>=|lz| not satisfied in Y(): l = " << l << ", lz = " << m << "]\n"; exit(1); }
-  if(r==0.0) { cout << "[ERROR: cannot compute Y() of a null direction]\n"; exit(1); }
+  if(!(l>=0)) { cerr<<"[ERROR: negative angular momentum selected in Y(): l = " << l << "]\n"; exit(1); }
+  if(!(l<=6)) { cerr<<"[ERROR: l>6 not yet implemented in Y(): l = " << l << "]\n"; exit(1); }
+  if(!(l>=abs(m))) { cerr<<"[ERROR: condition l>=|lz| not satisfied in Y(): l = " << l << ", lz = " << m << "]\n"; exit(1); }
+  if(r==0.0) { cerr<<"[ERROR: cannot compute Y() of a null direction]\n"; exit(1); }
   ntype c = z/r, c2,c3,c4,c5,c6; // cos(theta)
   complex<ntype> sp = (x + y*1i)/r; // exp(i*phi)*sin(theta)
   complex<ntype> sm = conj(sp); // exp(-i*phi)*sin(theta)
@@ -118,7 +117,7 @@ complex<ntype> Y(int l, int m, myvec<ntype,3> R, ntype r)
        }
     default: break;
   }
-  cout << "[WARNING: you should not reach this line. There's a bug in the code]\n";
+  cerr<<"[WARNING: you should not reach this line. There's a bug in the code]\n";
   return 10000.0; // useless return
 }
 # endif

@@ -51,8 +51,7 @@ python3 data2xyz.py $key.data $key
 box=$(cat $key.box)
 
 # ANALYSIS
-../../bin/mdtraj -xyz_cp2k $key.xyz -box6 $box -rcut rcut.dat -rdf 0.02 -1 -adf 0.01 -cn -edq -bo -l 4 -tag $key
-../../bin/mdtraj -xyz_cp2k $key.xyz -box6 $box -rcut rcut.dat -bo -l 6 -tag $key
+../../bin/mdtraj -xyz_cp2k $key.xyz -box6 $box -rcut rcut.dat -rdf 0.02 -1 -adf 0.01 -cn -edq -bo -l 4 6 8 10 12 -tag $key -v
 
 for el in adf rdf; do
   python3 ../../python/plot_${el}_average.py --inavg ${el}.${key}.ave  --inlabels labels.${key}.dat --yshift 10

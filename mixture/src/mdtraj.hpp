@@ -9,7 +9,7 @@
 #include "lib/vecflex.hpp"
 #include "lib/particle.hpp"
 #include "lib/mymatrix.hpp"
-#include "lib/Ycomplex.hpp"
+#include "lib/Ycomplex_builtin.hpp"
 #include "lib/pbc.hpp"
 #include "lib/logtimesteps.hpp"
 using namespace std;
@@ -237,7 +237,10 @@ public:
     defaultCutoff[1][0] = 5.15;
     defaultCutoff[2].resize(1); // 3rd sphere
     defaultCutoff[2][0] = 8.8;
-    l=4;
+    //l=4;
+    num_l=1;
+    l_list[0]=4;
+    s_l_list[0]="l.4";
     p1half=6;
     qldot_th = 0.65;
     rdf_binw=0.0;
@@ -595,6 +598,14 @@ public:
   }
 
   void get_angular_momentum_list() {
+    // get tag name from l_list for each l_
+    for(int i=0;i<num_l;i++){
+      ss.str(std::string());
+      ss<<".l"<<std::to_string(l_list[i]);
+      s_l_list[i]=ss.str();
+      ss.clear();
+    }
+    /*
     // split the input INTEGER into digits, e.g. l=46 into a vector containing 4,6
     string segment;
     stringstream sss;
@@ -612,6 +623,7 @@ public:
     }
     ss.clear(); //!!!
     num_l=i;
+    */
 
     /* // old method
     if(l>0&&l<=6){
