@@ -331,9 +331,12 @@ public:
     if(debug) cerr << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
     fin.open(s_in, ios::in);
 
-    if(filetype==FileType::CONTCAR || filetype==FileType::POSCAR || filetype==FileType::ALPHANES || filetype==FileType::ALPHANES9) {
-      timestep=-1; dtframe=1;
-    } // set manual time for CONTCAR, POSCAR, ALPHANES, ALPHANES9 file format
+    // set manual time for the following file formats:
+    bool set_manual_time=(filetype==FileType::CONTCAR ||
+                          filetype==FileType::POSCAR ||
+                          filetype==FileType::ALPHANES ||
+                          filetype==FileType::ALPHANES9);
+    if(set_manual_time) { timestep=-1; dtframe=1; }
     //---------- Read 1st frame -------------//
     read_frame(fin, true, 0);
     t0frame = timestep;
@@ -351,9 +354,7 @@ public:
     try
     {
       read_frame(fin, false, 1);
-      if(filetype!=FileType::CONTCAR && filetype!=FileType::ALPHANES && filetype!=FileType::ALPHANES9){
-        dtframe=timestep-t0frame;
-      }
+      if(!set_manual_time){ dtframe=timestep-t0frame; }
       if(debug) cerr << " I read the second frame: dtframe = "<<dtframe<<endl;
     } catch (...) {
       cerr << "WARNING: only 1 frame in trajectory.\n";
@@ -378,8 +379,10 @@ public:
       read_frame(fin, false, i);
       if(N != ps.size()) { cerr << "[Warning: N has changed]\n"; exit(1);}
 
-      if(i==0) dtframe=0;
-      else     dtframe=timestep-last_timestep;
+      if(!set_manual_time){
+        if(i==0) dtframe=0;
+        else     dtframe=timestep-last_timestep;
+      }
 
       if(i>1 && dtframe==0) {
         if(ignore_double_frames){
