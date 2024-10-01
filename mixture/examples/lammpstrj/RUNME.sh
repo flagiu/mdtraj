@@ -24,7 +24,7 @@ echo "|||| $tag |||| Logarithmic S(q,t) and MSD(t) ..."
 #$MDTRAJ -logtime ../scheduled.times -sqt 2 $((${qpeak}+5)) 1 -msd
 
 echo "|||| $tag ||||  S(q,t) and MSD(t) ..."
-$MDTRAJ -sqt 2 $((${qpeak}+5)) 1 -msd
+$MDTRAJ -sqt 2 $((${qpeak}+5)) 1 -msd -period $period
 echo "|||||||| $tag : Prob(angle), q_Errington-Debenetetti ..."
 $MDTRAJ -rcut rcut${tagdot}.dat -adf 0.01 -edq
 echo "|||||||| $tag : Q4 and detailed Coordination-Number ..."

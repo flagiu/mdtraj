@@ -611,6 +611,7 @@ read_jmd_frame(fstream &i, bool resetN)
   getline(i,line);
   if(debug) cerr << "\n  Line 1: " << line << endl;
 
+  ss.str(std::string()); ss.clear(); // clear the string stream!
   ss << line;
   // count the number of columns
   ncols=0;
