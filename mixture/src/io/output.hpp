@@ -77,7 +77,7 @@ print_out_lammpsdump(string string_out) {
   xz=box[0][2];
   yz=box[1][2];
   xlob = xlo + min(min(0.0,xy), min(xz,xy+xz) );
-  xhib = xhi + max( max(0.0,xy), max(xz,xy+xz) );
+  xhib = xhi + max(max(0.0,xy), max(xz,xy+xz) );
   ylob = ylo + min(0.0,yz);
   yhib = yhi + max(0.0,yz);
   zlob = zlo;

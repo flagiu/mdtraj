@@ -39,7 +39,7 @@ public:
   bool c_coordnum, c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
   bool c_altbc, c_sq, c_sqt, c_edq, c_clusters; // compute or not
   string s_in, s_out, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
-  string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_rdf, s_adf;
+  string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_overlap, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
   bool ignore_double_frames, logtime, out_box, out_xyz, out_alphanes, out_lammpsdump;
   bool debug, verbose;
@@ -67,6 +67,7 @@ public:
   ADF_Calculator<ntype,ptype> *adf_calculator;
   //
   int period; // this is in timestep units, not in number of frames
+  ntype Qoverlap_cutoff;
   bool msdAverageOverTime0;
   MSDU_Calculator<ntype,ptype> *msd_calculator;
   //
@@ -191,6 +192,7 @@ public:
     s_nxtal="nc";
     s_msd="msd";
     s_ngp="ngp";
+    s_overlap="Qoverlap";
     s_nnd="nnd";
     s_rdf="rdf";
     s_adf="adf";
@@ -253,6 +255,7 @@ public:
     altbc_rmin=0.0;
     altbc_angle_th=-1.0;
     fskip0=fskip1=0.0;
+    Qoverlap_cutoff = 2.0; // default 2 angstrom is ok for antimony
 
     //-------- Update parameters with input arguments: -----------//
     args(argc, argv);
@@ -488,8 +491,8 @@ public:
     }
     if(c_msd) {
       msd_calculator = new MSDU_Calculator<ntype,ptype>();
-      msd_calculator->init(dtframe,nframes,period, N,nTypes,Nt,
-        logtime,logt, s_msd,s_ngp,tag, debug,verbose);
+      msd_calculator->init(dtframe,nframes,period, Qoverlap_cutoff, N,nTypes,Nt,
+        logtime,logt, s_msd,s_ngp,s_overlap,tag, debug,verbose);
     }
     if(c_rdf) {
       rdf_calculator = new RDF_Calculator<ntype,ptype>();

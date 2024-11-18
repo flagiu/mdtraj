@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nnd -rdf -rmin -rmax -sq -sqt]"
+  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nnd -Qself -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -65,6 +65,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
   fprintf(stderr, "\n -nnd \t Compute Nearest Neighbour Distances for neighbours in the 1st sphere. INPUT: max_number_of_neighbours OUTPUT: %s.{dat,ave}.", s_nnd.c_str());
+  fprintf(stderr, "\n -Qself \t Compute the self-overlap parameter Q_s(t) and its susceptibility (uses the same routine for MSDU). INPUT: cutoff. OUTPUT: %s.ave.", s_overlap.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width, max_distance. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
   fprintf(stderr, "\n -rmin \t Compute the minimum distance between atoms. OUTPUT: %s.dat.", s_rmin.c_str() );
   fprintf(stderr, "\n -rmax \t Compute the maximum distance between atoms. OUTPUT: %s.dat.", s_rmax.c_str() );
@@ -270,6 +271,14 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	      if (i == argc) { fprintf(stderr, "ERROR: '-qdot_th must be followed by a number in [0,1]!\n"); exit(-1); }
 	      qldot_th = atof(argv[i]);
 	      if(qldot_th<0||qldot_th>1) { fprintf(stderr, "ERROR: '--qdot_th must be followed by a number in [0,1]!\n"); exit(-1); }
+	    }
+    else if ( !strcmp(argv[i], "-Qself") )
+	    {
+	      c_msd = true;
+	      i++;
+	      if (i == argc) { fprintf(stderr, "ERROR: '-Qself' must be followed by (cutoff)!\n"); exit(-1); }
+	      Qoverlap_cutoff = atof(argv[i]);
+        if(Qoverlap_cutoff<=0) { fprintf(stderr, "ERROR: '--Qself must be followed by a positive number!\n"); exit(-1); }
 	    }
 	  else if ( !strcmp(argv[i], "-rcut") )
 	  	{

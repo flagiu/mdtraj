@@ -22,14 +22,20 @@ class MSDU_Calculator
     vecflex< vecflex<ntype> > r4; // < |r(t) - r(t0)|^4 > averaged over t0 and particles, for each type
     vecflex<ntype> r2CM; // < |rCM(t) - rCM(t0)|^2 > averaged over t0, for all types
     vecflex<ntype> num_avg, num_avg_predicted;
-    string string_out_msd, string_out_ngp, myName, tag;
+    vecflex< vecflex<ntype> > Qs, Qs2; // self overlap parameter
+    ntype Q_cutoff, Q_cutoff2; // cutoff for the overlap parameter
+    string string_out_msd, string_out_ngp, string_out_overlap, myName, tag;
     fstream fout;
     stringstream ss;
     bool debug,verbose, logtime;
     LogTimesteps logt;
+
+    ntype w(ntype dr2) {
+      return dr2>Q_cutoff2 ? 0. : 1.;
+    }
   public:
     MSDU_Calculator(){
-      myName = "MSDU and NGP";
+      myName = "MSDU and NGP and Self-Overlap";
     }
     virtual ~MSDU_Calculator(){}
 
@@ -99,12 +105,14 @@ class MSDU_Calculator
 
     }
 
-    void init(int dtframe, int nframes, int period_in_real_units, int N_,
+    void init(int dtframe, int nframes, int period_in_real_units, ntype Q_cutoff_, int N_,
       int nTypes_, int *Nt_, bool logtime_, LogTimesteps logt_,
-      string string_out_msd_, string string_out_ngp_,
+      string string_out_msd_, string string_out_ngp_, string string_out_overlap_,
       string tag_, bool debug_, bool verbose_)
     {
       if(debug) cout << myName << " Initialization STARTED\n";
+      Q_cutoff = Q_cutoff_;
+      Q_cutoff2 = Q_cutoff*Q_cutoff;
       N=N_;
       nTypes=nTypes_;
       Nt.resize(nTypes);
@@ -113,6 +121,7 @@ class MSDU_Calculator
       logt = logt_;
       string_out_msd = string_out_msd_;
       string_out_ngp = string_out_ngp_;
+      string_out_overlap = string_out_overlap_;
       tag = tag_;
       debug=debug_;
       verbose=verbose_;
@@ -130,9 +139,13 @@ class MSDU_Calculator
       CM_rvec.resize(ntimes);
       r2.resize(nTypes);
       r4.resize(nTypes);
+      Qs.resize(nTypes);
+      Qs2.resize(nTypes);
       for(int t=0;t<nTypes;t++){
         r2[t].resize(ntimes-1); // < |r(t0+dt) - r(t0)|^2 > , dt>0, for type t
         r4[t].resize(ntimes-1); // < |r(t0+dt) - r(t0)|^4 > , dt>0, for type t
+        Qs[t].resize(ntimes-1);
+        Qs2[t].resize(ntimes-1);
       }
       r2CM.resize(ntimes-1); // < |rCM(t0+dt) - rCM(t0)|^2 > , dt>0
 
@@ -140,6 +153,8 @@ class MSDU_Calculator
         for(int t=0;t<nTypes;t++){
           r2[t][i]=0.0;
           r4[t][i]=0.0;
+          Qs[t][i]=0.0;
+          Qs2[t][i]=0.0;
         }
         r2CM[i]=0.0;
       }
@@ -151,6 +166,9 @@ class MSDU_Calculator
       ss.str(std::string()); ss << string_out_ngp << tag << ".ave"; fout.open(ss.str(), ios::out);
       fout << "#Delta timestep | NGP for each type (-0.4: homog. displ., 0.0: Brownian displ., >0: heterog. displ.)\n";
       fout.close();
+      ss.str(std::string()); ss << string_out_overlap << tag << ".ave"; fout.open(ss.str(), ios::out);
+      fout << "#Delta timestep | Qself for each type | Susceptibility for each type\n";
+      fout.close();
 
       if(debug) cout << myName << " Initialization COMPLETED\n";
     }
@@ -161,6 +179,8 @@ class MSDU_Calculator
       const ntype invN=1.0/(ntype)N;
       vec dr, dr_image;
       ntype dr2, r2t0;
+      vecflex<ntype> overlap;
+      overlap.resize(N);
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
 
       if(logtime){
@@ -222,10 +242,20 @@ class MSDU_Calculator
           t=ps[i].label;                  // type: integer 0,1,...,nTypes-1
           r2[t][dframe-1] += dr2;         // average over t0 and atoms of same type
           r4[t][dframe-1] += dr2*dr2;
+          // self-overlap parameter
+          overlap[i] = w(dr2);
+          Qs[t][dframe-1] += overlap[i];
+          Qs2[t][dframe-1] += overlap[i]*overlap[i];
+          for(int ii=0;ii<i;ii++){ // warning: this must be done with overlap[] syncronized at same time
+            Qs2[t][dframe-1] += 2*overlap[i]*overlap[ii];
+          }
+        }
 
-          if(logtime && dframe>=logt.npc) {
-            if(debug) cout << "  Out-of-log-cycle linear subsampling:\n";
-            for(j=1;j<=nperiod-1;j++) { // subtract a decreasing time interval
+        if(logtime && dframe>=logt.npc) {
+          if(debug) cout << "  Out-of-log-cycle linear subsampling:\n";
+          for(j=1;j<=nperiod-1;j++) { // subtract a decreasing time interval
+            for(i=0;i<N;i++){
+              idx = N*dframe + i;
               idx_old=N*(logt.npc-1+j)+i; // ... t0 increases with j
               dr = particle_rvec[idx] - particle_rvec[idx_old];  // displacement r(t)-r(t0)
               num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
@@ -233,10 +263,15 @@ class MSDU_Calculator
               t=ps[i].label;                  // type: integer 0,1,...,nTypes-1
               r2[t][dframe-1-j] += dr2;         // average over t0 and atoms of same type
               r4[t][dframe-1-j] += dr2*dr2; // -time interval decreases with j
-              //num_avg[dframe-1-j]+=1*invN; // time interval decreases with j (DONE in CM for saving operations)
+              overlap[i] = w(dr2);
+              Qs[t][dframe-1-j] += overlap[i];
+              Qs2[t][dframe-1-j] += overlap[i]*overlap[i];
+              for(int ii=0;ii<i;ii++){
+                Qs2[t][dframe-1-j] += 2*overlap[i]*overlap[ii];
+              }
+              //num_avg[dframe-1-j]+=1*invN; // time interval decreases with j (DONE in CM in order to save operations)
             }
           }
-
         }
 
         if(verbose){
@@ -291,7 +326,7 @@ class MSDU_Calculator
       }
 
       ss.str(std::string()); ss << string_out_msd << tag << ".ave"; fout.open(ss.str(), ios::app);
-      ntype r2_error[nTypes];
+      ntype tmpvar[nTypes];
 
       for(int i=0; i<ntimes-1; i++) {
         // normalize the averages
@@ -299,13 +334,13 @@ class MSDU_Calculator
         for(int t=0;t<nTypes;t++){
           r2[t][i] /= (num_avg[i]*Nt[t]);
           r4[t][i] /= (num_avg[i]*Nt[t]);
-          r2_error[t] = sqrt( (r4[t][i] - r2[t][i]*r2[t][i])/(num_avg[i]*Nt[t]-1) );
+          tmpvar[t] = sqrt( (r4[t][i] - r2[t][i]*r2[t][i])/(num_avg[i]*Nt[t]-1) );
         }
         // print MSD to file
         if(logtime) fout << logt.get_dt(i+1) << " ";
         else        fout << (i+1)*dtframe << " ";
         for(int t=0;t<nTypes;t++) fout << r2[t][i] << " ";
-        for(int t=0;t<nTypes;t++) fout << r2_error[t] << " ";
+        for(int t=0;t<nTypes;t++) fout << tmpvar[t] << " ";
         fout << r2CM[i] << endl;
       }
       fout.close();
@@ -316,6 +351,23 @@ class MSDU_Calculator
         if(logtime) fout << logt.get_dt(i+1) << " ";
         else        fout << (i+1)*dtframe << " ";
         for(int t=0;t<nTypes;t++) fout << 0.6*(r4[t][i]/(r2[t][i]*r2[t][i]))-1.0 << endl;
+      }
+      fout.close();
+
+      ss.str(std::string()); ss << string_out_overlap << tag << ".ave"; fout.open(ss.str(), ios::app);
+      for(int i=0; i<ntimes-1; i++) {
+        // normalize the averages
+        for(int t=0;t<nTypes;t++){
+          Qs[t][i] /= (num_avg[i]*Nt[t]);
+          Qs2[t][i] /= (num_avg[i]*Nt[t]*Nt[t]);
+          tmpvar[t] = Qs2[t][i] - Qs[t][i]*Qs[t][i];
+        }
+        // print MSD to file
+        if(logtime) fout << logt.get_dt(i+1) << " ";
+        else        fout << (i+1)*dtframe << " ";
+        for(int t=0;t<nTypes;t++) fout << Qs[t][i] << " ";
+        for(int t=0;t<nTypes;t++) fout << tmpvar[t] << " ";
+        fout << endl;
       }
       fout.close();
 
