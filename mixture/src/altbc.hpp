@@ -17,6 +17,22 @@ class ALTBC_Calculator
     fstream fout;
     stringstream ss;
     bool debug, verbose;
+    struct CollinearBonds {
+      /*
+       j--i----k
+       - r_short = |rij|
+       - ratio_shortlong = rij/rik
+       - cos = cos(angle(jik))
+      */
+      ntype r_short, ratio_shortlong, cos;
+    };
+    struct PeierlsDistortion {
+      static const int maxCollBonds=3;
+      int numCollBonds;
+      CollinearBonds collBonds[maxCollBonds];
+    };
+    vector<PeierlsDistortion> peierlsDists;
+
   public:
     ALTBC_Calculator(){
       myName = "ALTBC";
@@ -47,18 +63,17 @@ class ALTBC_Calculator
       ave.resize(nbins2);
       ave2.resize(nbins2);
 
+      for(i=0; i<nbins; i++){
+        bins[i] = r_min + (i+0.5)*binw; // take the center of the bin for histogram
+      }
+      
       if(verbose)
       {
         ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
         fout << "# 1st block: radial distance; other blocks: ALTBC 2D matrix for each frame; # deviation >= " << angle_th << " degrees\n";
-      }
-      for(i=0; i<nbins; i++)
-      {
-        bins[i] = r_min + (i+0.5)*binw; // take the center of the bin for histogram
-        if(verbose){ fout << bins[i] << endl;}
-      }
-      if(verbose)
-      {
+        for(i=0; i<nbins; i++){
+          fout << bins[i] << endl;
+        }
         fout << endl; // end of block
         fout.close();
       }
@@ -85,6 +100,10 @@ class ALTBC_Calculator
         ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::out);
         fout << "# r_1/r_2 (with r_1<=r_2) for each count; one line per frame\n";
         fout.close();
+
+        ss.str(std::string()); ss << string_out << "_peierls" << tag << ".traj"; fout.open(ss.str(), ios::out);
+        fout << "# one line per frame: for each atom: { numCollBonds(integer) for each collBond: {rshort, ratio_shortlong, cos } }\n";
+        fout.close();
       }
 
       ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::out);
@@ -98,14 +117,18 @@ class ALTBC_Calculator
       int i,j,k,k0,k1, a,b, bin0, bin1, counts;
       vec rij, rik;
       ntype rijSq, rikSq, costheta, rijNorm, rikNorm, r1r2, r1r2_ave, r1r2_ave2;
+      CollinearBonds collBond;
       for(a=0; a<nbins2; a++) value[a] = 0.0;
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
 
+      peierlsDists.resize(N);
       counts=0;
       r1r2_ave=r1r2_ave2=0.0;
       if(verbose){ ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::app); }
+      // check angles of the type j---i---k (with i at center)
       for(i=0;i<N;i++)
       {
+        peierlsDists[i].numCollBonds=0;
         for(a=1;a<ps[i].neigh_list[0].size();a++)
         {
           j = ps[i].neigh_list[0][a];
@@ -130,10 +153,26 @@ class ALTBC_Calculator
               counts++;
               value[bin1 + nbins*bin0] += 1.0;
               counts++;
-              r1r2 = (rijNorm>rikNorm ? rikNorm/rijNorm: rijNorm/rikNorm);
+              collBond.r_short = rijNorm>rikNorm ? rikNorm : rijNorm;
+              collBond.ratio_shortlong = rijNorm>rikNorm ? rikNorm/rijNorm: rijNorm/rikNorm;
+              collBond.cos = costheta;
+              if(peierlsDists[i].numCollBonds==peierlsDists[i].maxCollBonds) {
+                if(debug){
+                  cerr << "Warning: numCollBonds for atom i="<<i<<" exceeded maxCollBonds="<<peierlsDists[i].maxCollBonds<<endl;
+                  cerr << "         I will ignore this bond in peierlsDists and in ALTBC.\n";
+                  cerr << "                 r_short = "<<collBond.r_short<<endl;
+                  cerr << "         ratio_shortlong = "<<collBond.ratio_shortlong<<endl;
+                  cerr << "                     cos = "<<collBond.cos<<endl<<endl;
+                }
+                continue;
+              }
+              peierlsDists[i].collBonds[peierlsDists[i].numCollBonds] = collBond;
+              peierlsDists[i].numCollBonds++;
+              r1r2 = collBond.ratio_shortlong;
               if(verbose){ fout << r1r2 << " "; } // print r1/r2
-              r1r2_ave += r1r2;
-              r1r2_ave2 += r1r2*r1r2;
+              r1r2_ave += 2 * r1r2; // 2x because we are increasing count twice!
+              r1r2_ave2 += 2 * r1r2*r1r2;
+              //
             }
           }
         }
@@ -153,6 +192,21 @@ class ALTBC_Calculator
       }
       fout << timestep << " " << r1r2_ave << " " << r1r2_ave2 << endl;
       fout.close();
+      // print perierlsDists
+      if(verbose)
+      {
+        ss.str(std::string()); ss << string_out << "_peierls" << tag << ".traj"; fout.open(ss.str(), ios::app);
+        for(i=0;i<N;i++){
+          fout << peierlsDists[i].numCollBonds << " ";
+          for(j=0;j<peierlsDists[i].numCollBonds; j++) {
+              fout << peierlsDists[i].collBonds[j].r_short << " ";
+              fout << peierlsDists[i].collBonds[j].ratio_shortlong << " ";
+              fout << peierlsDists[i].collBonds[j].cos << " ";
+          }
+        }
+        fout << endl;
+        fout.close();
+      }
       // Print current histogram and add it to the average
       if(verbose)
       {
