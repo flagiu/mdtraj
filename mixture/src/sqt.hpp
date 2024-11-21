@@ -14,11 +14,12 @@ class SQT_Calculator
   using vec=myvec<ntype,3>;
   using mat=mymatrix<ntype,3,3>;
   private:
-    ntype binw;
+    ntype binw, dk;
     int qm, qM, dq, nbins, nTypes, nTypePairs;
-    int period_in_dt_units, ntimes;
     vector<int> Nt;
-    vecflex<ntype> bins, ave, ave2;
+    int period_in_dt_units, ntimes;
+    int num_k_values, exp_storage_size;
+    vecflex<ntype> bins, exps, ave_t0,ave2_t0, ave_t0_lin,ave2_t0_lin, ave,ave2;
     vecflex<ntype> num_avg, num_avg_predicted;
     string string_out, myName, tag, rho_tmpfile_prefix;
     fstream fout, f_rho;
@@ -112,7 +113,7 @@ class SQT_Calculator
         }
       }
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "# 1st block: q-wave-vector; 2nd block: Delta timestep; 3rd block: <S(q,t)> matrix; 4th block: <S(q,t)> error matrix.\n";
+      fout << "# 1st block: q-wave-vector; 2nd block: Delta timestep; 3rd block: <S(q,t)> matrix; 4th block: <S(q,t)> error matrix; 5th block: <chi4(q,t)> suscettivity matrix.\n";
       for(i=0; i<nbins; i++) fout << bins[i] << endl;
       fout<<endl; // new block
       for(i=0;i<ntimes;i++) fout << logt.get_dt(i) << endl;
@@ -183,7 +184,11 @@ class SQT_Calculator
       nTypes = nTypes_;
       nTypePairs = nTypes*(nTypes+1)/2;
       Nt.resize(nTypes);
-      for(i=0;i<nTypes;i++) Nt[i]=Nt_[i];
+      int N=0;
+      for(i=0;i<nTypes;i++) {
+        Nt[i]=Nt_[i];
+        N+=Nt[i];
+      }
       qm = q_mod_min;
       qM = q_mod_max;
       dq = q_mod_step;
@@ -193,11 +198,19 @@ class SQT_Calculator
       bins.resize(nbins);
       for(i=0; i<nbins; i++) bins[i] = (qm+i*dq)*binw; // q-wave-vector values
 
+      dk=2.*binw; // 2*M_PI/L[0];
+      num_k_values=1+qM/2; // 1/2 is the mesh spacing!
+      exp_storage_size=num_k_values*N*3*2; // wavenumber, particle, cartesian, real/imag
+      exps.resize(exp_storage_size);
+      ave_t0.resize(nbins);
+      ave2_t0.resize(nbins);
+
       if(logtime){
         initLogTime();
       } else {
         initLinearTime(period_in_real_units, dtframe, nframes);
       }
+
       if(debug) cout << myName << " Initialization COMPLETED\n";
     }
 
@@ -210,16 +223,9 @@ class SQT_Calculator
       ntype rhoQvecRe,rhoQvecIm, rhoQvecRe_old,rhoQvecIm_old;
       ntype sqtQvecRe, sqtQvecIm;
       string line,a,b,c;
-      const int num_k_values=1+qM/2; // 1/2 is the mesh spacing!
-      const int exp_storage_size=num_k_values*N*3*2; // wavenumber, particle, cartesian, real/imag
-      const ntype dk=2.*binw; // 2*M_PI/L[0];
       ntype x0,x1, y0,y1, z0,z1;
-      vecflex<ntype> exps, ave_t0,ave2_t0, ave_t0_lin,ave2_t0_lin;
-      exps.resize(exp_storage_size);
-      ave_t0.resize(nbins);
-      ave2_t0.resize(nbins);
 
-      for(k=0;k<nbins;k++) ave_t0[k]=ave2_t0[k]=0.0;
+      for(k=0;k<nbins;k++) { ave_t0[k]=ave2_t0[k]=0.0; }
 
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
 
@@ -349,6 +355,8 @@ class SQT_Calculator
           // Average over orientations at fixed q,t0,t
           ave_t0[k] += sqtQvecRe;
           ave2_t0[k] += sqtQvecRe*sqtQvecRe;
+          //ave2_t0[k] += sqtQvecRe*sqtQvecRe + sqtQvecIm*sqtQvecIm;
+          //ave_t0[k] += sqrt(sqtQvecRe*sqtQvecRe + sqtQvecIm*sqtQvecIm);
 
           // for log-lin sampling, when outside the log cycle,
           //   project also onto any linear sub-intervals:
@@ -372,17 +380,22 @@ class SQT_Calculator
               // Average over orientations at fixed q,t0, for each linear t
               ave_t0_lin[k+nbins*i]  += sqtQvecRe;
               ave2_t0_lin[k+nbins*i] += sqtQvecRe*sqtQvecRe;
+              //ave2_t0_lin[k+nbins*i] += sqtQvecRe*sqtQvecRe + sqtQvecIm*sqtQvecIm;
+              //ave_t0_lin[k+nbins*i] += sqrt(sqtQvecRe*sqtQvecRe + sqtQvecIm*sqtQvecIm);
             }
           }
         } // end of qvectors
         if(debug) cout << "  done calculating qvectors\n";
 
         ave_t0[k] /= num_qvectors;
-        if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
-          ave2_t0[k] /= num_qvectors;
-          ave2_t0[k] = sqrt( (ave2_t0[k]-ave_t0[k]*ave_t0[k])/(num_qvectors-1) );
-        }else ave2_t0[k] = 0.0;
-        if(debug) cout << "   S(k="<<k<<";dframe="<<dframe<<") = "<<ave_t0[k]<<" +- "<<ave2_t0[k]<<endl;
+        ave2_t0[k] /= num_qvectors;
+        if(debug){
+          if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
+            cout << "   S(k="<<k<<";dframe="<<dframe<<") = "<<ave_t0[k]<<" +- "<<sqrt( (ave2_t0[k]-ave_t0[k]*ave_t0[k])/(num_qvectors-1) )<<endl;
+          } else {
+            cout << "   S(k="<<k<<";dframe="<<dframe<<") = "<<ave_t0[k]<<" +- 0.0\n";
+          }
+        }
 
         idx = ntimes*k + dframe;
         ave[idx] += ave_t0[k]; // average over t0 at fixed q,t
@@ -395,11 +408,14 @@ class SQT_Calculator
           for(i=0;i<nperiod;i++) {
             j=k+nbins*i;
             ave_t0_lin[j]  /= num_qvectors;
-            if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
-              ave2_t0_lin[j] /= num_qvectors;
-              ave2_t0_lin[j] = sqrt( (ave2_t0_lin[j]-ave_t0_lin[j]*ave_t0_lin[j])/(num_qvectors-1) );
-            } else ave2_t0_lin[j] = 0.0;
-            if(debug) cout << "   S(k="<<k<<";dt="<<i<<"*"<<logt.npc<<") = "<<ave_t0_lin[j]<<" +- "<<ave2_t0_lin[j]<<endl;
+            ave2_t0_lin[j] /= num_qvectors;
+            if(debug){
+              if(num_qvectors>1){ // fluctuations of S(q;t0) over q orientation
+                cout << "   S(k="<<k<<";dt="<<i<<"*"<<logt.npc<<") = "<<ave_t0_lin[j]<<" +- "<<sqrt( (ave2_t0_lin[j]-ave_t0_lin[j]*ave_t0_lin[j])/(num_qvectors-1) )<<endl;
+              } else {
+                cout << "   S(k="<<k<<";dt="<<i<<"*"<<logt.npc<<") = "<<ave_t0_lin[j]<<" +- 0.0\n";
+              }
+            }
             if(i==0) {
               idx = ntimes*k + 0; // dt for the average among linear subsamples
               num_avg[0]+=1/(ntype)nbins;
@@ -444,16 +460,26 @@ class SQT_Calculator
           for(k=0;k<nbins;k++){
             for(j=0;j<ntimes;j++){
               idx = ntimes*k + j;
+              ave2[idx]/=num_avg[j];
               if(num_avg[j]>1){
-                ave2[idx]/=num_avg[j];
-                ave2[idx] = sqrt( (ave2[idx]-ave[idx]*ave[idx])/(num_avg[j]-1) );
+                fout << sqrt( (ave2[idx]-ave[idx]*ave[idx])/(num_avg[j]-1) ) << " ";
               }else{
-                ave2[idx] = 0.0;
+                fout << "0.0 ";
               }
-              fout << ave2[idx] << " ";
             }
             fout << endl;
           }
+          /* // Susceptibility chi4
+          fout << endl; // new block
+          for(k=0;k<nbins;k++){
+            for(j=0;j<ntimes;j++){
+              idx = ntimes*k + j;
+              //ave2[idx]/=num_avg[j];
+              fout << ave2[idx]-ave[idx]*ave[idx] << " ";
+            }
+            fout << endl;
+          }
+          */
           fout.close();
           if(debug) cout << "Average "<<myName<<" printed to file\n";
 
