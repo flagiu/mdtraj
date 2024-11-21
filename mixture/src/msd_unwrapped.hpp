@@ -23,6 +23,7 @@ class MSDU_Calculator
     vecflex<ntype> r2CM; // < |rCM(t) - rCM(t0)|^2 > averaged over t0, for all types
     vecflex<ntype> num_avg, num_avg_predicted;
     vecflex< vecflex<ntype> > Qs,Qss, Qd,Qdd, Qsd; // self- and distinct- overlap parameter
+    vecflex< ntype > Qs_sample, Qd_sample;
     ntype Q_cutoff, Q_cutoff2; // cutoff for the overlap parameter
     string string_out_msd, string_out_ngp, string_out_overlap, myName, tag;
     fstream fout;
@@ -153,6 +154,8 @@ class MSDU_Calculator
       Qd.resize(nTypePairs);
       Qdd.resize(nTypePairs);
       Qsd.resize(nTypePairs);
+      Qs_sample.resize(nTypes);
+      Qd_sample.resize(nTypePairs);
       for(t=0;t<nTypes;t++){
         r2[t].resize(ntimes-1); // < |r(t0+dt) - r(t0)|^2 > , dt>0, for type t
         r4[t].resize(ntimes-1); // < |r(t0+dt) - r(t0)|^4 > , dt>0, for type t
@@ -189,7 +192,7 @@ class MSDU_Calculator
       fout << "#Delta timestep | NGP for each type (-0.4: homog. displ., 0.0: Brownian displ., >0: heterog. displ.)\n";
       fout.close();
       ss.str(std::string()); ss << string_out_overlap << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "#Delta timestep | averaged Qs(1) Qss(1) Qd(1,1) Qdd(1,1) Qsd(1,1) Qd(1,2) Qdd(1,2) Qsd(1,2) Qs(2) Qss(2) Qd(2,2) ...\n";
+      fout << "#Delta timestep | averaged qs(1) qss(1) qd(1,1) qdd(1,1) qsd(1,1) qd(1,2) qdd(1,2) qsd(1,2) qs(2) qss(2) qd(2,2) ...\n";
       fout.close();
 
       if(debug) cout << myName << " Initialization COMPLETED\n";
@@ -236,8 +239,10 @@ class MSDU_Calculator
         idx_dt = dframe-1; // = 0,...,num_dt-1 however dt>0 always
         num_avg[idx_dt]+=1;
         CM_rvec[dframe]<<0.,0.,0.;
-        if(debug) cout << "  Computing dr^2 for dframe="<<dframe<<endl;
+        if(debug) cout << "  Computing dr^2 and Qoverlap for dframe="<<dframe<<endl;
         if(verbose) r2t0 = 0.0; // average r^2 over atoms at fixed t,t0
+        for(ti=0;ti<nTypes;ti++){ Qs_sample[ti]=0.0; }
+        for(tp=0;tp<nTypePairs;tp++){ Qd_sample[tp]=0.0; }
         for(i=0;i<N;i++)
         {
           idx = N*dframe + i;
@@ -263,24 +268,37 @@ class MSDU_Calculator
           ti=ps[i].label;                  // type: integer 0,1,...,nTypes-1
           r2[ti][idx_dt] += dr2;         // average over t0 and atoms of same type
           r4[ti][idx_dt] += dr2*dr2;
-          // overlap parameter
+          // overlap parameter, normalized to N
           // -- self
-          Qs[ti][idx_dt] += w(dr2);
+          Qs_sample[ti] += w(dr2);
           // -- distinct
           for(j=0;j<i;j++){
             dr = particle_rvec[idx] - particle_rvec[idx_old-i+j];  // displacement ri(t)-rj(t0)
             num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
             tj = ps[j].label;
-            Qd[types2int(ti,tj)][idx_dt] += 2*w(dr.sq()); // i<j + j>i
+            Qd_sample[types2int(ti,tj)] += 2*w(dr.sq()); // i<j + j>i
           }
         }
-        // 4-body terms for susceptibility, for each type pair
+        // normalization to N of 2-body terms, and running average of 2-body and 4-body terms
         for(ti=0;ti<nTypes;ti++){
-          Qss[ti][idx_dt] += Qs[ti][idx_dt]*Qs[ti][idx_dt];
-          for(tj=0;tj<nTypes;tj++){
+          Qs_sample[ti] *= invN;
+          Qs[ti][idx_dt] += Qs_sample[ti];
+          Qss[ti][idx_dt] += Qs_sample[ti]*Qs_sample[ti];
+          /* if(idx_dt==0) {
+            cerr << "#---- Adding Qs*Qs to Qss ----#\n";
+            cerr << "# idx_dt="<<idx_dt<<" i_type="<<ti<<" navg="<<num_avg[idx_dt]<<" Qs_sample="<<Qs_sample[ti]<<endl;
+            cerr << "# Qs="<<Qs[ti][idx_dt]<<" Qss="<<Qss[ti][idx_dt]<<" (to be normalized to navg)\n";
+          } */
+        }
+        // (first normalize every self term, then go to distinct terms)
+        for(ti=0;ti<nTypes;ti++){
+          for(tj=ti;tj<nTypes;tj++){
             tp=types2int(ti,tj);
-            Qdd[tp][idx_dt] += Qd[tp][idx_dt]*Qd[tp][idx_dt];
-            Qsd[tp][idx_dt] += Qs[ti][idx_dt]*Qd[tp][idx_dt] + Qs[tj][idx_dt]*Qd[tp][idx_dt];
+            Qd_sample[tp] *= invN;
+            Qd[tp][idx_dt] += Qd_sample[tp];
+            Qdd[tp][idx_dt] += Qd_sample[tp]*Qd_sample[tp];
+            Qsd[tp][idx_dt] += 2* Qs_sample[ti]*Qd_sample[tp]; // 2x because of double product Qs*Qd + Qd*Qs
+            if(tj!=ti){ Qsd[tp][idx_dt] += 2* Qs_sample[tj]*Qd_sample[tp]; }
           }
         }
 
@@ -288,6 +306,8 @@ class MSDU_Calculator
           if(debug) cout << "  Out-of-log-cycle linear subsampling:\n";
           for(k=1;k<=nperiod-1;k++) { // subtract a decreasing time interval
             idx_dt = dframe-1-k;
+            for(ti=0;ti<nTypes;ti++){ Qs_sample[ti]=0.0; }
+            for(tp=0;tp<nTypePairs;tp++){ Qd_sample[tp]=0.0; }
             for(i=0;i<N;i++){
               idx = N*dframe + i;
               idx_old=N*(logt.npc-1+k)+i; // ... t0 increases with k
@@ -297,25 +317,38 @@ class MSDU_Calculator
               ti=ps[i].label;                  // type: integer 0,1,...,nTypes-1
               r2[ti][idx_dt] += dr2;         // average over t0 and atoms of same type
               r4[ti][idx_dt] += dr2*dr2; // -time interval decreases with k
-              // overlap parameter
+              // overlap parameter, normalized to N
               // -- self
-              Qs[ti][idx_dt] += w(dr2);
+              Qs_sample[ti] += w(dr2);
               // -- distinct
               for(j=0;j<i;j++){
                 dr = particle_rvec[idx] - particle_rvec[idx_old-i+j];  // displacement ri(t)-rj(t0)
                 num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
                 tj = ps[j].label;
-                Qd[types2int(ti,tj)][idx_dt] += 2*w(dr.sq()); // i<j + j>i
+                Qd_sample[types2int(ti,tj)] += 2*w(dr.sq()); // i<j + j>i
               }
               //num_avg[dframe-1-k]+=1*invN; // time interval decreases with k (DONE in CM in order to save operations)
             }
-            // 4-body terms for susceptibility, for each type pair
+            // normalization to N of 2-body terms, and running average of 2-body and 4-body terms
             for(ti=0;ti<nTypes;ti++){
-              Qss[ti][idx_dt] += Qs[ti][idx_dt]*Qs[ti][idx_dt];
-              for(tj=0;tj<nTypes;tj++){
+              Qs_sample[ti] *= invN;
+              Qs[ti][idx_dt] += Qs_sample[ti];
+              Qss[ti][idx_dt] += Qs_sample[ti]*Qs_sample[ti];
+              /* if(idx_dt==0) {
+                cerr << "#---- Adding Qs*Qs to Qss ----#\n";
+                cerr << "# idx_dt="<<idx_dt<<" i_type="<<ti<<" navg="<<num_avg[idx_dt]<<" Qs_sample="<<Qs_sample[ti]<<endl;
+                cerr << "# Qs="<<Qs[ti][idx_dt]<<" Qss="<<Qss[ti][idx_dt]<<" (to be normalized to navg)\n";
+              } */
+            }
+            // (first normalize every self term, then go to distinct terms)
+            for(ti=0;ti<nTypes;ti++){
+              for(tj=ti;tj<nTypes;tj++){
                 tp=types2int(ti,tj);
-                Qdd[tp][idx_dt] += Qd[tp][idx_dt]*Qd[tp][idx_dt];
-                Qsd[tp][idx_dt] += Qs[ti][idx_dt]*Qd[tp][idx_dt] + Qs[tj][idx_dt]*Qd[tp][idx_dt];
+                Qd_sample[tp] *= invN;
+                Qd[tp][idx_dt] += Qd_sample[tp];
+                Qdd[tp][idx_dt] += Qd_sample[tp]*Qd_sample[tp];
+                Qsd[tp][idx_dt] += 2* Qs_sample[ti]*Qd_sample[tp]; // 2x because of double product Qs*Qd + Qd*Qs
+                if(tj!=ti){ Qsd[tp][idx_dt] += 2* Qs_sample[tj]*Qd_sample[tp]; }
               }
             }
           }
@@ -349,12 +382,13 @@ class MSDU_Calculator
         if(logtime && dframe>=logt.npc) {
           if(debug) cout << "  Out-of-log-cycle linear subsampling for CM:\n";
           for(k=1;k<=nperiod-1;k++) { // subtract a decreasing time interval
+            idx_dt = dframe-1-k;
             idx_old=logt.npc-1+k; // ... t0 increases with j
             dr = CM_rvec[dframe] - CM_rvec[idx_old];  // displacement r(t)-r(t0)
             num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
             dr2 = dr.sq();
-            r2CM[dframe-1-k] += dr2;
-            num_avg[dframe-1-k]+=1;
+            r2CM[idx_dt] += dr2;
+            num_avg[idx_dt]+=1;
           }
         }
 
@@ -411,7 +445,6 @@ class MSDU_Calculator
           Qs[ti][i] /= num_avg[i];
           Qss[ti][i] /= num_avg[i];
           fout << Qs[ti][i] << " " << Qss[ti][i] << " ";
-          tmpvar[ti] = Qss[ti][i] - Qs[ti][i]*Qs[ti][i];
           for(tj=ti;tj<nTypes;tj++){
             tp=types2int(ti,tj);
             Qd[tp][i] /= num_avg[i];
