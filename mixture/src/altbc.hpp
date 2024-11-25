@@ -11,8 +11,9 @@ class ALTBC_Calculator
   using mat=mymatrix<ntype,3,3>;
   private:
     ntype r_min, binw, r_max, angle_th, cos_th;
-    int nbins, nbins2;
-    vecflex<ntype> bins, norm, value, ave, ave2;
+    int nbins, nbins2, max_nTypes, nTypes, nTypePairs;
+    vecflex<ntype> bins, norm;
+    vecflex< vecflex<ntype> > value, ave, ave2;
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
@@ -40,14 +41,17 @@ class ALTBC_Calculator
     virtual ~ALTBC_Calculator(){}
 
     void init(ntype r_min_, ntype binw_, ntype r_max_, ntype angle_th_,
-      int N, ntype V, string string_out_, string tag_, bool debug_, bool verbose_)
+              int nTypes_, int N, ntype V, string string_out_,
+              string tag_, bool debug_, bool verbose_)
     {
-      int i,j, idx;
+      int i,j, idx, ti;
       ntype shell1, shell2;
       string_out = string_out_;
       tag = tag_;
       debug = debug_;
       verbose = verbose_;
+      nTypes = nTypes_; // in case of dynamic_types, this should be intended as max_nTypes
+      nTypePairs = nTypes*(nTypes+1)/2;
       r_min = r_min_;
       binw = binw_;
       r_max = r_max_;
@@ -59,25 +63,33 @@ class ALTBC_Calculator
 
       bins.resize(nbins);
       norm.resize(nbins2);
-      value.resize(nbins2);
-      ave.resize(nbins2);
-      ave2.resize(nbins2);
+      value.resize(nTypes);
+      ave.resize(nTypes);
+      ave2.resize(nTypes);
+      for(j=0;j<nTypes;j++){
+        value[j].resize(nbins2);
+        ave[j].resize(nbins2);
+        ave2[j].resize(nbins2);
+      }
 
       for(i=0; i<nbins; i++){
         bins[i] = r_min + (i+0.5)*binw; // take the center of the bin for histogram
       }
-      
+
       if(verbose)
       {
-        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::out);
-        fout << "# 1st block: radial distance; other blocks: ALTBC 2D matrix for each frame; # deviation >= " << angle_th << " degrees\n";
-        for(i=0; i<nbins; i++){
-          fout << bins[i] << endl;
+        for(ti=0;ti<nTypes;ti++){
+          ss.str(std::string()); ss << string_out << tag << "_type"<<ti<< ".traj"; fout.open(ss.str(), ios::out);
+          fout << "# 1st block: radial distance; other blocks: ALTBC 2D matrix for each frame; # deviation >= " << angle_th << " degrees\n";
+          for(i=0; i<nbins; i++){
+            fout << bins[i] << endl;
+          }
+          fout << endl; // end of block
+          fout.close();
         }
-        fout << endl; // end of block
-        fout.close();
       }
 
+      // same normalization for all types ...
       ntype NVfactor = ((ntype)N) *(((ntype)(N-1))/V) * (((ntype)(N-2))/V);
       for(i=0; i<nbins; i++)
       {
@@ -87,48 +99,64 @@ class ALTBC_Calculator
           shell2 = 4.0 * M_PI * bins[j]*bins[j] * binw;
           idx = nbins*i + j;
           norm[idx] = shell1*shell2 * NVfactor; // prepare normalization
-          ave[idx]=ave2[idx]=0.0; // reset averages
+          for(ti=0;ti<nTypes;ti++){
+            ave[ti][idx]=ave2[ti][idx]=0.0; // reset averages
+          }
         }
       }
 
-      ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "# 1st block: radial distance; 2nd block: ALTBC 2D matrix; # deviation >= " << angle_th << " degrees\n";
-      fout.close();
-
-      if(verbose)
-      {
-        ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::out);
-        fout << "# r_1/r_2 (with r_1<=r_2) for each count; one line per frame\n";
+      for(ti=0;ti<nTypes;ti++){
+        ss.str(std::string()); ss << string_out << tag << "_type"<<ti<< ".ave"; fout.open(ss.str(), ios::out);
+        fout << "# 1st block: radial distance; 2nd block: ALTBC 2D matrix; # deviation >= " << angle_th << " degrees\n";
         fout.close();
 
-        ss.str(std::string()); ss << string_out << "_peierls" << tag << ".traj"; fout.open(ss.str(), ios::out);
-        fout << "# one line per frame: for each atom: { numCollBonds(integer) for each collBond: {rshort, ratio_shortlong, cos } }\n";
+        ss.str(std::string()); ss << string_out << "_r1r2" << tag << "_type"<<ti<< ".ave"; fout.open(ss.str(), ios::out);
+        fout << "# Timestep | <r_1/r_2> (with r_1<=r_2) | fluctuations\n";
         fout.close();
       }
 
-      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "# Timestep | <r_1/r_2> (with r_1<=r_2) | fluctuations\n";
-      fout.close();
+      if(verbose)
+      {
+        for(ti=0;ti<nTypes;ti++){
+          /*
+          ss.str(std::string()); ss << string_out << "_r1r2" << tag << "_type"<<ti<< ".traj"; fout.open(ss.str(), ios::out);
+          fout << "# r_1/r_2 (with r_1<=r_2) for each count; one line per frame\n";
+          fout.close();
+          */
+          ss.str(std::string()); ss << string_out << "_peierls" << tag << "_type"<<ti<< ".traj"; fout.open(ss.str(), ios::out);
+          fout << "# one line per frame: for each atom: { numCollBonds(integer) for each collBond: {rshort, ratio_shortlong, cos } }\n";
+          fout.close();
+        }
+      }
     }
 
     void compute(int frameidx, int nframes, int timestep, vector<ptype> ps)
     {
       const int N=ps.size();
-      int i,j,k,k0,k1, a,b, bin0, bin1, counts;
+      int i,j,k,k0,k1, a,b, bin0, bin1, ti;
       vec rij, rik;
-      ntype rijSq, rikSq, costheta, rijNorm, rikNorm, r1r2, r1r2_ave, r1r2_ave2;
+      ntype rijSq, rikSq, costheta, rijNorm, rikNorm, r1r2;
+      vector<int> counts;
+      vecflex<ntype> r1r2_ave, r1r2_ave2;
       CollinearBonds collBond;
-      for(a=0; a<nbins2; a++) value[a] = 0.0;
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
 
       peierlsDists.resize(N);
-      counts=0;
-      r1r2_ave=r1r2_ave2=0.0;
-      if(verbose){ ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".traj"; fout.open(ss.str(), ios::app); }
+      counts.resize(nTypes);
+      r1r2_ave.resize(nTypes);
+      r1r2_ave2.resize(nTypes);
+      // reset counters and values
+      for(ti=0;ti<nTypes;ti++){
+        for(k=0; k<nbins2; k++){ value[ti][k] = 0.0; }
+        counts[ti]=0;
+        r1r2_ave[ti]=r1r2_ave2[ti]=0.0;
+      }
+
       // check angles of the type j---i---k (with i at center)
       for(i=0;i<N;i++)
       {
         peierlsDists[i].numCollBonds=0;
+        ti=ps[i].label;
         for(a=1;a<ps[i].neigh_list[0].size();a++)
         {
           j = ps[i].neigh_list[0][a];
@@ -149,10 +177,9 @@ class ALTBC_Calculator
             bin1 = int(floor( (rikNorm-r_min)/binw ));
             if(bin0<nbins && bin1<nbins && fabs(costheta) >= cos_th)
             {
-              value[bin0 + nbins*bin1] += 1.0;
-              counts++;
-              value[bin1 + nbins*bin0] += 1.0;
-              counts++;
+              value[ti][bin0 + nbins*bin1] += 1.0;
+              value[ti][bin1 + nbins*bin0] += 1.0;
+              counts[ti]+=2;
               collBond.r_short = rijNorm>rikNorm ? rikNorm : rijNorm;
               collBond.ratio_shortlong = rijNorm>rikNorm ? rikNorm/rijNorm: rijNorm/rikNorm;
               collBond.cos = costheta;
@@ -169,96 +196,100 @@ class ALTBC_Calculator
               peierlsDists[i].collBonds[peierlsDists[i].numCollBonds] = collBond;
               peierlsDists[i].numCollBonds++;
               r1r2 = collBond.ratio_shortlong;
-              if(verbose){ fout << r1r2 << " "; } // print r1/r2
-              r1r2_ave += 2 * r1r2; // 2x because we are increasing count twice!
-              r1r2_ave2 += 2 * r1r2*r1r2;
+              r1r2_ave[ti] += 2 * r1r2; // 2x because we are increasing count twice!
+              r1r2_ave2[ti] += 2 * r1r2*r1r2;
               //
             }
           }
         }
       }
-      if(verbose)
-      {
-        fout<<endl;
-        fout.close();
-      }
-      // print <r1/r2>
-      ss.str(std::string()); ss << string_out << "_r1r2" << tag << ".ave"; fout.open(ss.str(), ios::app);
-      if(counts>0)
-      {
-        r1r2_ave /= counts;
-        r1r2_ave2 /= counts;
-        if(counts>1) r1r2_ave2 = sqrt( (r1r2_ave2 - r1r2_ave*r1r2_ave)/(counts-1) );
-      }
-      fout << timestep << " " << r1r2_ave << " " << r1r2_ave2 << endl;
-      fout.close();
-      // print perierlsDists
-      if(verbose)
-      {
-        ss.str(std::string()); ss << string_out << "_peierls" << tag << ".traj"; fout.open(ss.str(), ios::app);
-        for(i=0;i<N;i++){
-          fout << peierlsDists[i].numCollBonds << " ";
-          for(j=0;j<peierlsDists[i].numCollBonds; j++) {
-              fout << peierlsDists[i].collBonds[j].r_short << " ";
-              fout << peierlsDists[i].collBonds[j].ratio_shortlong << " ";
-              fout << peierlsDists[i].collBonds[j].cos << " ";
-          }
-        }
-        fout << endl;
-        fout.close();
-      }
-      // Print current histogram and add it to the average
-      if(verbose)
-      {
-        ss.str(std::string()); ss << string_out << tag << ".traj"; fout.open(ss.str(), ios::app);
-        fout << endl; // start new block
-      }
-      for(k0=0; k0<nbins; k0++)
-      {
-        for(k1=0; k1<nbins; k1++)
+      // print <r1/r2>, per type
+      for(ti=0;ti<nTypes;ti++){
+        ss.str(std::string()); ss << string_out << "_r1r2" << tag << "_type"<<ti<< ".ave"; fout.open(ss.str(), ios::app);
+        if(counts[ti]>0)
         {
-          k = k0 + nbins*k1;
-          if(counts>0) value[k] /= (counts*binw*binw); // ci sta l'area del bin??
-          value[k] /= norm[k];
-          if(verbose){ fout << value[k] << " "; } // 2D matrix
-          ave[k] += value[k];
-          ave2[k] += value[k]*value[k];
+          r1r2_ave[ti] /= counts[ti];
+          r1r2_ave2[ti] /= counts[ti];
+          if(counts[ti]>1) r1r2_ave2[ti] = sqrt( (r1r2_ave2[ti] - r1r2_ave[ti]*r1r2_ave[ti])/(counts[ti]-1) );
         }
-        if(verbose) { fout << endl; }
+        fout << timestep << " " << r1r2_ave[ti] << " " << r1r2_ave2[ti] << endl;
+        fout.close();
       }
+      // print perierlsDists, per type
       if(verbose)
       {
-        fout << endl; // end of block
-        fout.close();
+        for(ti=0;ti<nTypes;ti++){
+          ss.str(std::string()); ss << string_out << "_peierls" << tag << "_type"<<ti<< ".traj"; fout.open(ss.str(), ios::app);
+          for(i=0;i<N;i++){
+            if(ps[i].label!=ti) continue;
+            fout << peierlsDists[i].numCollBonds << " ";
+            for(j=0;j<peierlsDists[i].numCollBonds; j++) {
+                fout << peierlsDists[i].collBonds[j].r_short << " ";
+                fout << peierlsDists[i].collBonds[j].ratio_shortlong << " ";
+                fout << peierlsDists[i].collBonds[j].cos << " ";
+            }
+          }
+          fout << endl;
+          fout.close();
+        }
+      }
+      // Add current histogram to the average...
+      for(ti=0;ti<nTypes;ti++)
+      {
+        for(k=0; k<nbins2; k++)
+        {
+          if(counts[ti]>0) value[ti][k] /= (counts[ti]*binw*binw); // ci sta l'area del bin??
+          value[ti][k] /= norm[k];
+          ave[ti][k] += value[ti][k];
+          ave2[ti][k] += value[ti][k]*value[ti][k];
+        }
+        // ... and print it, if verbose
+        if(verbose)
+        {
+          ss.str(std::string()); ss << string_out << tag << "_type"<<ti<< ".traj"; fout.open(ss.str(), ios::app);
+          fout << endl; // start new block
+          for(k0=0; k0<nbins; k0++){ // print as 2D matrix
+            for(k1=0; k1<nbins; k1++){
+              k = k0 + nbins*k1;
+              fout << value[ti][k] << " ";
+            }
+            fout << endl;
+          }
+          fout << endl; // end of block
+          fout.close();
+        }
       }
 
       if(frameidx == (nframes-1)) // if last frame: print final results
       {
-        ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
-        for(k0=0; k0<nbins; k0++){
-          fout << bins[k0] << endl; // bins
-        }
-        fout << endl; // end of block
-        for(k0=0; k0<nbins; k0++){
-          for(k1=0; k1<nbins; k1++){
-            k = k0 + nbins*k1;
-            ave[k] /= nframes;
-            ave2[k] /= nframes;
-            fout << ave[k] << " "; // average
+        for(ti=0;ti<nTypes;ti++)
+        {
+          ss.str(std::string()); ss << string_out << tag << "_type"<<ti<< ".ave"; fout.open(ss.str(), ios::app);
+          for(k0=0; k0<nbins; k0++){
+            fout << bins[k0] << endl; // bins
           }
-          fout << endl;
-        }
-        /* // do NOT print errors... who does even look at them?
-        fout << endl; // end of block
-        for(k0=0; k0<nbins; k0++){
-          for(k1=0; k1<nbins; k1++){
-            k = k0 + nbins*k1;
-            fout << sqrt( (ave2[k]-ave[k]*ave[k])/(nframes -1) ) << " "; // error
+          fout << endl; // end of block
+          for(k0=0; k0<nbins; k0++){
+            for(k1=0; k1<nbins; k1++){
+              k = k0 + nbins*k1;
+              ave[ti][k] /= nframes;
+              ave2[ti][k] /= nframes;
+              fout << ave[ti][k] << " "; // average
+            }
+            fout << endl;
           }
-          fout << endl;
+          /* // do NOT print errors... who does even look at them?
+          fout << endl; // end of block
+          for(k0=0; k0<nbins; k0++){
+            for(k1=0; k1<nbins; k1++){
+              k = k0 + nbins*k1;
+              fout << sqrt( (ave2[k]-ave[k]*ave[k])/(nframes -1) ) << " "; // error
+            }
+            fout << endl;
+          }
+          */
+          fout.close();
         }
-        */
-        fout.close();
         if(debug) cout << "Average "<<myName<<" printed to file\n";
       }
       if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";

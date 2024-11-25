@@ -6,7 +6,7 @@ void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
   				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nnd -Qself -rdf -rmin -rmax -sq -sqt]"
-				  " [-rcut -p1half -period] [-out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
+				  " [-rcut -p1half -period] [ -dynamic_types -out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -83,6 +83,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n");
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
+  fprintf(stderr, "\n -dynamic_types \t (Dangerous!) Allow for number of types and number of particles per type to change during simulation.");
   fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end.");
   fprintf(stderr, "\n        \t INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
   fprintf(stderr, "\n -ignore_double_frames \t Skip a frame if timestep is the same as before. [default: raise an error]");
@@ -494,6 +495,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
         filetype = FileType::YUHAN;
 	      s_in = string(argv[i]);
 	    }
+    else if ( !strcmp(argv[i], "-dynamic_types") )
+        dynamic_types = true;
     else if ( !strcmp(argv[i], "-ignore_double_frames") )
     	ignore_double_frames = true;
     else if ( !strcmp(argv[i], "-logtime") )

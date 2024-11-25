@@ -15,7 +15,7 @@
 using namespace std;
 
 const string root_path="/home/flavio/programmi/mdtraj/mixture";
-#define MAX_N_TYPES 5
+#define MAX_N_TYPES 8
 #define MAX_N_ANGMOM 5
 enum class FileType {
   NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN, RUNNER
@@ -27,6 +27,7 @@ public:
   using vec=myvec<ntype,3>;
   using mat=mymatrix<ntype,3,3>;
   int N, nTypes, nTypePairs, Nt[MAX_N_TYPES]; // number of particles, number of types, num of particles for each type
+  int max_nTypes; // in case of dynamic types (e.g. clusters)
   string type_names[MAX_N_TYPES]; // name for each type
   vec L; // length of box vectors ( ??? centered in 0: -Lx/2 < x < Lx/2 )
   mat box, boxInv; // most general simulation box
@@ -38,6 +39,7 @@ public:
   int nframes, timestep;
   bool c_coordnum, c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
   bool c_altbc, c_sq, c_sqt, c_edq, c_clusters; // compute or not
+  bool dynamic_types;
   string s_in, s_out, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
   string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_overlap, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
@@ -133,6 +135,7 @@ public:
     cerr << " c_edq = \t " << c_edq << endl;
     cerr << " c_nnd = \t " << c_nnd << endl;
     cerr << " c_clusters = \t " << c_clusters << endl;
+    cerr << " dynamic_types = \t " << dynamic_types << endl;
     cerr << " angular momentum for ql: l = \t " << l << endl;
     cerr << " qldot threshold = \t " << qldot_th << endl;
     cerr << " box (a|b|c) = \t "; box.show();
@@ -180,6 +183,7 @@ public:
     c_edq = false;
     c_nnd = false;
     c_clusters = false;
+    dynamic_types = false;
 
     filetype=FileType::NONE;
     s_in="__NOT_DEFINED__";
@@ -310,7 +314,7 @@ public:
     }
   }
 
-  void read_frame(fstream &i, bool resetN, int frameIdx);
+  void read_frame(fstream &i, bool resetN, bool reset_nTypes, int frameIdx);
   void removeRotDof();
   void read_contcar_frame(fstream &i, bool resetN);
   void read_poscar_frame(fstream &i, bool resetN);
@@ -320,7 +324,7 @@ public:
   void read_alphanes_frame(fstream &i, bool resetN);
   void read_alphanes9_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
-  void read_lammpstrj_frame(fstream &i, bool resetN);
+  void read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes);
   void read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame);
   void read_runner_frame(fstream &i, bool resetN);
 
@@ -341,7 +345,7 @@ public:
                           filetype==FileType::ALPHANES9);
     if(set_manual_time) { timestep=-1; dtframe=1; }
     //---------- Read 1st frame -------------//
-    read_frame(fin, true, 0);
+    read_frame(fin, true, true, 0);
     t0frame = timestep;
     if(debug) cerr << " I read first frame: set N = " << N << " (I assume it's constant) and t0frame = " << t0frame << "\n";
     if(debug) cerr << "  From N, I deduce nframes = " << nframes << "\n";
@@ -356,19 +360,42 @@ public:
     //---------- Read 2nd frame (if it exists) -------------//
     try
     {
-      read_frame(fin, false, 1);
+      read_frame(fin, false, dynamic_types, 1);
       if(!set_manual_time){ dtframe=timestep-t0frame; }
       if(debug) cerr << " I read the second frame: dtframe = "<<dtframe<<endl;
     } catch (...) {
       cerr << "WARNING: only 1 frame in trajectory.\n";
       dtframe=last_dtframe=1; // this is meaningless, but it avoids nonsense later
     }
-    if(debug) cerr << "Initialization of Computations STARTED\n";
-    init_computations();
-    if(debug) cerr << "Initialization of Computations COMPLETED\n";
     fin.close();
 
     // Restart reading!!
+
+    // check max nTypes
+    max_nTypes=nTypes;
+    if(dynamic_types) {
+      if(debug||verbose) { cerr << "# dynamic_types: checking for max number of types in trajectory\n"; }
+      if(debug) { cerr << "# dynamic_types: # frame nTypes\n"; }
+      fin.open(s_in, ios::in);
+      for(int i=0; i<nframes_original; i++)
+      {
+        if(i+1>nskip0 && i<nframes_original-nskip1){
+          read_frame(fin, true, true, i);
+          max_nTypes = max(max_nTypes, nTypes);
+          if(debug) { cerr << "# dynamic_types: "<< i << " " << nTypes << endl; }
+        } else{
+          read_frame(fin, false, false, i);
+        }
+        if(N != ps.size()) { cerr << "[Error: N has changed]\n"; exit(1);}
+      }
+      fin.close();
+      if(debug||verbose) { cerr << "# dynamic_types: found max "<< max_nTypes << " types\n"; }
+    }
+
+    if(debug) cerr << "Initialization of Computations STARTED\n";
+    init_computations();
+    if(debug) cerr << "Initialization of Computations COMPLETED\n";
+
     if(debug || verbose) cerr << "#------- MAIN LOOP ------#\n";
     fin.open(s_in, ios::in);
     printProgress.init( nframes, 2000 ); // update % every 2000 ms
@@ -379,8 +406,12 @@ public:
     timer.go();
     for(int i=0; i<nframes_original; i++)
     {
-      read_frame(fin, false, i);
-      if(N != ps.size()) { cerr << "[Warning: N has changed]\n"; exit(1);}
+      if(i+1>nskip0 && i<nframes_original-nskip1)
+        read_frame(fin, false, dynamic_types, i);
+      else
+        read_frame(fin, false, false, i);
+
+      if(N != ps.size()) { cerr << "[Error: N has changed]\n"; exit(1);}
 
       if(!set_manual_time){
         if(i==0) dtframe=0;
@@ -460,7 +491,7 @@ public:
     if(maxsphere>0)
     {
       n_b_list = new Neigh_and_Bond_list<ntype,ptype>();
-      n_b_list->init(s_rcut, defaultCutoff, maxsphere, p1half, N, nTypes, s_log,
+      n_b_list->init(s_rcut, defaultCutoff, maxsphere, p1half, N, max_nTypes, s_log,
         tag, debug, verbose);
     }
     if(c_coordnum) n_b_list->init_coordnum(s_coordnum);
@@ -506,7 +537,7 @@ public:
     if(c_altbc) {
       altbc_calculator = new ALTBC_Calculator<ntype,ptype>();
       altbc_calculator->init(altbc_rmin, altbc_binw, n_b_list->rcut[0][0],
-        altbc_angle_th, N, V, s_altbc, tag, debug, verbose);
+        altbc_angle_th, max_nTypes, N, V, s_altbc, tag, debug, verbose);
     }
     if(c_sq) {
       sq_calculator = new SQ_Calculator<ntype,ptype>();
@@ -541,8 +572,9 @@ public:
             for(auto i=0;i<ps.size();i++){
               c=n_b_list->cluster_of_particle[i];
               original_labels[i]=ps[i].label;
-              if(c>=0) ps[i].label = (int)(n_b_list->cluster_permutation_by_size[c]);
-              else     ps[i].label = c;
+              // label 1 for particles belonging to no cluster, label 2,3,... for clusters of decreasing size
+              if(c>=0) ps[i].label = 2+(int)(n_b_list->cluster_permutation_by_size[c]);
+              else     ps[i].label = 1;
             }
             ss.str(std::string()); ss<<s_clusters<<s_l_list[l_];
             print_out_lammpsdump(ss.str());

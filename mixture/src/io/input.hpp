@@ -3,9 +3,9 @@ using namespace std;
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
-read_frame(fstream &i, bool resetN, int frameIdx)
+read_frame(fstream &i, bool resetN, bool reset_nTypes, int frameIdx)
 {
-  if(resetN){
+  if(resetN || reset_nTypes){
     nTypes=0;
     for(auto a=0;a<MAX_N_TYPES;a++) Nt[a]=0;
   }
@@ -43,7 +43,7 @@ read_frame(fstream &i, bool resetN, int frameIdx)
       read_jmd_frame(i, resetN);
       break;
     case FileType::LAMMPSTRJ:
-      read_lammpstrj_frame(i, resetN);
+      read_lammpstrj_frame(i, resetN, reset_nTypes);
       break;
     case FileType::YUHAN:
       read_yuhan_frame(i, resetN, frameIdx==0);
@@ -670,7 +670,7 @@ read_jmd_frame(fstream &i, bool resetN)
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::
-read_lammpstrj_frame(fstream &i, bool resetN)
+read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
 {
   enum class LAMMPS_ATOM_ENTRIES {
     ID, TYPE, X,Y,Z, XS,YS,ZS, IX,IY,IZ, XU,YU,ZU, VX,VY,VZ
@@ -900,7 +900,7 @@ read_lammpstrj_frame(fstream &i, bool resetN)
     }
     //if(debug) p.show();
     ss.str(std::string()); ss.clear(); // clear the string stream!
-    if(resetN)
+    if(resetN || reset_nTypes)
     {
       nTypes = max(nTypes,p.label+1);
       if(nTypes>MAX_N_TYPES) {
