@@ -262,7 +262,11 @@ class MSDU_Calculator
           } else idx_old=N*0 + i;
 
           dr = particle_rvec[idx] - particle_rvec[idx_old];  // displacement r(t)-r(t0)
-          num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
+          // apply periodic boundary conditions
+          num_images = pbc->apply(dr, &dr_image);
+          dr = dr_image;
+          particle_rvec[idx] = particle_rvec[idx_old] + dr;
+          // MSD and NGP
           dr2 = dr.sq();
           if(verbose) r2t0 += dr2 * invN;          // sample trajectory
           ti=ps[i].label;                  // type: integer 0,1,...,nTypes-1
@@ -297,8 +301,8 @@ class MSDU_Calculator
             Qd_sample[tp] *= invN;
             Qd[tp][idx_dt] += Qd_sample[tp];
             Qdd[tp][idx_dt] += Qd_sample[tp]*Qd_sample[tp];
-            Qsd[tp][idx_dt] += 2* Qs_sample[ti]*Qd_sample[tp]; // 2x because of double product Qs*Qd + Qd*Qs
-            if(tj!=ti){ Qsd[tp][idx_dt] += 2* Qs_sample[tj]*Qd_sample[tp]; }
+            Qsd[tp][idx_dt] += Qs_sample[ti]*Qd_sample[tp];
+            if(tj!=ti){ Qsd[tp][idx_dt] += Qs_sample[tj]*Qd_sample[tp]; } // type exchange
           }
         }
 
@@ -306,6 +310,7 @@ class MSDU_Calculator
           if(debug) cout << "  Out-of-log-cycle linear subsampling:\n";
           for(k=1;k<=nperiod-1;k++) { // subtract a decreasing time interval
             idx_dt = dframe-1-k;
+            num_avg[idx_dt]+=1;
             for(ti=0;ti<nTypes;ti++){ Qs_sample[ti]=0.0; }
             for(tp=0;tp<nTypePairs;tp++){ Qd_sample[tp]=0.0; }
             for(i=0;i<N;i++){
@@ -327,7 +332,6 @@ class MSDU_Calculator
                 tj = ps[j].label;
                 Qd_sample[types2int(ti,tj)] += 2*w(dr.sq()); // i<j + j>i
               }
-              //num_avg[dframe-1-k]+=1*invN; // time interval decreases with k (DONE in CM in order to save operations)
             }
             // normalization to N of 2-body terms, and running average of 2-body and 4-body terms
             for(ti=0;ti<nTypes;ti++){
@@ -347,8 +351,8 @@ class MSDU_Calculator
                 Qd_sample[tp] *= invN;
                 Qd[tp][idx_dt] += Qd_sample[tp];
                 Qdd[tp][idx_dt] += Qd_sample[tp]*Qd_sample[tp];
-                Qsd[tp][idx_dt] += 2* Qs_sample[ti]*Qd_sample[tp]; // 2x because of double product Qs*Qd + Qd*Qs
-                if(tj!=ti){ Qsd[tp][idx_dt] += 2* Qs_sample[tj]*Qd_sample[tp]; }
+                Qsd[tp][idx_dt] += Qs_sample[ti]*Qd_sample[tp];
+                if(tj!=ti){ Qsd[tp][idx_dt] += Qs_sample[tj]*Qd_sample[tp]; } // type inversion
               }
             }
           }
@@ -388,7 +392,6 @@ class MSDU_Calculator
             num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
             dr2 = dr.sq();
             r2CM[idx_dt] += dr2;
-            num_avg[idx_dt]+=1;
           }
         }
 
@@ -449,7 +452,7 @@ class MSDU_Calculator
             tp=types2int(ti,tj);
             Qd[tp][i] /= num_avg[i];
             Qdd[tp][i] /= num_avg[i];
-            Qsd[tp][i] /= num_avg[i];
+            Qsd[tp][i] *= 2./num_avg[i]; // 2x because of double product Qs*Qd + Qd*Qs
             fout << Qd[tp][i] << " " << Qdd[tp][i] << " " << Qsd[tp][i] << " ";
           }
         }
