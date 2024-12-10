@@ -5,19 +5,51 @@ using namespace std;
 class LogTimesteps
 {
 public:
-  int npc, ncycles, delta, t0;
-  float alpha;
-  int log_period, time_window_size;
-  bool setup=false;
+  int npc=0, ncycles=0, delta=0, t0=0;
+  int ncyc_skip0=0, ncyc_skip1=0;
+  float alpha=0.0;
+  int log_period, time_window_size, num_frames;
+  bool setup=false, debug=false;
 
   int get_time_window_size(){
-    time_window_size=npc-1+ncycles;
+    time_window_size=npc-1+(ncycles-ncyc_skip0-ncyc_skip1);
     return time_window_size;
+  }
+
+  int get_num_frames(){
+    num_frames = (ncycles-ncyc_skip0-ncyc_skip1)*npc;
+    return num_frames;
   }
 
   int get_log_period(){
     log_period = t0 * round(pow(alpha,npc));
     return log_period;
+  }
+
+  int apply_fskip(float fskip0, float fskip1){
+    if(!setup) {
+      cerr << "ERROR: apply_skip() called before setup\n";
+      exit(1);
+    }
+    // idea: you can only skip a whole cycle
+    int num_frames_full = get_num_frames();
+    int nskip0=int(fskip0*num_frames_full);
+    int nskip1=int(fskip1*num_frames_full);
+    ncyc_skip0=int(nskip0/(float)npc+0.5);
+    ncyc_skip1=int(nskip1/(float)npc+0.5);
+    if(debug){
+      cerr << "# LogTimesteps\n";
+      cerr << "# num_frames_full="<<num_frames_full<<endl;
+      cerr << "# fskip0="<<fskip0<<" ==> nskip0="<<nskip0<<" ==> ncyc_skip0="<<ncyc_skip0<<"\n";
+      cerr << "# fskip1="<<fskip1<<" ==> nskip1="<<nskip1<<" ==> ncyc_skip1="<<ncyc_skip1<<"\n";
+    }
+    num_frames = get_num_frames();
+    if(num_frames<=0) {
+      cerr << "ERROR: skipped too many log cycles:";
+      cerr <<"\n      ncycles="<<ncycles<<" ncyc_skip0="<<ncyc_skip0<<" ncyc_skip1="<<ncyc_skip1<<endl;
+      exit(1);
+    }
+    return num_frames;
   }
 
   bool is_linear_sampling(int timestep){
@@ -58,6 +90,8 @@ public:
     cout<<"         ncycles="<<ncycles<<endl;
     cout<<"              t0="<<t0<<endl;
     cout<<endl;
+    cout<<"      ncyc_skip0="<<ncyc_skip0<<endl;
+    cout<<"      ncyc_skip1="<<ncyc_skip1<<endl;
     cout<<"      log_period="<<log_period<<endl;
     cout<<"time_window_size="<<time_window_size<<endl;
     cout<<"#-----------------------------#\n\n";
@@ -66,7 +100,7 @@ public:
   void print_all_timesteps(){
     int i,j, t;
     t0=(int)(delta/alpha);
-    for(i=0;i<ncycles;i++){
+    for(i=ncyc_skip0;i<ncycles-ncyc_skip1;i++){
       for(j=0;j<npc;j++){
         t = t0 * (pow(alpha,npc)*i + pow(alpha,(j+1)) );
         cout<<t<<endl;
@@ -74,7 +108,8 @@ public:
     }
   }
 
-  void deduce_fromfile(string file){
+  void deduce_fromfile(string file, bool debug_){
+    debug=debug_;
     ifstream i;
     string line;
     int t1,t2,dt,dt_old,count=0;
@@ -85,7 +120,7 @@ public:
       cout << "ERROR: Unable to open file "<<file<<endl;
       exit(1);
     }
-    // deduce npc, delta, alpha, t0
+    // deduce npc, delta, alpha, t0 from a FULL schedule file
     while ( count<maxcount && getline(i,line)){
       t2=stoi(line);
       if(count==0) delta=t2;
@@ -135,6 +170,8 @@ public:
       delta=other.delta;
       t0=other.t0;
       alpha=other.alpha;
+      ncyc_skip0=other.ncyc_skip0;
+      ncyc_skip1=other.ncyc_skip1;
       log_period=other.log_period;
       time_window_size=other.time_window_size;
       setup=other.setup;

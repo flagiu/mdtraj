@@ -355,6 +355,13 @@ public:
     nskip1=int(fskip1*nframes);
     nframes_original = nframes;
     nframes = nframes - nskip0 - nskip1;
+    if(logtime) {
+      logt.deduce_fromfile(s_logtime, debug);
+      nframes = logt.apply_fskip(fskip0,fskip1);
+      if(debug) logt.print_summary();
+      nskip0 = max(nskip0, logt.ncyc_skip0*logt.npc);
+      nskip1 = max(nskip1, logt.ncyc_skip1*logt.npc);
+    }
     if(nframes<1) { cerr << "[ "<<myName<<" Error ] skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
 
     //---------- Read 2nd frame (if it exists) -------------//
@@ -476,10 +483,6 @@ public:
     if(out_xyz) init_out_xyz();
     if(out_lammpsdump&&!c_clusters) init_out_lammpsdump(s_out);
     if(out_alphanes) init_out_alphanes();
-    if(logtime) {
-      logt.deduce_fromfile(s_logtime);
-      if(debug) logt.print_summary();
-    }
 
     if(maxsphere>0 || c_rdf || c_msd)
     {
