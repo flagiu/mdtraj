@@ -333,9 +333,9 @@ public:
   void run()
   {
     PrintProgress printProgress;
-    if(verbose || debug) {cerr << "Begin of run():\n"; print_state();}
+    if(verbose || debug) {cerr << "#Begin of run():\n"; print_state();}
     nlines = getLineCount(s_in);
-    if(debug) cerr << "Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
+    if(debug) cerr << "#Read " << nlines << " lines in file " << s_in << ". Opening again for reading trajectory.\n";
     fin.open(s_in, ios::in);
 
     // set manual time for the following file formats:
@@ -344,24 +344,40 @@ public:
                           filetype==FileType::ALPHANES ||
                           filetype==FileType::ALPHANES9);
     if(set_manual_time) { timestep=-1; dtframe=1; }
+
     //---------- Read 1st frame -------------//
     read_frame(fin, true, true, 0);
     t0frame = timestep;
-    if(debug) cerr << " I read first frame: set N = " << N << " (I assume it's constant) and t0frame = " << t0frame << "\n";
-    if(debug) cerr << "  From N, I deduce nframes = " << nframes << "\n";
+    nframes_original = nframes;
+    if(debug) cerr << "# I read first frame: set N = " << N << " (I assume it's constant) and t0frame = " << t0frame << "\n";
+    if(debug) cerr << "#  From N, I deduce nframes = " << nframes << "\n";
     print_types();
 
-    nskip0=int(fskip0*nframes);
-    nskip1=int(fskip1*nframes);
-    nframes_original = nframes;
-    nframes = nframes - nskip0 - nskip1;
+    // this is valid for trajectories with linear timesteps
+    nskip0=int(fskip0*nframes_original);
+    nskip1=int(fskip1*nframes_original);
+    nframes = nframes_original - nskip0 - nskip1;
+
+    // read log timesteps full schedule and deduce nskip's
     if(logtime) {
       logt.deduce_fromfile(s_logtime, debug);
       nframes = logt.apply_fskip(fskip0,fskip1);
+      nskip0 = logt.ncyc_skip0*logt.npc;
       if(debug) logt.print_summary();
-      nskip0 = max(nskip0, logt.ncyc_skip0*logt.npc);
-      nskip1 = max(nskip1, logt.ncyc_skip1*logt.npc);
+      if(t0frame!=logt.get_first_timestep_noskip()){
+        cerr<<"ERROR: first timestep="<<t0frame<<" =/= first scheduled timestep="
+            <<logt.get_first_timestep_noskip()<<endl;
+            exit(1);
+      }
+      // nskip0 is correct, but nskip1 may not be if trajectory was early-stopped,
+      // so compute it by subtracting nframes and nskip0 to the actual (original) n. of frames:
+      nskip1 = nframes_original - nskip0 - nframes;
     }
+    if(debug||verbose){
+      if(logtime) cerr << "# Log-skipping applied:    nskip0="<<nskip0<<" nframes="<<nframes<<" => nskip1="<<nskip1<<endl;
+      else        cerr << "# Linear-skipping applied: nskip0="<<nskip0<<" nskip1="<<nskip1<<" => nframes="<<nframes<<endl;
+    }
+
     if(nframes<1) { cerr << "[ "<<myName<<" Error ] skipped too many frames.\n  Total: "<<nframes_original<<"; Skipped: "<<nskip0<<"+"<<nskip1<<"; Remaining: "<<nframes<<" ]\n\n"; exit(1);}
 
     //---------- Read 2nd frame (if it exists) -------------//
@@ -369,7 +385,7 @@ public:
     {
       read_frame(fin, false, dynamic_types, 1);
       if(!set_manual_time){ dtframe=timestep-t0frame; }
-      if(debug) cerr << " I read the second frame: dtframe = "<<dtframe<<endl;
+      if(debug) cerr << "# I read the second frame: dtframe = "<<dtframe<<endl;
     } catch (...) {
       cerr << "WARNING: only 1 frame in trajectory.\n";
       dtframe=last_dtframe=1; // this is meaningless, but it avoids nonsense later

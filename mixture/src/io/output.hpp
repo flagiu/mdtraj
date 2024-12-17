@@ -89,11 +89,10 @@ print_out_lammpsdump(string string_out) {
   fout<<"ITEM: ATOMS type x y z\n";
   for(auto &p : ps) {
     if(pbc_out) {
-      p.r = p.r - box*round(boxInv*p.r); // apply PBC to the position
-      p.r += 0.5*box.diag(); // center inside the box [0,L] for better Ovito visualization
+      // apply PBC to the position and translate x=0 to x=L/2 for better OVITO visualization
+      p.r = p.r - box*round(boxInv*p.r-0.5);
     }
     p.write_xyz(fout);
-    if(pbc_out) p.r -= 0.5*box.diag(); // undo
   }
   fout.close();
   return;

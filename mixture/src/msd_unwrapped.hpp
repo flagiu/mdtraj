@@ -78,8 +78,8 @@ class MSDU_Calculator
       if(period_in_real_units>0 && period_in_real_units<nframes*dtframe){
         period_in_dt_units = ceil(period_in_real_units/dtframe);
       } else if(period_in_real_units>0){
-        cout << "WARNING: the input period for MSD calculation exceeds maximum time interval.\n";
-        cout << "         I will set it equal to the maximum time interval.\n";
+        cerr << "WARNING: the input period for MSD calculation exceeds maximum time interval.\n";
+        cerr << "         I will set it equal to the maximum time interval.\n";
         period_in_dt_units = nframes;
       }
       else{

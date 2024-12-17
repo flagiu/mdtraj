@@ -81,6 +81,34 @@ public:
     }
   }
 
+  int get_timestep(int icycle, int i_incycle) {
+    return t0 * (pow(alpha,npc)*icycle + pow(alpha,(i_incycle+1)) );
+  }
+
+  int get_first_timestep_noskip(){
+    return get_timestep(0,0);
+  }
+  int get_last_timestep_noskip(){
+    return get_timestep(ncycles-1,npc-1);
+  }
+  int get_first_timestep_withskip(){
+    return get_timestep(ncyc_skip0,0);
+  }
+  int get_last_timestep_withskip(){
+    return get_timestep(ncycles-ncyc_skip1-1,npc-1);
+  }
+
+  void print_all_timesteps(){
+    int i,j, t;
+    t0=(int)(delta/alpha);
+    for(i=ncyc_skip0;i<ncycles-ncyc_skip1;i++){
+      for(j=0;j<npc;j++){
+        t = get_timestep(i,j);
+        cout<<t<<endl;
+      }
+    }
+  }
+
   void print_summary(){
     cout<<"#-----------------------------#\n";
     cout<<"LogTimesteps summary:\n";
@@ -97,23 +125,13 @@ public:
     cout<<"#-----------------------------#\n\n";
   }
 
-  void print_all_timesteps(){
-    int i,j, t;
-    t0=(int)(delta/alpha);
-    for(i=ncyc_skip0;i<ncycles-ncyc_skip1;i++){
-      for(j=0;j<npc;j++){
-        t = t0 * (pow(alpha,npc)*i + pow(alpha,(j+1)) );
-        cout<<t<<endl;
-      }
-    }
-  }
-
   void deduce_fromfile(string file, bool debug_){
     debug=debug_;
     ifstream i;
     string line;
     int t1,t2,dt,dt_old,count=0;
     float ratio,ratio_old;
+    bool firstCycleEnded=false;
     const int maxcount=99999999;
     i.open(file, ios::in);
     if (!i.is_open()){
@@ -128,11 +146,15 @@ public:
         dt=t2-t1;
         if(count>1){
           ratio=(float)t2/(float)t1;
-          if(dt<dt_old){
+          // deduce alpha from the ratio btw the two highest numbers available
+          // in the first cycle, i.e. the last two. Find them by checking then
+          // the step difference is shorter than the previous one
+          if(!firstCycleEnded && dt<dt_old){
             npc=count;
             count=maxcount+1;
             alpha=ratio_old;
-            t0=(int)(((float)delta)/alpha);
+            t0=(int)round(((float)delta)/alpha);
+            firstCycleEnded=true;
           }
           ratio_old=ratio;
         }

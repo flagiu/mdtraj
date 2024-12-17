@@ -84,10 +84,14 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n OTHER PARAMETERS:");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n -dynamic_types \t (Dangerous!) Allow for number of types and number of particles per type to change during simulation.");
-  fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end.");
+  fprintf(stderr, "\n -fskip \t Skip the given fraction of frames from beginning and from end. ");
+  fprintf(stderr, "\n        \t Note: if logtime is set, the skip refers to the time schedule");
+  fprintf(stderr, "\n        \t and is internally converted into the trajectory's fraction of frames.");
   fprintf(stderr, "\n        \t INPUT: fskip_from_beginning fskip_from_end. [default: 0.0 0.0].");
   fprintf(stderr, "\n -ignore_double_frames \t Skip a frame if timestep is the same as before. [default: raise an error]");
-  fprintf(stderr, "\n -logtime \t Input has log-linear timesteps specified by the following file. [default: %s]",s_logtime.c_str());
+  fprintf(stderr, "\n -logtime \t Input has log-linear timesteps specified by the following file,");
+  fprintf(stderr, "\n          \t containing the full schedule. Note: trajectory timesteps must");
+  fprintf(stderr, "\n          \t match at the beginning, but can be truncated at the end [default: %s]",s_logtime.c_str());
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
   fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining");
   fprintf(stderr, "\n               \t files: type.dat, box.dat, pos.dat. Box is rotated if");
