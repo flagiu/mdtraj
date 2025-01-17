@@ -82,7 +82,8 @@ public:
   }
 
   int get_timestep(int icycle, int i_incycle) {
-    return t0 * (pow(alpha,npc)*icycle + pow(alpha,(i_incycle+1)) );
+    // round, in case alpha is not perfectly deduced
+    return (int) (0.5+ t0 * (pow(alpha,npc)*icycle + pow(alpha,(i_incycle+1)) ) );
   }
 
   int get_first_timestep_noskip(){

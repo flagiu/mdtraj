@@ -7,6 +7,7 @@ root_path="/home/flavio/programmi/mdtraj/mixture"
 
 # paste frames into a single trajectory
 [[ -e traj.jmd ]] && rm traj.jmd
+awk '(NR==1){printf "0";for(i=2;i<=NF;i++){printf " %s",$i}; printf "\n"}(NR>1){print}' ../pos_initial > ../configurations/pos_0
 ls ../configurations/pos_* | sort -V | while read el; do cat $el >> traj.jmd; done
 
 # prepare cutoffs

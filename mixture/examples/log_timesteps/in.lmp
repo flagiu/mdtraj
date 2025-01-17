@@ -38,9 +38,9 @@ variable restart_exists file restart_exists
 if   ${restart_exists} then &
   "shell ls -rt restart1 restart2 | tail -n 1 > restart_newer" &
   "variable restart_newer file restart_newer" &
-  "print 'fg: Restarting from latest file: ${restart_newer}'" &
+  "print '#fg: Restarting from latest file: ${restart_newer}'" &
   "read_restart ${restart_newer}" &
-  "print 'fg: Timestep=$(step)'" &
+  "print '#fg: Timestep=$(step)'" &
   "jump SELF setup_and_run"
 
 # 4) Run the first-frame setup only if you are starting from scratch...

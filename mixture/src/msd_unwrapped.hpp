@@ -294,11 +294,16 @@ class MSDU_Calculator
             cerr << "# Qs="<<Qs[ti][idx_dt]<<" Qss="<<Qss[ti][idx_dt]<<" (to be normalized to navg)\n";
           } */
         }
-        // (first normalize every self term, then go to distinct terms)
+        // (first normalize every self term and sample, then go to distinct terms)
         for(ti=0;ti<nTypes;ti++){
           for(tj=ti;tj<nTypes;tj++){
             tp=types2int(ti,tj);
             Qd_sample[tp] *= invN;
+          }
+        }
+        for(ti=0;ti<nTypes;ti++){
+          for(tj=ti;tj<nTypes;tj++){
+            tp=types2int(ti,tj);
             Qd[tp][idx_dt] += Qd_sample[tp];
             Qdd[tp][idx_dt] += Qd_sample[tp]*Qd_sample[tp];
             Qsd[tp][idx_dt] += Qs_sample[ti]*Qd_sample[tp];
@@ -349,6 +354,11 @@ class MSDU_Calculator
               for(tj=ti;tj<nTypes;tj++){
                 tp=types2int(ti,tj);
                 Qd_sample[tp] *= invN;
+              }
+            }
+            for(ti=0;ti<nTypes;ti++){
+              for(tj=ti;tj<nTypes;tj++){
+                tp=types2int(ti,tj);
                 Qd[tp][idx_dt] += Qd_sample[tp];
                 Qdd[tp][idx_dt] += Qd_sample[tp]*Qd_sample[tp];
                 Qsd[tp][idx_dt] += Qs_sample[ti]*Qd_sample[tp];

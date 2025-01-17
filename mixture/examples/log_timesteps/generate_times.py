@@ -3,9 +3,9 @@
 # base of the logarithm
 alpha: float = 1.25
 # number of points per cycle (logarithmic scale)
-npc: int =       16
+npc: int =       28
 # number of cycles (linear scale)
-ncycles: int =    3
+ncycles: int =   10
 # spacing (in timesteps) btw. consecutive cycles (Better if multiple of alpha!)
 delta: float =  5.0
 

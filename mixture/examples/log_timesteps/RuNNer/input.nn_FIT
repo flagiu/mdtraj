@@ -1,0 +1,191 @@
+### #############################################################
+### This is the input file for RuNNer (version 0_44 and upwards)
+### #############################################################
+### General remarks: 
+### - commands can be switched off by using the # character at the BEGINNING of the line
+### - the input file can be structured by blank lines and comment lines
+### - the order of the keywords is arbitrary
+### - if keywords are missing, default values will be used and written to runner.out
+### - if mandatory keywords or keyword options are missing, RuNNer will stop with an error message 
+
+########################################################################################################################
+### general keywords
+########################################################################################################################
+nn_type_short 1                           # 1=Behler-Parrinello, 2=Pair NN
+runner_mode 2                             # 1=calculate symmetry functions, 2=fitting mode, 3=predicition mode
+number_of_elements 1                      # number of elements                                   (nelem)                       MODE1+2+3+4
+elements Sb                               # specification of elements                            (element)                     MODE1+2+3+4
+random_seed 4                            # seed for initial random weight parameters and train/test splitting (iseed)         MODE1+2
+random_number_type 1                      # 1=ran0, 2=ran1, 3=ran2, 4=ran3
+remove_atom_energies                      # remove atomic energies before fitting                (lremoveatomenergies)         MODE1+2+3+4
+atom_energy Sb -5.5470123875              # free atom reference energy (atomic zora) ! DUMMY VALUES ! hartree?
+#atom_energy Te -8.181151072              # free atom reference energy (atomic zora) ! DUMMY VALUES !
+#energy_threshold  5.0d0                  # energythreshold for fitting data in Ha per atom      (fitethres)                   MODE1
+bond_threshold 1.0d0                      # threshold for the shortest bond in structure         (rmin)                        MODE1+2+3
+#force_threshold 5.0d0                    # forcethreshold (per component) for fitting data in Ha/Bohr           (fitfthres)                   MODE1
+#use_old_weights_short
+
+
+########################################################################################################################
+### NN structure of the short-range NN  
+########################################################################################################################
+use_short_nn                              # use NN for short range interactions                  (lshort) 
+global_hidden_layers_short 2              # number of hidden layers                              (num_layersshort-1)
+#JB I recommend to use 2 hidden layers, 3 only rarely
+global_nodes_short 20 20                  # number of nodes in hidden layers                     (nodes_short)
+#JB I recommend to use t (hyperbolic tangent) as activation function instead of s
+global_activation_short t t l             # activation functions (t=tanh, s=sigmoid, g=gaussian, c=cosine, l=linear) 
+
+########################################################################################################################
+### symmetry function generation ( mode 1): 
+########################################################################################################################
+test_fraction 0.14000                     # threshold for splitting between fitting and test set (splitthres)                           MODE1
+check_input_forces 0.0001                 # check if sum of reference force vectors is close to zero vector (threshold refers to vector length in Ha/Bohr)
+#CAUTION: don't forget ##use_short_forces below (if you want to generate the training files for the forces)
+
+########################################################################################################################
+### symmetry function definitions (all modes): 
+########################################################################################################################
+# INFO: not yet implemented in this file
+# INFO: symfunction format: reference atom, type, neighbor element 1 (and neighbor element 2), symfunction parameters 
+#
+# GLOBAL SYMMETRY FUNCTIONS FOR SHORT RANGE NN
+# SAMPLE TYPE 2: global_symfunction_short 2 7.14214 0.0 11.338            ! type eta rshift funccutoff
+# SAMPLE TYPE 3: global_symfunction_short 3 0.03571 -1.0 16.0  7.55891    ! type eta lambda zeta funccutoff
+
+#JB I added here a set of very general symmetry functions that should work for first fits. Maybe later a refinement might be useful.
+# Please check in the output of mode 2 if any symmetry function has a too narrow range and generates a warning. In that case the respective
+# symmetry function has to be commented and mode 1 has to be run again
+
+# RADIAL
+# SbSb shortest distance = 1.11 AA
+symfunction_short Sb 2 Sb     0.000000      0.000000     12.500000
+symfunction_short Sb 2 Sb     0.008000      0.000000     12.500000
+symfunction_short Sb 2 Sb     0.018000      0.000000     12.500000
+symfunction_short Sb 2 Sb     0.038000      0.000000     12.500000
+symfunction_short Sb 2 Sb     0.070000      0.000000     12.500000
+symfunction_short Sb 2 Sb     0.148000      0.000000     12.500000
+symfunction_short Sb 2 Sb     0.180000      0.000000     12.500000
+symfunction_short Sb 2 Sb     0.360000      4.800000     12.500000
+symfunction_short Sb 2 Sb     0.360000      6.700000     12.500000
+symfunction_short Sb 2 Sb     0.360000      8.900000     12.500000
+symfunction_short Sb 2 Sb     0.360000      10.80000     12.500000
+
+# SbTe shortest distance = 1.19 AA
+#symfunction_short Sb 2 Te     0.000000      0.000000     12.500000
+#symfunction_short Sb 2 Te     0.007000      0.000000     12.500000
+#symfunction_short Sb 2 Te     0.017000      0.000000     12.500000
+#symfunction_short Sb 2 Te     0.032000      0.000000     12.500000
+#symfunction_short Sb 2 Te     0.060000      0.000000     12.500000
+#symfunction_short Sb 2 Te     0.120000      0.000000     12.500000
+
+# TeSb shortest distance = 1.19 AA
+#symfunction_short Te 2 Sb    0.000000      0.000000     12.500000
+#symfunction_short Te 2 Sb    0.007000      0.000000     12.500000
+#symfunction_short Te 2 Sb    0.017000      0.000000     12.500000
+#symfunction_short Te 2 Sb    0.032000      0.000000     12.500000
+#symfunction_short Te 2 Sb    0.060000      0.000000     12.500000
+#symfunction_short Te 2 Sb    0.120000      0.000000     12.500000
+
+# TeTe shortest = 1.65 AA
+#symfunction_short Te 2 Te    0.000000      0.000000     12.500000
+#symfunction_short Te 2 Te    0.005000      0.000000     12.500000
+#symfunction_short Te 2 Te    0.012000      0.000000     12.500000
+#symfunction_short Te 2 Te    0.020000      0.000000     12.500000
+#symfunction_short Te 2 Te    0.033000      0.000000     12.500000
+#symfunction_short Te 2 Te    0.054000      0.000000     12.500000
+
+# ANGULAR
+symfunction_short Sb 3 Sb Sb 0.0  1.0  1.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  -1.0  1.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  1.0  2.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  -1.0  2.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  1.0  4.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  -1.0 4.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  1.0  8.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  -1.0 8.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  1.0  16.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  -1.0 16.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  1.0  24.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.0  1.0  32.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+
+symfunction_short Sb 3 Sb Sb 0.010  1.0  1.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.015  1.0  1.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.010  1.0  2.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+symfunction_short Sb 3 Sb Sb 0.015  1.0  2.0 12.5  ! central_atom type neighbor_atom1 neighbor_atom2 eta lambda zeta funccutoff
+#END SF
+
+########################################################################################################################
+### fitting (mode 2):general inputs for short range AND electrostatic part:
+########################################################################################################################
+epochs 25                                 # number of epochs                                     (nepochs)                              MODE2
+points_in_memory  1000                    # max number of structures in memory                   (nblock)                               MODE2
+mix_all_points 
+#JB random_order_training is outdates, please use mix_all_points
+#random_order_training                    # training with random order of points                 (lrandomtrain)                         MODE2
+scale_symmetry_functions                  # scale symmetry functions                             (lscalesym)                            MODE2+3+4
+#scale_min_short 0.00
+#scale_max_short 1.00
+#center_symmetry_functions                # remove center of mass of structure function values   (lcentersym)                           MODE2+3+4
+fitting_unit  eV                          # unit for error output in mode 2 (eV or Ha)
+max_force  0.40  #If the absolute value of a force component in x,y or z
+                #is larger than A Ha/Bohr
+                #then the force is not used in the update
+                #and it is also not used for the RMSE calculation!!!
+max_energy 0.04
+
+########################################################################################################################
+### fitting options ( mode 2): short range part only:
+########################################################################################################################
+optmode_short_energy 1                    # optimization mode short range energies(optmodee, 1=Kalman filter, 2=conjugate gradient, 3=steepest descent) 
+optmode_short_force 1                     # optimization mode short range forces  (optmodef, 1=Kalman filter, 2=conjugate gradient, 3=steepest descent) 
+#JB I recommend using this:
+short_energy_error_threshold 0.00000      # threshold of adaptive Kalman filter short E          (kalmanthreshold)                      MODE2
+#JB I recommend using this or lower values
+short_force_error_threshold 1.0000001     # threshold of adaptive Kalman filter short F          (kalmanthresholdf)                     MODE2
+kalman_lambda_short 0.98000               # Kalman parameter short E/F                           (kalmanlambda)                         MODE2
+kalman_nue_short 0.99870                  # Kalman parameter short E/F                           (kalmannue)                            MODE2
+#steepest_descent_step_energy_short 0.01d0# step size for steepest descent energy                (steepeststepe)                        MODE2
+#steepest_descent_step_force_short 0.01d0 # step size for steepest descent force                 (steepeststepf)                        MODE2
+#use_old_weights_short                    # restart fitting with old weight parameters for short (luseoldweightsshort)                  MODE2
+#update_worst_short_energies 0.1d0        # percentage of the worst energies used for update     (worste)                               MODE2
+#update_worst_short_forces 0.1d0          # percentage of the worst forces used for update       (worstf)                               MODE2
+force_update_scaling 3.0d0               # scaling factor for the force update (negative value means automatic scaling) (scalefactorf) MODE2
+#short_energy_group 1                     # group energies for update                            (nenergygroup)                         MODE2
+short_energy_fraction 1.0                 # percentage of energies used for fitting 100%=1.0     (energyrnd)                            MODE2
+#short_force_group 1                      # group forces for update                              (nforcegroup)                          MODE2
+#JB adapt the short_force_fraction value for speed-up, but you will lose information for too small values
+short_force_fraction 0.12                 # percentage of forces used for fitting 100%=1.0       (forcernd)                             MODE2 
+use_short_forces                          # use forces for fitting                               (luseforces)                           MODE2
+#calculate_final_force                    # calculate error of forces only in final epoch to save time
+weights_min -1.00                         # minimum value for initial random short range weights
+weights_max 1.00                          # maximum value for initial random short range weights
+analyze_error
+#JB The following keyword might be useful:
+#precondition_weights
+print_mad
+analyze_composition
+#JB this might be useful:
+repeated_energy_update
+#nguyen_widrow_weights_short              # initialize short range weights according to Nguyen Widrow scheme                     MODE2
+
+########################################################################################################################
+### output options for mode 2 (fitting):  
+########################################################################################################################
+write_weights_epoch 1                     # write set of weight parameters every ith epoch       (iwriteweight)                         MODE2
+#write_temporary_weights                  # write temporary weights each data block              (lwritetmpweights)                     MODE2
+write_trainpoints                         # write trainpoints.out and testpoints.out files       (lwritetrainpoints)                    MODE2
+#write_traincharges                       # write traincharges.out and testcharges.out files     (lwritetraincharges)                   MODE2
+write_trainforces                         # write trainforces.out and testforces.out files       (lwritetrainforces)                    MODE2
+
+########################################################################################################################
+### output options for mode 3 (prediction):  
+########################################################################################################################
+calculate_forces                          # calculate forces                                     (ldoforces)                            MODE3
+calculate_stress                          # calculate stress                                     (ldostress)(not fully implemented)     MODE3
+#write_pdb                                 # write predicted structure in pdb format              (lwritepdb)                            MODE3
+#write_xyz                                 # write predicted structure in xyz format              (lwritexyz)                            MODE3
+#write_pov                                 # write predicted structure in pov format              (lwritepov)                            MODE3
+#write_pwscf                               # write predicted structure in pwscf format            (lwritepw)                             MODE3
+######################## END !!!!!!!
+
