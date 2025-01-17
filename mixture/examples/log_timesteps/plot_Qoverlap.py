@@ -94,9 +94,9 @@ for i,file in enumerate(args.files):
     chi4sd = (Qsd-2*Qs*Qd) * chifactor
     
 
-    axes[0].plot(t,Qs, "-", label="s", color=col, zorder=-i)
-    axes[0].plot(t,Qd, "--", label="d", color=col, zorder=-i)
-    axes[0].plot(t,Qs+Qd, "x-", label="total", color=col, zorder=-i)
+    axes[0].plot(t,Qs, "-", label="s" if i==0 else None, color=col, zorder=-i)
+    axes[0].plot(t,Qd, "--", label="d" if i==0 else None, color=col, zorder=-i)
+    axes[0].plot(t,Qs+Qd, "x-", label="total" if i==0 else None, color=col, zorder=-i)
     """    
     axes[1].plot(t,Qss, "-", label="ss", color=col, zorder=-i)
     axes[1].plot(t,Qdd, "--", label="dd", color=col, zorder=-i)
@@ -130,6 +130,7 @@ for ax in axes:
     ax.tick_params(which='both', direction='in')
     ax.set_xscale("log")
     ax.set_xlim((1e-1,1e3)) # picoseconds
+    ax.set_ylim((0,ax.get_ylim()[1]))
 
 axes[0].legend(frameon=False, fontsize=6)
 axes[-1].legend(frameon=False, fontsize=6)
