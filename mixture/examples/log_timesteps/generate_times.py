@@ -3,7 +3,7 @@
 # base of the logarithm
 alpha: float = 1.25
 # number of points per cycle (logarithmic scale)
-npc: int =       28
+npc: int =       36
 # number of cycles (linear scale)
 ncycles: int =   10
 # spacing (in timesteps) btw. consecutive cycles (Better if multiple of alpha!)
@@ -31,8 +31,9 @@ print("<--------------------------------------------->")
 f = open(file,"w")
 for i in range(ncycles):
 	for j in range(npc):
-		t = t0 * (alpha**npc * i + alpha**(j+1) )
-		f.write("%d\n"%round(t))
+		#t = round(t0*(alpha**npc)*i + t0*(alpha**(j+1)) ) # wrong!
+		t = round(t0 * alpha**npc * i) + round(t0 * alpha**(j+1))
+		f.write("%d\n"%t)
 print("Maximum step for LAMMPS: %d"%t)
 print("<--------------------------------------------->")
 print("Times saved into %s"%file)
