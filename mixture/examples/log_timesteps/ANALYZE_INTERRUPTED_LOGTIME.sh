@@ -1,16 +1,9 @@
 #!/bin/bash
 
-run_fraction_of_trajectory() {
-tag=$1     # string tag for output files. Use the empty string ('' or "") for no tag
-f0=$2      # fraction in [0,1]
-f1=$3      # fraction in [0,1]
-
 traj="../dump.lammpstrj"
 MDTRAJ_PATH="/home/flavio/programmi/mdtraj/mixture"
-
-MDTRAJ="${MDTRAJ_PATH}/bin/mdtraj -lammpstrj $traj -nodynamics -fskip $f0 $f1 "
-[[ $tag ]] && MDTRAJ="${MDTRAJ} -tag $tag" # if tag is not empty, add it as an argument
-[[ $tag ]] && tagdot=".${tag}" || tagdot="" # if tag is not empty, prepend a '.' for output files' names
+MDTRAJ_PY=${MDTRAJ_PATH}/python
+MDTRAJ="${MDTRAJ_PATH}/bin/mdtraj -lammpstrj $traj -nodynamics"
 
 cat > rcut.dat << EOF
 3.58
@@ -18,14 +11,18 @@ cat > rcut.dat << EOF
 5.34
 EOF
 echo 3.70 > rcut_clusters.dat
-echo "|||| $tag |||| q4 ..."
-$MDTRAJ -rcut rcut.dat -clusters rcut_clusters.dat -cn -bo -l 4 -qdot_th 0.65
+echo "|||| q4 ..."
+$MDTRAJ -rcut rcut.dat -clusters rcut_clusters.dat -bo -l 4 -qdot_th 0.65 -out_lammpsdump -pbc_out
 
-echo "|||| $tag |||| Clearing PDFs and heaviest output files ..."
-rm *.pdf log$tagdot nnd${tagdot}.dat coordnum${tagdot}.dat ed_q${tagdot}.dat 2> tmp
-rm boo*${tagdot}.dat boc*${tagdot}.dat boo*${tagdot}.local_ave boc*${tagdot}.local_ave 2> tmp
+bash clip_type_lmp-dump.sh clusters.l4.dump 2 > clipped.dump
+
+MDTRAJ="${MDTRAJ_PATH}/bin/mdtraj -lammpstrj clipped.dump -nodynamics -fskip 0.76 0 -tag A -dynamic_types"
+echo 4.5 > tmp
+$MDTRAJ -rcut tmp -altbc 0.02 2.5 25 -v
+
+for i in $(seq 0 1)
+do
+python ${MDTRAJ_PY}/plot_altbc.py --inavg altbc.A_type${i}.ave --outname altbc.A_type${i}
+done
 rm tmp
-}
-
-run_fraction_of_trajectory "" 0.0 0.0
 
