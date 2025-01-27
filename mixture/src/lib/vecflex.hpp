@@ -52,21 +52,31 @@ public:
     {
       v[i] = val;
     }
+
+  void show(ostream& o)
+  {
+    o << "(";
+    for (int i = 0; i < length(); i++) {
+      o << v[i];
+      if (i < length()-1)
+        o << ", ";
+      else
+        o << ")\n";
+    }
+  }
+  void show(ostream& o, const char *myname) const
+  {
+    o << myname << ": ";
+    show(o);
+  }
+
   void show(void) const
     {
-      cerr << "(";
-      for (int i = 0; i < length(); i++) {
-        cerr << v[i];
-        if (i < length()-1)
-          cerr << ", ";
-        else
-          cerr << ")\n";
-      }
+      show(cerr);
     }
-  void show(const char *str) const
+  void show(const char *myname) const
   {
-    cerr << str << ": ";
-    show();
+    show(cerr, myname);
   }
 
   template<class ntype2>

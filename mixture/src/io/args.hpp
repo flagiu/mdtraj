@@ -6,7 +6,7 @@ void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
   				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nnd -Qself -rdf -rmin -rmax -sq -sqt]"
-				  " [-rcut -p1half -period] [ -dynamic_types -out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
+				  " [-rcut -p1half -period] [ -dynamic_types -nodynamics -out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -92,6 +92,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -logtime \t Input has log-linear timesteps specified by the following file,");
   fprintf(stderr, "\n          \t containing the full schedule. Note: trajectory timesteps must");
   fprintf(stderr, "\n          \t match at the beginning, but can be truncated at the end [default: %s]",s_logtime.c_str());
+  fprintf(stderr, "\n -nodynamics \t Do not raise error if timesteps are not equally spaced.");
+  fprintf(stderr, "\n             \t WARNING: dynamic averages will be junk.");
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
   fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining");
   fprintf(stderr, "\n               \t files: type.dat, box.dat, pos.dat. Box is rotated if");
@@ -513,6 +515,8 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
        logtime = true;
        s_logtime = string(argv[i]);
      }
+   else if ( !strcmp(argv[i], "-nodynamics") )
+	    nodynamics = true;
 	  else if ( !strcmp(argv[i], "-out_xyz") )
 	    out_xyz = true;
 	  else if ( !strcmp(argv[i], "-out_alphanes") )

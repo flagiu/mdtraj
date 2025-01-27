@@ -123,13 +123,16 @@ class Neigh_and_Bond_list
         fout.close();
         if(debug) cerr << "*** Reading RCUT file DONE ***\n";
       }
-      cerr << "#-------- RCUT summary --------#\n";
+      // output r_cut to the log file
+      ss.str(std::string()); ss << log_file << tag; fout.open(ss.str(), ios::app);
+      fout << "#-------- RCUT summary --------#\n";
       for(u=0;u<Nsphere;u++)
       {
-        cerr << "SPHERE u="<<u<<" : ";
-        rcut[u].show();
+        fout << "SPHERE u="<<u<<" : ";
+        rcut[u].show(fout);
       }
-      cerr << "#------------------------------#\n";
+      fout << "#------------------------------#\n";
+      fout.close();
     }
 
     void read_rcut_clustering_from_file(string s_rcut, vecflex<ntype> cutoffDefault)
@@ -164,9 +167,12 @@ class Neigh_and_Bond_list
         fout.close();
         if(debug) cerr << "*** Reading RCUT_CLUSTERING file DONE ***\n";
       }
-      cerr << "#--- RCUT_CLUSTERING summary ---#\n";
-      rcut_clustering.show();
-      cerr << "#-------------------------------#\n";
+      // output to the log file
+      ss.str(std::string()); ss << log_file << tag; fout.open(ss.str(), ios::app);
+      fout << "#--- RCUT_CLUSTERING summary ---#\n";
+      rcut_clustering.show(fout);
+      fout << "#-------------------------------#\n";
+      fout.close();
     }
 
     void print_bond_summary(vector<ptype> ps)

@@ -33,6 +33,9 @@ args = parser.parse_args()
 print("Plotting ALTBC ...")
 
 lines = args.inavg.readlines()
+if len(lines)<2:
+    print("ERROR: only %s lines in %s"%(len(lines),args.inavg.name))
+    sys.exit(1)
 i = 0
 block=0
 r = []

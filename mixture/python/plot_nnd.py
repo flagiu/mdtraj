@@ -8,6 +8,7 @@ plt.rcParams['axes.labelsize'] = 'large'
 
 outpng="nnd.png"
 outpdf="nnd.pdf"
+outdat="nnd.ave"
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
@@ -74,16 +75,18 @@ ax.set_ylabel("Density")
 y_shift=0.0
 central_atom_type=x[:,2]
 
-print("#Central atom type, Average distance for each shell:")
+f=open(outdat,"w")
+f.write("#Type of central atom; mean(r) and std(r) for each shell: r1,s1, r2,s2, ... \n")
 for nt in range(ntypes): # for each type of central atom
     y_shift=nt*args.yshift
-    print(labels[nt],end='')
+    f.write("%s"%labels[nt])
     for nn in range(M): # for each closest neighbour
         selection=(central_atom_type==nt)
         dist_forAnyNeighType = x[selection,3+2*nn+1]
         _,edges_forAnyNeighType = np.histogram(dist_forAnyNeighType, bins=args.bins)
         avg=dist_forAnyNeighType.mean()
-        print(" %.2f"%avg,end='')
+        std=dist_forAnyNeighType.std()
+        f.write(" %.3f %.3f"%(avg,std))
         baseline_values=y_shift+np.zeros(len(edges_forAnyNeighType)-1)
         for nt_other in range(ntypes):
             neigh_type = x[selection,3+2*nn]
@@ -92,7 +95,9 @@ for nt in range(ntypes): # for each type of central atom
             values,_ = np.histogram(dist, bins=edges_forAnyNeighType, density=True)
             ax.stairs(values,edges_forAnyNeighType, baseline=baseline_values, fill=False, alpha=0.9)
             baseline_values+=values
-    print()
+    f.write('\n')
+f.close()
+print("Saved average nnd into %s"%(outdat))
 
 #ax.set_yscale("log")
 ax.tick_params(which='both', direction='in')

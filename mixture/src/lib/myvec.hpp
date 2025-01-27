@@ -45,22 +45,32 @@ public:
     {
       v[i] = val;
     }
-  void show(void) const
+
+    void show(ostream& o) const
     {
-      cerr << "(";
+      o << "(";
       for (int i = 0; i < length(); i++) {
-        cerr << v[i];
+        o << v[i];
         if (i < length()-1)
-          cerr << ",";
+          o << ", ";
         else
-          cerr << ")\n";
+          o << ")\n";
       }
     }
-  void show(const char *str) const
-  {
-    cerr << str << ": ";
-    show();
-  }
+    void show(ostream& o, const char *myname) const
+    {
+      o << myname << ": ";
+      show(o);
+    }
+
+    void show(void) const
+      {
+        show(cerr);
+      }
+    void show(const char *myname) const
+    {
+      show(cerr, myname);
+    }
 
   template <class ntype2>
   void to_array(ntype2 arr[N]) const

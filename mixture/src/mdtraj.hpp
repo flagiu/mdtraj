@@ -15,7 +15,7 @@
 using namespace std;
 
 const string root_path="/home/flavio/programmi/mdtraj/mixture";
-#define MAX_N_TYPES 8
+#define MAX_N_TYPES 10
 #define MAX_N_ANGMOM 5
 enum class FileType {
   NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN, RUNNER
@@ -43,7 +43,7 @@ public:
   string s_in, s_out, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
   string s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_overlap, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq; // for file naming
-  bool ignore_double_frames, logtime, out_box, out_xyz, out_alphanes, out_lammpsdump;
+  bool ignore_double_frames, logtime, nodynamics, out_box, out_xyz, out_alphanes, out_lammpsdump;
   bool debug, verbose;
   //
   LogTimesteps logt;
@@ -153,6 +153,7 @@ public:
     cerr << " adf_binw = \t " << adf_binw << endl;
     cerr << " q_mod_min,q_modmax,q_mod_step = \t " << qmodmin << ", " << qmodmax << ", "<< qmodstep << endl;
     cerr << " remove rotational degrees of freedom = \t " << remove_rot_dof << endl;
+    cerr << " nodynamics = \t " << nodynamics << endl;
     cerr << " out_box = \t " << out_box << endl;
     cerr << " out_xyz = \t " << out_xyz << endl;
     cerr << " out_lammpsdump = \t " << out_lammpsdump << endl;
@@ -220,6 +221,7 @@ public:
     period = -1; // default: don't average over t0 for MSD
     image_convention = 1; // Minimum Image Convention
     remove_rot_dof = false;
+    nodynamics = false; // ignore timestep values?
     out_box = false;
     out_xyz = false;
     out_lammpsdump = false;
@@ -283,6 +285,14 @@ public:
     if(filetype==FileType::NONE) {
       cerr << "ERROR: input file was not defined. Use -h for help\n";
       exit(1);
+    }
+
+    // check conflicts
+    if(nodynamics){
+      cerr<<"WARNING: '-nodynamics' may produce junk ensemble averages.\n";
+      if(logtime && nodynamics){
+        cerr<<"WARNING: combination of '-nodynamics' and '-logtime' will LIKELY produce junk.\n";
+      }
     }
   }
 
@@ -403,7 +413,7 @@ public:
       for(int i=0; i<nframes_original; i++)
       {
         if(i+1>nskip0 && i<nframes_original-nskip1){
-          read_frame(fin, true, true, i);
+          read_frame(fin, false, true, i); // reset ntypes but don't reset N and nframes
           max_nTypes = max(max_nTypes, nTypes);
           if(debug) { cerr << "# dynamic_types: "<< i << " " << nTypes << endl; }
         } else{
@@ -451,14 +461,14 @@ public:
         }
       }
 
-      if(i>1 && !logtime && dtframe!=last_dtframe) {
-        cerr<<"["<<myName<<" Error] logtime==false but timestep interval is not linearly spaced:\n";
+      if(i>1 && !nodynamics && !logtime && dtframe!=last_dtframe) {
+        cerr<<"["<<myName<<" Error] nodynamics==false and logtime==false, but timestep interval is NOT linearly spaced:\n";
         cerr<<"               last_dt = "<<last_dtframe<<", dt = "<<dtframe<<", at timestep = "<<timestep<<"\n";
         exit(1);
       }
 
       if(i+1>nskip0 && i<nframes_original-nskip1)
-        do_computations_and_output(i-nskip0);
+        do_computations_and_output(i-nskip0); // use index 0,1,...,nframes-1
 
       printProgress.update( i+1-nskip0, timer.lap() );
       last_dtframe=dtframe;
