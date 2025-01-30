@@ -17,7 +17,7 @@ class Neigh_and_Bond_list
   using mat=mymatrix<ntype,3,3>;
   private:
     int p1half, p2half, p1,p2;
-    string string_cn_out, string_nnd_out, string_rmin_out, string_rmax_out;
+    string string_cn_out, string_nna_out,string_nnd_out, string_rmin_out, string_rmax_out;
     string log_file, myName, tag;
     fstream fout;
     stringstream ss;
@@ -36,7 +36,7 @@ class Neigh_and_Bond_list
 
   public:
     ntype rmaxSq;
-    int Nsphere, N, nTypes, nTypePairs, max_num_nnd;
+    int Nsphere, N, nTypes, nTypePairs, max_num_nna,max_num_nnd;
     vecflex<ntype> rcut[MAX_NSPHERE], rcutSq[MAX_NSPHERE];
     vector< vecflex<ntype> > neigh[MAX_NSPHERE]; // Nspheres X nTypePairs X N
     vecflex<ntype> neigh_anytype[MAX_NSPHERE]; // Nspheres X N (agnostic of types)
@@ -467,6 +467,52 @@ class Neigh_and_Bond_list
 
       fout.close();
       if(debug) cerr << "*** NearestNeighDistances computation for timestep " << timestep << " ENDED ***\n";
+    }
+
+    //----------------- Nearest Neighbours angles (done on 1st sphere) ------------//
+    void init_nearest_neigh_angles(string string_nna_out_, int max_num_nna_)
+    {
+      max_num_nna=max_num_nna_;
+      if(debug) cerr<<"*** Initializing NearestNeighAngles within "<<myName<<"***\n";
+      cerr<<"WARNING: NearestNeighAngles produces a large output file\n";
+      string_nna_out = string_nna_out_;
+      ss.str(std::string()); ss << string_nna_out << tag << ".dat"; fout.open(ss.str(), ios::out);
+      fout << "#TimeStep | Particle0Idx | Particle0Type | (Neighbour1Type, Neighbour2Type, cos(102)) for the first "<<max_num_nna<<" neighs, sorted by r1<=r2 | # cutoffs = ";
+      for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
+      fout<<endl;
+      fout.close();
+      if(debug) cerr<<"*** Initialization completed ***\n";
+    }
+
+    void compute_nearest_neigh_angles(int timestep, vector<ptype> ps)
+    {
+      if(debug) cerr << "*** NearestNeighAngles computation for timestep " << timestep << " STARTED ***\n";
+      int i, j,jj, k,kk, u;
+      vec rij, rik;
+      ntype rijSq, rikSq, cos;
+
+      ss.str(std::string()); ss << string_nna_out << tag << ".dat"; fout.open(ss.str(), ios::app);
+
+      u=0; // 1st sphere neighbours
+      for(i=0;i<N;i++){
+        fout << timestep << " " << i << " " << ps[i].label;
+        for(jj=0;jj<ps[i].neigh_list[u].size()&&jj<max_num_nna;jj++){ // search in neigh list
+          j = ps[i].neigh_list[u][jj];
+          rij = ps[i].rij_list[u][jj];
+          rijSq = ps[i].rijSq_list[u][jj];
+          for(kk=jj+1;kk<ps[i].neigh_list[u].size()&&kk<max_num_nna;kk++){ // search in neigh list
+            k = ps[i].neigh_list[u][kk];
+            rik = ps[i].rij_list[u][kk];
+            rikSq = ps[i].rijSq_list[u][kk];
+            cos = (rij*rik) / sqrt(rijSq*rikSq);
+            fout << " " << ps[j].label << " " << ps[k].label << " " << cos;
+          }
+        }
+        fout << endl;
+      }
+
+      fout.close();
+      if(debug) cerr << "*** NearestNeighAngles computation for timestep " << timestep << " ENDED ***\n";
     }
 
     //---------------------- Minimum atomic distance ---------------------------------//

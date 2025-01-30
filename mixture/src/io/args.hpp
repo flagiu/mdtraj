@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nnd -Qself -rdf -rmin -rmax -sq -sqt]"
+  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nna -nnd -Qself -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut -p1half -period] [ -dynamic_types -nodynamics -out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -64,6 +64,7 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -cn \t Compute the coordination number, i.e., the number of neighbours in the 1st sphere, weighted by a cutoff function. OUTPUT: %s.{dat,ave}.", s_coordnum.c_str());
   fprintf(stderr, "\n -edq \t Compute the Errington-Debenedetti 'q' bond order parameter.  OUTPUT: %s.{dat,ave,_classes.dat}.", s_edq.c_str() );
   fprintf(stderr, "\n -msd \t Compute the Mean Squared Displacement and the Non-Gaussianity Parameter. OUTPUT: %s.{traj,ave,ngp}.", s_msd.c_str() );
+  fprintf(stderr, "\n -nna \t Compute Nearest Neighbour Angles for neighbours in the 1st sphere. INPUT: max_number_of_neighbours OUTPUT: %s.{dat,ave}.", s_nna.c_str());
   fprintf(stderr, "\n -nnd \t Compute Nearest Neighbour Distances for neighbours in the 1st sphere. INPUT: max_number_of_neighbours OUTPUT: %s.{dat,ave}.", s_nnd.c_str());
   fprintf(stderr, "\n -Qself \t Compute the self-overlap parameter Q_s(t) and its susceptibility (uses the same routine for MSDU). INPUT: cutoff. OUTPUT: %s.ave.", s_overlap.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width, max_distance. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
@@ -155,16 +156,26 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 		}
 	  else if ( !strcmp(argv[i], "-cn") )
 	      c_coordnum = true;
-    else if ( !strcmp(argv[i], "-nnd") )
+    else if ( !strcmp(argv[i], "-nna") )
       {
-        c_nnd = true;
+        c_nna = true;
         i++;
         if (i == argc){
-          fprintf(stderr, "ERROR: '-nnd' must be followed by the max_number_of_neighbours!\n");
+          fprintf(stderr, "ERROR: '-nna' must be followed by the max_number_of_neighbours!\n");
           exit(-1);
         }
-        max_num_nnd = atoi(argv[i]);
+        max_num_nna = atoi(argv[i]);
       }
+      else if ( !strcmp(argv[i], "-nnd") )
+        {
+          c_nnd = true;
+          i++;
+          if (i == argc){
+            fprintf(stderr, "ERROR: '-nnd' must be followed by the max_number_of_neighbours!\n");
+            exit(-1);
+          }
+          max_num_nnd = atoi(argv[i]);
+        }
 	  else if ( !strcmp(argv[i], "-edq") )
 	      c_edq = true;
 	  else if ( !strcmp(argv[i], "-box1") )
