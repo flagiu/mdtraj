@@ -20,6 +20,7 @@
 #include "msd_and_ngp.hpp"
 #include "msd_unwrapped.hpp"
 #include "neighbour_and_bond_list.hpp"
+#include "pattern_matching_parameter.hpp"
 #include "rdf.hpp"
 #include "sq.hpp"
 #include "sqt.hpp"

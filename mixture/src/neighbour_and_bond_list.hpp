@@ -36,7 +36,7 @@ class Neigh_and_Bond_list
 
   public:
     ntype rmaxSq;
-    int Nsphere, N, nTypes, nTypePairs, max_num_nna,max_num_nnd;
+    int Nsphere, N, nTypes, nTypePairs, max_num_nn, max_num_nna,max_num_nnd;
     vecflex<ntype> rcut[MAX_NSPHERE], rcutSq[MAX_NSPHERE];
     vector< vecflex<ntype> > neigh[MAX_NSPHERE]; // Nspheres X nTypePairs X N
     vecflex<ntype> neigh_anytype[MAX_NSPHERE]; // Nspheres X N (agnostic of types)
