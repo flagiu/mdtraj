@@ -4,6 +4,8 @@
 #include "neighbour_and_bond_list.hpp"
 using namespace std;
 //---------------------- https://doi.org/10.3389/fmats.2017.00034 -------------------------------//
+// q in [0,1] pattern is matched when q>0.5 (ideally q=1)
+// For the ideal simple cubic: CN=6, q_tetr=0.014 , q_oct=1
 template <class ntype, class ptype>
 class PatternMatchingParameters
 {
@@ -12,7 +14,7 @@ class PatternMatchingParameters
   private:
     Neigh_and_Bond_list<ntype,ptype> *nb_list;
     vecflex<ntype> q_tetr, q_oct;
-    ntype tetr_angle, dtheta1,dtheta2,thetaSouth, dt1Sq,dt2Sq, rad2deg;
+    ntype tetr_angle, dtheta1,dtheta2,thetaSouth, gaussWeight1,gaussWeight2, rad2deg;
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
@@ -22,12 +24,12 @@ class PatternMatchingParameters
     PatternMatchingParameters(){
       myName = "PatternMatchingParameters";
       tetr_angle = 109.47; //degrees
-      dtheta1 = 12.0; // degrees, size of gaussian smoothening
-      dtheta2 = 10.0;
-      thetaSouth = 160.0; //degrees, threshold for being considered in South Pole
-      dt1Sq = dtheta1*dtheta1;
-      dt2Sq = dtheta2*dtheta2;
-      rad2deg = 180/M_PI;
+      dtheta1 = 12.; // degrees, size of gaussian smoothening
+      dtheta2 = 10.;
+      thetaSouth = 160.; //degrees, threshold for being considered in South Pole
+      gaussWeight1 = 1/(2.*dtheta1*dtheta1);
+      gaussWeight2 = 1/(2.*dtheta2*dtheta2);
+      rad2deg = 180./M_PI;
     }
     virtual ~PatternMatchingParameters(){}
 
@@ -59,8 +61,9 @@ class PatternMatchingParameters
     {
       const int N=nb_list->N;
       const int u=0; // first shell bonds
-      ntype rijSq,rikSq,rimSq, theta_k,theta_m,phi, sumt1,sumt2,sumo1,sumo2;
-      vec rij,rik,rim;
+      ntype rijSq,rikSq,rimSq, sumt1,sumt2,sumo1,sumo2;
+      ntype cos_k,theta_k, cos_m,theta_m, cos_phi,phi;
+      vec rij,rik,rim, uij,uik_equator,uim_equator;
       int i,jj,kk,mm, j,k,m, num_neigh;
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
       for(i=0;i<N;i++)
@@ -73,16 +76,21 @@ class PatternMatchingParameters
           //j = ps[i].neigh_list[u][jj];
           rij = ps[i].rij_list[u][jj];
           rijSq = ps[i].rijSq_list[u][jj];
+          uij = rij/sqrt(rijSq); // versor
 
           for(kk=0;kk<num_neigh;kk++)
           {
-            sumt2=sumo2=0.0;
             if(kk==jj){ continue; }
             //k = ps[i].neigh_list[u][kk];
             rik = ps[i].rij_list[u][kk];
             rikSq = ps[i].rijSq_list[u][kk];
             // angle j-i-k (polar)
-            theta_k = rad2deg*acos( (rij*rik) / sqrt(rijSq*rikSq) );
+            cos_k = (rij*rik) / sqrt(rijSq*rikSq);
+            theta_k = rad2deg*acos(cos_k);
+            // versor of the projection of k on the equator of j
+            uik_equator = rik/sqrt(rikSq) - cos_k*uij;
+
+            sumt2=sumo2=0.0;
 
             for(mm=0;mm<num_neigh;mm++)
             {
@@ -90,25 +98,29 @@ class PatternMatchingParameters
               //m = ps[i].neigh_list[u][mm];
               rim = ps[i].rij_list[u][mm];
               rimSq = ps[i].rijSq_list[u][mm];
-              // angle j-i-m (azimuth)
-              theta_m = rad2deg*acos( (rij*rim) / sqrt(rijSq*rimSq) );
-              // angle m-i-k (azimuth)
-              phi = rad2deg*acos( (rim*rik) / sqrt(rimSq*rikSq) );
+              // angle j-i-m (polar)
+              cos_m = (rij*rim) / sqrt(rijSq*rimSq);
+              theta_m = rad2deg*acos(cos_m);
+              // versor of the projection of m on the equator of j
+              uim_equator = rim/sqrt(rimSq) - cos_m*uij;
+              // AZIMUTHAL angle m-i-k
+              cos_phi = uim_equator*uim_equator;
+              phi = rad2deg*acos(cos_phi);
 
-              sumt2 += SQUARE(cos(1.5*phi))*exp(-SQUARE(theta_m-tetr_angle)/(2*dt1Sq));
+              sumt2 += SQUARE(cos(1.5*phi))*exp(-SQUARE(theta_m-tetr_angle)*gaussWeight1);
 
               if(theta_k<thetaSouth && theta_m<thetaSouth){
-                sumo2 += SQUARE(cos(2.*phi))*exp(-SQUARE(theta_m-90.)/(2*dt2Sq));
+                sumo2 += SQUARE(cos(2.*phi))*exp(-SQUARE(theta_m-90.)*gaussWeight2);
               }
 
             }
 
-            sumt1 += sumt2 * exp(-SQUARE(theta_k-tetr_angle)/(2*dt1Sq));
+            sumt1 += sumt2 * exp(-SQUARE(theta_k-tetr_angle)*gaussWeight1);
 
             if(theta_k<thetaSouth) {
               sumo1 += sumo2;
             } else {
-              sumo1 += 3*exp(-SQUARE(theta_k-180.)/(2*dt1Sq));
+              sumo1 += 3*exp(-SQUARE(theta_k-180.)*gaussWeight1);
             }
 
           }
