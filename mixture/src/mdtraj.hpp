@@ -38,11 +38,11 @@ public:
   vector<ptype> ps, ps_new; // vector of particles
   int nframes, timestep;
   bool c_coordnum, c_nna,c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
-  bool c_altbc, c_sq, c_sqt, c_edq, c_clusters, c_pmp; // compute or not
+  bool c_altbc, c_sq, c_sqt, c_edq, c_clusters, c_pmp, c_oct; // compute or not
   bool dynamic_types;
   string s_in, s_out, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
   string s_nna,s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_overlap, s_rdf, s_adf;
-  string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq, s_pmp; // for file naming
+  string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq, s_pmp, s_oct; // for file naming
   bool ignore_double_frames, logtime, nodynamics, out_box, out_xyz, out_alphanes, out_lammpsdump;
   bool debug, verbose;
   //
@@ -58,6 +58,7 @@ public:
   Bond_Parameters<ntype,ptype>* bond_parameters[MAX_N_ANGMOM];
   ED_Bond_Parameter<ntype,ptype>* ed_q_calculator;
   PatternMatchingParameters<ntype,ptype>* pmp_calculator;
+  OctahedralParameter<ntype,ptype>* oct_calculator;
   //
   ntype rdf_binw, rdf_rmax;
   PBC<ntype> *pbc;
@@ -137,6 +138,7 @@ public:
     cerr << " c_nna = \t " << c_nna << endl;
     cerr << " c_nnd = \t " << c_nnd << endl;
     cerr << " c_pmp = \t " << c_pmp << endl;
+    cerr << " c_oct = \t " << c_oct << endl;
     cerr << " c_clusters = \t " << c_clusters << endl;
     cerr << " dynamic_types = \t " << dynamic_types << endl;
     cerr << " angular momentum for ql: l = \t " << l << endl;
@@ -188,6 +190,7 @@ public:
     c_nna = false;
     c_nnd = false;
     c_pmp = false;
+    c_oct = false;
     c_clusters = false;
     dynamic_types = false;
 
@@ -214,6 +217,7 @@ public:
     s_sqt="sqt";
     s_edq="ed_q";
     s_pmp="q_pmp";
+    s_oct="q_oct";
     s_clusters="clusters";
     tag="";
     s_out="traj";
@@ -279,7 +283,7 @@ public:
     p1 = 2*p1half;
     p2 = 2*p2half;
     if(c_bondorient) maxsphere=MAX_NSPHERE; // init all neigh spheres
-    else if(c_coordnum || c_nna || c_nnd || c_adf || c_rmin || c_rmax || c_altbc || c_edq || c_pmp) maxsphere=1;       // init only first neigh sphere
+    else if(c_coordnum || c_nna || c_nnd || c_adf || c_rmin || c_rmax || c_altbc || c_edq || c_pmp || c_oct) maxsphere=1;       // init only first neigh sphere
     else                         maxsphere=0;       // do not init any
     if(c_clusters && !c_bondorient) {
       cerr << "ERROR: cannot compute clusters without computing BOC parameters!\n";
@@ -561,6 +565,10 @@ public:
       pmp_calculator = new PatternMatchingParameters<ntype,ptype>();
       pmp_calculator->init(n_b_list, s_pmp, tag, debug, verbose);
     }
+    if(c_oct) {
+      oct_calculator = new OctahedralParameter<ntype,ptype>();
+      oct_calculator->init(n_b_list, s_oct, tag, debug, verbose);
+    }
     if(c_msd) {
       msd_calculator = new MSDU_Calculator<ntype,ptype>();
       msd_calculator->init(dtframe,nframes,period, Qoverlap_cutoff, N,nTypes,Nt,
@@ -627,6 +635,7 @@ public:
     }
     if(c_edq) ed_q_calculator->compute(timestep, ps);
     if(c_pmp) pmp_calculator->compute(timestep, ps);
+    if(c_oct) oct_calculator->compute(timestep, ps);
     if(c_msd) msd_calculator->compute(i,timestep,ps,pbc);
     if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,pbc);
     if(c_adf) adf_calculator->compute(i,nframes,timestep,ps);

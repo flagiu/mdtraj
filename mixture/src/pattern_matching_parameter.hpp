@@ -13,8 +13,8 @@ class PatternMatchingParameters
   using mat=mymatrix<ntype,3,3>;
   private:
     Neigh_and_Bond_list<ntype,ptype> *nb_list;
-    vecflex<ntype> q_tetr, q_oct;
-    ntype tetr_angle, dtheta1,dtheta2,thetaSouth, gaussWeight1,gaussWeight2, rad2deg;
+    vecflex<ntype> q_tetr, q_oct, my_q_oct;
+    ntype tetr_angle, dtheta1,dtheta2,thetaSouth, gaussWeight1,gaussWeight2, rad2deg, my_cos_th;
     string string_out, myName, tag;
     fstream fout;
     stringstream ss;
@@ -30,6 +30,7 @@ class PatternMatchingParameters
       gaussWeight1 = 1/(2.*dtheta1*dtheta1);
       gaussWeight2 = 1/(2.*dtheta2*dtheta2);
       rad2deg = 180./M_PI;
+      my_cos_th = cos(3./4.*M_PI); // negative! Threshold to decide if closer to 90° or 180°
     }
     virtual ~PatternMatchingParameters(){}
 
@@ -44,8 +45,9 @@ class PatternMatchingParameters
       const int N=nb_list->N;
       q_tetr.resize(N);
       q_oct.resize(N);
+      my_q_oct.resize(N);
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep | Particle index  | Particle type | Coordination number | q_tetr | q_oct . # cutoffs = ";
+      fout << "#Timestep | Particle index  | Particle type | Coordination number | q_tetr | q_oct | my_q_oct . # cutoffs = ";
       for(int t=0;t<nb_list->nTypePairs;t++)
         fout <<nb_list->rcut[0][t]<<" ";
       fout<<endl;
@@ -61,14 +63,14 @@ class PatternMatchingParameters
     {
       const int N=nb_list->N;
       const int u=0; // first shell bonds
-      ntype rijSq,rikSq,rimSq, sumt1,sumt2,sumo1,sumo2;
+      ntype rijSq,rikSq,rimSq, sumt1,sumt2,sumo1,sumo2, sum_my_oct;
       ntype cos_k,theta_k, cos_m,theta_m, cos_phi,phi;
       vec rij,rik,rim, uij,uik_equator,uim_equator;
       int i,jj,kk,mm, j,k,m, num_neigh;
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
       for(i=0;i<N;i++)
       {
-        sumt1 = sumo1 = 0.0;
+        sumt1 = sumo1 = sum_my_oct = 0.0;
         num_neigh = ps[i].neigh_list[u].size();
 
         for(jj=0;jj<num_neigh;jj++)
@@ -89,6 +91,12 @@ class PatternMatchingParameters
             theta_k = rad2deg*acos(cos_k);
             // versor of the projection of k on the equator of j
             uik_equator = rik/sqrt(rikSq) - cos_k*uij;
+
+            if(cos_k<my_cos_th) { // if closer to 180°
+              sum_my_oct+=SQUARE(cos_k+1) / 3.0;
+            } else { // else closer to 90°
+              sum_my_oct+=SQUARE(cos_k) / 12.0;
+            }
 
             sumt2=sumo2=0.0;
 
@@ -128,13 +136,13 @@ class PatternMatchingParameters
 
         q_tetr[i] = sumt1 / (num_neigh*(num_neigh-1)*(num_neigh-2));
         q_oct[i] = sumo1 / (num_neigh*(3+(num_neigh-2)*(num_neigh-3)));
-
+        my_q_oct[i] = 1.0-sum_my_oct;
       }
 
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++)
       {
-        fout << timestep <<" "<< i <<" "<< ps[i].label <<" "<< ps[i].neigh_list[u].size() << " "<< q_tetr[i] << " "<< q_oct[i] << endl;
+        fout << timestep <<" "<< i <<" "<< ps[i].label <<" "<< ps[i].neigh_list[u].size() << " "<< q_tetr[i] << " "<< q_oct[i] << " " << my_q_oct[i]<< endl;
       }
       fout.close();
       /*
