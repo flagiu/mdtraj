@@ -5,8 +5,8 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-outxyz] [-adf -altbc -bo -cn -edq -l -msd -nna -nnd -oct -pmp -Qself -rdf -rmin -rmax -sq -sqt]"
-				  " [-rcut -p1half -period] [ -dynamic_types -nodynamics -out_xyz -out_alphanes -pbc_out -fskip -tag -timings]\n", argv0);
+  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-adf -altbc -bo -cn -edq -l -msd -nna -nnd -oct -pmp -Qself -rdf -rmin -rmax -sq -sqt]"
+				  " [-rcut -p1half -period] [ -dynamic_types -nodynamics -out_lammpsdump -out_xyz -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
 template <class ntype, class ptype>
@@ -99,6 +99,9 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n          \t match at the beginning, but can be truncated at the end [default: %s]",s_logtime.c_str());
   fprintf(stderr, "\n -nodynamics \t Do not raise error if timesteps are not equally spaced.");
   fprintf(stderr, "\n             \t WARNING: dynamic averages will be junk.");
+  fprintf(stderr, "\n -out_lammpsdump \t Produces an output *.dump file.");
+  fprintf(stderr, "\n                 \t If combined with -clusters, the particle type will reflect crystallinity.");
+  fprintf(stderr, "\n                 \t If combined with -oct, the per-atom variable q_oct will be printed next to x,y,z.");
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
   fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining");
   fprintf(stderr, "\n               \t files: type.dat, box.dat, pos.dat. Box is rotated if");

@@ -86,13 +86,21 @@ print_out_lammpsdump(string string_out) {
   fout<<ylob<<" "<<yhib<<" "<<xz<<endl;
   fout<<zlob<<" "<<zhib<<" "<<yz<<endl;
 
-  fout<<"ITEM: ATOMS type x y z\n";
-  for(auto &p : ps) {
+  if(c_oct){
+    fout<<"ITEM: ATOMS type x y z qoct\n";
+  } else {
+    fout<<"ITEM: ATOMS type x y z\n";
+  }
+  for(auto i=0;i<N;i++) {
     if(pbc_out) {
       // apply PBC to the position and translate x=0 to x=L/2 for better OVITO visualization
-      p.r = p.r - box*round(boxInv*p.r-0.5);
+      ps[i].r = ps[i].r - box*round(boxInv*ps[i].r-0.5);
     }
-    p.write_xyz(fout);
+    if(c_oct){
+      fout << setprecision(10) << ps[i].label <<" "<< ps[i].r[0] <<" "<< ps[i].r[1] <<" "<< ps[i].r[2] <<" "<<oct_calculator->my_q_oct[i] << endl;
+    } else {
+      ps[i].write_xyz(fout);
+    }
   }
   fout.close();
   return;
