@@ -37,7 +37,7 @@ rm *.pdf log$tagdot 2> tmp
 rm tmp
 }
 
-for a in 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5
+for a in 0.5 1.0 2.0 3.0 4.0
 do
 run_fraction_of_trajectory "a${a}" 0.0 0.0 $a
 done

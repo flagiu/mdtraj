@@ -506,12 +506,20 @@ read_xdatcar_frame(fstream &i, bool resetN, bool constantBox)
       cur_type++;
       cumulative_Nt+=Nt[cur_type];
     }
-    ps[j].read_3cols(i); // N particle lines
+    ps[j].read_3cols(i); // N particle lines read into ps[j].r
     ps[j].label = cur_type;
     // from direct to cartesian
-    if(format==0) ps[j].r = box*ps[j].r; // x' = (x*ax + y*bx + z*cx) etc.
+    if(format==0) {
+      ps[j].s = ps[j].r; // we did read the scaled coordinate
+      ps[j].r = box*ps[j].s; // x' = (x*ax + y*bx + z*cx) etc.
+    }
     // already cartesian: must only be scaled by s
-    else if(format==1) ps[j].r*=s;
+    else if(format==1) {
+      ps[j].r*=s;
+      ps[j].s = boxInv*ps[j].r;
+    }
+    // coordinates are wrapped: you can tell nothing about the unwrapped ones
+    ps[j].su=ps[j].s; ps[j].ru=ps[j].r;
   }
 }
 
@@ -877,19 +885,19 @@ read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
     if(x_count>0 && xs_count==0 && pi_count==0 && xu_count==0) {
       p.s = boxInv * p.r;
       // you can tell nothing about the unwrapped ones
-      p.su=p.s; p.ru=p.r;
+      p.su=p.s; p.ru=p.r; p.pi<<0,0,0;
     }
     // given only the wrapped fractional:
     if(xs_count>0 && x_count==0 && pi_count==0 && xu_count==0) {
       p.r = box * p.s;
       // you can tell nothing about the unwrapped ones
-      p.su=p.s; p.ru=p.r;
+      p.su=p.s; p.ru=p.r; p.pi<<0,0,0;
     }
     // given only the wrapped fractionals and the periodic images:
     if(xs_count>0 && pi_count>0 && x_count==0 && xu_count==0) {
       p.r = box*p.s;    // get wrapped cartesian
       p.su = p.s + p.pi; // get unwrapped fractional
-      p.ru = box*p.s;   // get unwrapped cartesian
+      p.ru = box*p.su;   // get unwrapped cartesian
     }
     // given only unwrapped cartesian coordinates:
     if(xu_count>0 && x_count==0 && xs_count==0 && pi_count==0) {

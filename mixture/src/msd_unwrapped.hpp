@@ -49,7 +49,7 @@ class MSDU_Calculator
 
     void initLogTime()
     {
-      ntimes = logt.get_time_window_size();
+      ntimes = logt.get_time_window_size(); // (log+lin) = npc-1 + ncycles_not_skipped
 
       num_avg.resize(ntimes-1);
       num_avg_predicted.resize(ntimes-1);
@@ -118,7 +118,7 @@ class MSDU_Calculator
       string string_out_msd_, string string_out_ngp_, string string_out_overlap_,
       string tag_, bool debug_, bool verbose_)
     {
-      if(debug) cout << myName << " Initialization STARTED\n";
+      if(debug) cerr << myName << " Initialization STARTED\n";
       Q_cutoff = Q_cutoff_;
       Q_cutoff2 = Q_cutoff*Q_cutoff;
       N=N_;
@@ -195,7 +195,7 @@ class MSDU_Calculator
       fout << "#Delta timestep | averaged qs(1) qss(1) qd(1,1) qdd(1,1) qsd(1,1) qd(1,2) qdd(1,2) qsd(1,2) qs(2) qss(2) qd(2,2) ...\n";
       fout.close();
 
-      if(debug) cout << myName << " Initialization COMPLETED\n";
+      if(debug) cerr << myName << " Initialization COMPLETED\n";
     }
 
     void compute(int frameidx, int timestep, vector<ptype> ps, PBC<ntype> *pbc)
@@ -204,7 +204,7 @@ class MSDU_Calculator
       const ntype invN=1.0/(ntype)N;
       vec dr, dr_image;
       ntype dr2, r2t0;
-      if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
+      if(debug) cerr << "*** "<<myName<<" computation for timestep " << timestep << " STARTED ***\n";
 
       if(logtime){
         nperiod = frameidx / logt.npc;
@@ -232,30 +232,43 @@ class MSDU_Calculator
           particle_rvec[N*dframe + i] = ps[i].ru; //store initial positions for this sample trajectory
           CM_rvec[dframe] += ( particle_rvec[N*dframe + i] * invN ); // store initial center of mass for '''
         }
-        if(debug) cout << "  Saved positions of initial frame\n";
+        if(debug) cerr << "  Saved positions of initial frame\n";
       }
       else
       {
         idx_dt = dframe-1; // = 0,...,num_dt-1 however dt>0 always
         num_avg[idx_dt]+=1;
         CM_rvec[dframe]<<0.,0.,0.;
-        if(debug) cout << "  Computing dr^2 and Qoverlap for dframe="<<dframe<<endl;
+        if(debug) cerr << "  Computing dr^2 and Qoverlap for dframe="<<dframe<<endl;
         if(verbose) r2t0 = 0.0; // average r^2 over atoms at fixed t,t0
         for(ti=0;ti<nTypes;ti++){ Qs_sample[ti]=0.0; }
         for(tp=0;tp<nTypePairs;tp++){ Qd_sample[tp]=0.0; }
         for(i=0;i<N;i++)
         {
           idx = N*dframe + i;
-          //idx_old = idx - N;       // previous frame
+          // unwrap positions w.r.t. PREVIOUS frame idx_old
+          if(logtime){
+            if(dframe==1&&nperiod>0) { // if dt=1 within a log cycle that is not the 1st one:
+              idx_old=N*(logt.npc-1+nperiod)+i; // take the begining of the current npc log cycle
+            } else if(dframe>logt.npc){ // if at the begining of a log cycle that is not the 1st one:
+              idx_old=N*(logt.npc-1)+i; // take the last log frame (npc-1)
+            }else{
+              idx_old=idx-N; // else just take the previous one
+            }
+          } else { // if linear, just take the previous one (mod period)
+            idx_old=N*((dframe-1+ntimes)%ntimes) + i;
+          }
+          pbc->unwrap_inplace(&ps[i].ru, &particle_rvec[idx_old]);
           particle_rvec[idx] = ps[i].ru;
-          CM_rvec[dframe] += ( particle_rvec[idx] * invN ); // compute center of mass
+          // compute center of mass
+          CM_rvec[dframe] += ( particle_rvec[idx] * invN );
 
-          // Calculate r(t0+dt) - r(t0):
+          // Calculate r(t0+dt) - r(t0) w.r.t. REFERENCE frame t0 indexed by idx_old:
           // - linear sampling: t0 is the beginning of each cycle
           // - linlog sampling: t0 depends:
           if(logtime){
             if(dframe<logt.npc){
-              if(nperiod==0) idx_old=N*0 + i; // else if first period, t0 is the begining of the first npc log cycle
+              if(nperiod==0) idx_old=N*0 + i; // if first period, t0 is the begining of the first npc log cycle
               else           idx_old=N*(logt.npc-1+nperiod)+i; // else t0 is the begining of the current npc log cycle
             }
             else             idx_old=N*0 + i; // for linear subsampling, first compare with first absolute snapshot
@@ -263,9 +276,9 @@ class MSDU_Calculator
 
           dr = particle_rvec[idx] - particle_rvec[idx_old];  // displacement r(t)-r(t0)
           // apply periodic boundary conditions
-          num_images = pbc->apply(dr, &dr_image);
-          dr = dr_image;
-          particle_rvec[idx] = particle_rvec[idx_old] + dr;
+          //num_images = pbc->apply(dr, &dr_image);
+          //dr = dr_image;
+          //particle_rvec[idx] = particle_rvec[idx_old] + dr;
           // MSD and NGP
           dr2 = dr.sq();
           if(verbose) r2t0 += dr2 * invN;          // sample trajectory
@@ -278,7 +291,7 @@ class MSDU_Calculator
           // -- distinct
           for(j=0;j<i;j++){
             dr = particle_rvec[idx] - particle_rvec[idx_old-i+j];  // displacement ri(t)-rj(t0)
-            num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
+            //num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
             tj = ps[j].label;
             Qd_sample[types2int(ti,tj)] += 2*w(dr.sq()); // i<j + j>i
           }
@@ -312,7 +325,7 @@ class MSDU_Calculator
         }
 
         if(logtime && dframe>=logt.npc) {
-          if(debug) cout << "  Out-of-log-cycle linear subsampling:\n";
+          if(debug) cerr << "  Out-of-log-cycle linear subsampling:\n";
           for(k=1;k<=nperiod-1;k++) { // subtract a decreasing time interval
             idx_dt = dframe-1-k;
             num_avg[idx_dt]+=1;
@@ -322,7 +335,7 @@ class MSDU_Calculator
               idx = N*dframe + i;
               idx_old=N*(logt.npc-1+k)+i; // ... t0 increases with k
               dr = particle_rvec[idx] - particle_rvec[idx_old];  // displacement r(t)-r(t0)
-              num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
+              //num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
               dr2 = dr.sq();
               ti=ps[i].label;                  // type: integer 0,1,...,nTypes-1
               r2[ti][idx_dt] += dr2;         // average over t0 and atoms of same type
@@ -333,7 +346,7 @@ class MSDU_Calculator
               // -- distinct
               for(j=0;j<i;j++){
                 dr = particle_rvec[idx] - particle_rvec[idx_old-i+j];  // displacement ri(t)-rj(t0)
-                num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
+                //num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
                 tj = ps[j].label;
                 Qd_sample[types2int(ti,tj)] += 2*w(dr.sq()); // i<j + j>i
               }
@@ -389,17 +402,17 @@ class MSDU_Calculator
         } else idx_old=0;
 
         dr = CM_rvec[dframe] - CM_rvec[idx_old];
-        num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
+        //num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
         dr2 = dr.sq();
         r2CM[dframe-1] += dr2;
 
         if(logtime && dframe>=logt.npc) {
-          if(debug) cout << "  Out-of-log-cycle linear subsampling for CM:\n";
+          if(debug) cerr << "  Out-of-log-cycle linear subsampling for CM:\n";
           for(k=1;k<=nperiod-1;k++) { // subtract a decreasing time interval
             idx_dt = dframe-1-k;
             idx_old=logt.npc-1+k; // ... t0 increases with j
             dr = CM_rvec[dframe] - CM_rvec[idx_old];  // displacement r(t)-r(t0)
-            num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
+            //num_images = pbc->apply(dr, &dr_image); // apply periodic boundary conditions
             dr2 = dr.sq();
             r2CM[idx_dt] += dr2;
           }
@@ -407,15 +420,15 @@ class MSDU_Calculator
 
       }
 
-      if(debug) cout << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
+      if(debug) cerr << "*** "<<myName<<" computation for timestep " << timestep << " ENDED ***\n\n";
     }
 
     void print(int dtframe)
     {
       int i,t, ti,tj,tp;
       if(debug){
-        cout<<"Please check that num_avg is the same as the predicted one:\n";
-        cout<<" index num_avg predicted\n";
+        cerr<<"Please check that num_avg is the same as the predicted one:\n";
+        cerr<<" index num_avg predicted\n";
         for(i=0;i<ntimes-1;i++)
           cout << " "<<i<<" "<<num_avg[i]<<" "<<num_avg_predicted[i]<<endl;
       }
@@ -470,7 +483,7 @@ class MSDU_Calculator
       }
       fout.close();
 
-      if(debug) cout << myName<<" printed to file\n";
+      if(debug) cerr << myName<<" printed to file\n";
     }
 };
 

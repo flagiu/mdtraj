@@ -91,6 +91,37 @@ class PBC
       }
       return ret;
     }
+
+    // maps r_unwrapped --> [-L/2,L/2]
+    // Example: x=L*0.9 --> L*0.9 - L*round(L*0.9/L) = L*0.9 - L*1 = -L*0.1
+    void wrap_inplace(vec* r){
+      vec r_wrapped = *r - box * round(boxInv*(*r));
+      *r = r_wrapped;
+    }
+    vec wrap_outplace(vec* r){
+      vec r_wrapped = *r - box * round(boxInv*(*r));
+      return r_wrapped;
+    }
+
+    // unwraps assuming that |x_true-x_old| < L/2
+    // Example: x_old=-.4*L ; x=.4*L
+    // --> dx=.8*L
+    //  --> dx'=.8*L-L*round(.8)=-0.2*L
+    //   --> x'=x_old+dx'=-0.6*L
+    // Example: x_old=12*L ; x=15.2*L
+    // --> dx=3*L
+    //  --> dx'=L*(3.2-round(3.2))=.2*L
+    //   --> x'=x_old+dx'=12.2*L
+    void unwrap_inplace(vec* r, vec* r_old){
+      vec dr = *r - *r_old;
+      dr -= box * round(boxInv*dr);
+      *r = *r_old+ dr;
+    }
+    vec unwrap_outplace(vec* r, vec* r_old){
+      vec dr = *r - *r_old;
+      dr -= box * round(boxInv*dr);
+      return *r_old + dr;
+    }
 };
 
 #endif
