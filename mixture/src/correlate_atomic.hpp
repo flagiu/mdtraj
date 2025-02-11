@@ -101,10 +101,6 @@ class AtomicTimeCorrelator
         x2[i]=x4[i]=0;
       }
 
-      ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "#Delta timestep | <dx(t)*dx(0)>/<dx(0)*dx(0)>\n";
-      fout.close();
-
       if(debug) cerr << myName << " Initialization COMPLETED\n";
     }
 
@@ -200,12 +196,12 @@ class AtomicTimeCorrelator
           cout << " "<<i<<" "<<num_avg[i]<<" "<<num_avg_predicted[i]<<endl;
       }
 
-      ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
-
+      ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::out);
       x1static/=counts1;
       x2static/=counts1;
       x4static/=counts1;
-      fout<<"#<x> = "<<x1static<<" <x^2> = "<<x1static<<" <x^4> = "<<x4static<<endl;
+      fout<<"#<x> = "<<x1static<<" <x^2> = "<<x2static<<" <x^4> = "<<x4static<<endl;
+      fout<<"#t(timestep) | <dx(t)*dx(0)>/<dx(0)*dx(0)>\n";
       for(i=0; i<ntimes-1; i++) {
         // normalize the averages
         x2[i] /= (num_avg[i]*N);
