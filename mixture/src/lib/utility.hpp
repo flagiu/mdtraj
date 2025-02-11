@@ -10,6 +10,27 @@ using namespace std;
 
 #define SQUARE(x) ((x)*(x))
 
+/*
+template<class T>
+void alloc(T *ptr, int n) {
+  if(n<1){
+    cerr<<"Error: cannot allocate n="<<n<<" elements\n";
+    exit(1);
+  }
+  ptr = new (nothrow) T [n];
+  if (ptr == nullptr) {
+    cerr<<"Error during allocation of n="<<n<<" elements of type T="<<typeid(T).name()<<"\n";
+    exit(1);
+  }
+}
+
+template<class T>
+void malloc(T *ptr, int n) {
+  alloc(ptr, n);
+  for(int i=0;i<n;i++) ptr[i]=0;
+}
+*/
+
 // Number of lines in a file
 static int getLineCount(string file)
 {

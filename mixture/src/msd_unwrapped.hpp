@@ -118,7 +118,6 @@ class MSDU_Calculator
       string string_out_msd_, string string_out_ngp_, string string_out_overlap_,
       string tag_, bool debug_, bool verbose_)
     {
-      if(debug) cerr << myName << " Initialization STARTED\n";
       Q_cutoff = Q_cutoff_;
       Q_cutoff2 = Q_cutoff*Q_cutoff;
       N=N_;
@@ -135,6 +134,7 @@ class MSDU_Calculator
       debug=debug_;
       verbose=verbose_;
       int i,t,tp;
+      if(debug) cerr << myName << " Initialization STARTED\n";
 
       if(logtime){
         initLogTime();

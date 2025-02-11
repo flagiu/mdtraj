@@ -20,9 +20,9 @@ class OctahedralParameter
     bool debug, verbose;
 
   public:
-    vecflex<ntype> my_q_oct, counts_collinear, ratio_sl;
+    vector<ntype> my_q_oct, counts_collinear, ratio_sl;
     ntype my_cos_th;
-    
+
     OctahedralParameter(){
       myName = "OctahedralParameter";
       my_cos_th = cos(3./4.*M_PI); // negative! Threshold to decide if closer to 90° or 180°
@@ -40,8 +40,8 @@ class OctahedralParameter
       nb_list = nb_list_;
       const int N=nb_list->N;
       my_q_oct.resize(N);
-      ratio_sl.resize(N);
       counts_collinear.resize(N);
+      ratio_sl.resize(N);
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::out);
       fout << "#Timestep | Particle index  | Particle type | q_oct | <r_short/r_long>_collinear . # cutoffs = ";
       for(int t=0;t<nb_list->nTypePairs;t++)
