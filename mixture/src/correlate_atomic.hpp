@@ -14,7 +14,7 @@ class AtomicTimeCorrelator
   private:
     int period_in_dt_units, num_periods, ntimes, N, counts1;
     vector<int> num_avg, num_avg_predicted;
-    ntype x1;
+    ntype x1static, x2static, x4static;
     vector<ntype> x_history, x2, x4;
     string string_out, myName, tag;
     fstream fout;
@@ -93,7 +93,7 @@ class AtomicTimeCorrelator
       //   with 0 <= current_time_index < ntimes,
       //   with 0 <= particle_index < N.
       if(debug) cerr<<"Mallocating "<<ntimes-1<<" elements for x2 and x4...\n";
-      x1=0;
+      x1static=x2static=x4static=0;
       counts1=0;
       x2.resize(ntimes-1);
       x4.resize(ntimes-1);
@@ -148,7 +148,9 @@ class AtomicTimeCorrelator
         {
           idx = N*dframe + i;
           x_history[idx] = x[i];
-          x1 += x[i];
+          x1static += x[i];
+          x2static += x[i]*x[i];
+          x4static += x[i]*x[i]*x[i]*x[i];
           counts1 += 1;
 
           // Calculate x(t0+dt) * x(t0) w.r.t. REFERENCE frame t0 indexed by idx_old:
@@ -200,13 +202,15 @@ class AtomicTimeCorrelator
 
       ss.str(std::string()); ss << string_out << tag << ".ave"; fout.open(ss.str(), ios::app);
 
-      x1/=counts1;
-      fout<<"#<x>="<<x1<<endl;
+      x1static/=counts1;
+      x2static/=counts1;
+      x4static/=counts1;
+      fout<<"#<x> = "<<x1static<<" <x^2> = "<<x1static<<" <x^4> = "<<x4static<<endl;
       for(i=0; i<ntimes-1; i++) {
         // normalize the averages
         x2[i] /= (num_avg[i]*N);
         x4[i] /= (num_avg[i]*N);
-        c=(x2[i]-x1*x1)/(x2[0]-x1*x1);
+        c=(x2[i]-x1static*x1static)/(x2static-x1static*x1static);
         // print to file
         if(logtime) fout << logt->get_dt(i+1) << " ";
         else        fout << (i+1)*dtframe << " ";
