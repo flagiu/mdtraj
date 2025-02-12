@@ -62,7 +62,7 @@ class AtomicTimeCorrelator
       num_avg.resize(ntimes-1);
       for(int j=0;j<ntimes-1;j++) {
         num_avg[j]=0;
-        num_avg_predicted[j]=logt->get_num_avg(j+1);
+        num_avg_predicted[j]=num_periods;
       }
 
     }
@@ -133,6 +133,10 @@ class AtomicTimeCorrelator
         for(i=0;i<N;i++)
         {
           x_history[N*dframe + i] = x[i]; //store initial value for this sample trajectory
+          x1static += x[i];
+          x2static += x[i]*x[i];
+          x4static += x[i]*x[i]*x[i]*x[i];
+          counts1 += 1;
         }
         if(debug) cerr << "  Saved values of initial frame\n";
       }
@@ -144,10 +148,12 @@ class AtomicTimeCorrelator
         {
           idx = N*dframe + i;
           x_history[idx] = x[i];
-          x1static += x[i];
-          x2static += x[i]*x[i];
-          x4static += x[i]*x[i]*x[i]*x[i];
-          counts1 += 1;
+          if(dframe>=logt->npc) {
+            x1static += x[i];
+            x2static += x[i]*x[i];
+            x4static += x[i]*x[i]*x[i]*x[i];
+            counts1 += 1;
+          }
 
           // Calculate x(t0+dt) * x(t0) w.r.t. REFERENCE frame t0 indexed by idx_old:
           // - linear sampling: t0 is the beginning of each cycle

@@ -70,10 +70,10 @@ public:
   }
 
   int get_num_avg(int i){
-    if(i<npc) return ncycles; // it is constant for dt=0 and for log sampling
+    if(i<npc) return ncycles-ncyc_skip0-ncyc_skip1; // it is constant for dt=0 and for log sampling
     else if(i<time_window_size) {
       int icycle=i-npc+1;
-      return ncycles-icycle; // it linearly decreases for linear sampling
+      return ncycles-ncyc_skip0-ncyc_skip1-icycle; // it linearly decreases for linear sampling
     }
     else {
       cout << "ERROR: index "<<i<<" exceeds time_window_size "<<time_window_size<<endl;
