@@ -9,6 +9,7 @@ plt.rcParams['axes.labelsize'] = 'large'
 outpng="nnd.png"
 outpdf="nnd.pdf"
 outdat="nnd.ave"
+type_colors=["darkgreen","purple","red","blue","black"]
 
 parser = argparse.ArgumentParser(
                     prog = sys.argv[0],
@@ -29,11 +30,11 @@ parser.add_argument('--yshift',  type=float,
                      help="Shift vertically the plots for each central atom type by this amount. [default: %(default)s]"
 )
 parser.add_argument('--xlim',  type=float, nargs=2,
-                     default=(2.6,4.9), required=False,
+                     default=None, required=False,
                      help="Set limit for x axis. [default: %(default)s]"
 )
 parser.add_argument('--ylim',  type=float, nargs=2,
-                     default=(0,6), required=False,
+                     default=None, required=False,
                      help="Set limit for y axis. [default: %(default)s]"
 )
 parser.add_argument('--fskip0', type=float,
@@ -84,16 +85,21 @@ for nt in range(ntypes): # for each type of central atom
         selection=(central_atom_type==nt)
         dist_forAnyNeighType = x[selection,3+2*nn+1]
         _,edges_forAnyNeighType = np.histogram(dist_forAnyNeighType, bins=args.bins)
+        centers_forAnyNeighType = (edges_forAnyNeighType[1:]+edges_forAnyNeighType[:-1])/2
         avg=dist_forAnyNeighType.mean()
         std=dist_forAnyNeighType.std()
         f.write(" %.3f %.3f"%(avg,std))
-        baseline_values=y_shift+np.zeros(len(edges_forAnyNeighType)-1)
+        baseline_values=y_shift+np.zeros(len(centers_forAnyNeighType))
+        ax.axhline(y_shift,lw=1,color='k',ls='-',zorder=-1)
         for nt_other in range(ntypes):
-            neigh_type = x[selection,3+2*nn]
+            neigh_type = x[:,3+2*nn]
             selection2 = (selection)&(neigh_type==nt_other)
             dist = x[selection2,3+2*nn+1]
             values,_ = np.histogram(dist, bins=edges_forAnyNeighType, density=True)
-            ax.stairs(values,edges_forAnyNeighType, baseline=baseline_values, fill=False, alpha=0.9)
+            ax.fill_between(centers_forAnyNeighType, baseline_values, baseline_values+values, color=type_colors[nt_other])
+            #ax.stairs(values,edges_forAnyNeighType, baseline=baseline_values, fill=False, alpha=0.9)
+            if nt_other==ntypes-1:
+                ax.plot(centers_forAnyNeighType, baseline_values+values, color='k',lw=1)
             baseline_values+=values
     f.write('\n')
 f.close()
@@ -105,11 +111,11 @@ if args.xlim is not None: ax.set_xlim(args.xlim)
 if args.ylim is not None: ax.set_ylim(args.ylim)
 if ntypes>1:
     for nt in range(ntypes):
-        ax.text(ax.get_xlim()[1], nt*args.yshift, "Around "+labels[nt], ha='left', va='center')
+        ax.text(ax.get_xlim()[1], nt*args.yshift, labels[nt], ha='left', va='center', color=type_colors[nt])
 #ax.grid(axis='both', which='major')
-plt.tight_layout()
+fig.tight_layout()
 
-plt.savefig(outpng)
-plt.savefig(outpdf)
+fig.savefig(outpng)
+fig.savefig(outpdf)
 print(" Figure saved on %s , %s\n"%(outpng, outpdf))
 #plt.show()
