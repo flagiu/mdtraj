@@ -150,9 +150,14 @@ read_xyz_frame(fstream &i, bool resetN)
     getline(i, line);
     istringstream(line) >> a >> b >> c >> d;
     //try { p.label = stoi(a); } except { cerr << "[Warning: could not convert type to integer.]\n"; }
+    // wrapped cartesian coordinates
     ps[j].r[0] = stof(b);
     ps[j].r[1] = stof(c);
     ps[j].r[2] = stof(d);
+    // wrapped scaled coordinates
+    ps[j].s = boxInv * ps[j].r;
+    // you can tell nothing about the unwrapped ones
+    ps[j].su=ps[j].s; ps[j].ru=ps[j].r; ps[j].pi<<0,0,0;
 
     if(j==0)
     {

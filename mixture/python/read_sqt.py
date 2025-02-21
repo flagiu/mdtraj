@@ -7,6 +7,8 @@ def read_sqt(filename: str, dt=0.002):
     """
     f=open(filename,"r")
     lines=f.readlines()
+    if len(lines)==0:
+        raise IncompleteFileError
     # Parse wavevectors from 1st block:
     i = 0
     block=0
@@ -27,6 +29,8 @@ def read_sqt(filename: str, dt=0.002):
     Nq=len(q)
 
     # Parse delta timesteps from 2nd block:
+    if len(lines)<=Nq+1:
+        raise IncompleteFileError
     t = []
     while block==1:
         line = lines[i]
@@ -45,6 +49,8 @@ def read_sqt(filename: str, dt=0.002):
     f.close()
 
     # Load 3rd block
+    if len(lines)<=Nq+Nt+2:
+        raise IncompleteFileError
     sqt = np.genfromtxt(filename, skip_header=1+Nq+1+Nt+1, skip_footer=Nq)
     # Load 4th block
     sqt_ = np.genfromtxt(filename, skip_header=1+Nq+1+Nt+1+Nq+1, skip_footer=0)
