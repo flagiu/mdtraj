@@ -59,7 +59,7 @@ public:
   ED_Bond_Parameter<ntype,ptype>* ed_q_calculator;
   PatternMatchingParameters<ntype,ptype>* pmp_calculator;
   OctahedralParameter<ntype,ptype>* oct_calculator;
-  AtomicTimeCorrelator<ntype> *oct_correlator;
+  AtomicTimeCorrelator<ntype> *oct_correlator, *qPDO_correlator;
   //
   ntype rdf_binw, rdf_rmax;
   PBC<ntype> *pbc;
@@ -572,6 +572,9 @@ public:
       oct_correlator = new AtomicTimeCorrelator<ntype>();
       oct_correlator->init(dtframe, nframes, period, N, logtime, &logt,
         s_oct+"_time", tag,debug,verbose);
+      qPDO_correlator = new AtomicTimeCorrelator<ntype>();
+      qPDO_correlator->init(dtframe, nframes, period, N, logtime, &logt,
+        "qPDO_time", tag,debug,verbose);
     }
     if(c_msd) {
       msd_calculator = new MSDU_Calculator<ntype,ptype>();
@@ -642,6 +645,7 @@ public:
     if(c_oct) {
       oct_calculator->compute(timestep, ps);
       oct_correlator->correlate(i,timestep,oct_calculator->my_q_oct);
+      qPDO_correlator->correlate(i,timestep,oct_calculator->qPDO);
     }
     if(c_msd) msd_calculator->compute(i,timestep,ps,pbc);
     if(c_rdf) rdf_calculator->compute(i,nframes,timestep,ps,pbc);
@@ -662,7 +666,10 @@ public:
   }
 
   void print_final_computations() {
-    if(c_oct) oct_correlator->print(dtframe);
+    if(c_oct) {
+      oct_correlator->print(dtframe);
+      qPDO_correlator->print(dtframe);
+    }
     if(c_msd) msd_calculator->print(dtframe);
   }
 

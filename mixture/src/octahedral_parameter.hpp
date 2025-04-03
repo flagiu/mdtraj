@@ -4,8 +4,8 @@
 #include "neighbour_and_bond_list.hpp"
 using namespace std;
 //---------------------- Custom octahedral order parameter -------------------------------//
-// For the ideal simple cubic: CoordinationNumber=6, q_oct=1
-// For a different phase with CN=6: q_oct<1
+// For the ideal simple cubic: CoordinationNumber=6, q_oct=0
+// For a different phase with CN=6: q_oct>0
 template <class ntype, class ptype>
 class OctahedralParameter
 {
@@ -20,7 +20,7 @@ class OctahedralParameter
     bool debug, verbose;
 
   public:
-    vector<ntype> my_q_oct, counts_collinear, ratio_sl;
+    vector<ntype> my_q_oct, counts_collinear, qPDO, ratio_sl;
     ntype my_cos_th;
 
     OctahedralParameter(){
@@ -40,10 +40,11 @@ class OctahedralParameter
       nb_list = nb_list_;
       const int N=nb_list->N;
       my_q_oct.resize(N);
+      qPDO.resize(N);
       counts_collinear.resize(N);
       ratio_sl.resize(N);
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep | Particle index  | Particle type | q_oct | <r_short/r_long>_collinear . # cutoffs = ";
+      fout << "#Timestep | Particle index  | Particle type | q_oct | <r_short/r_long>_collinear | qPDO . # cutoffs = ";
       for(int t=0;t<nb_list->nTypePairs;t++)
         fout <<nb_list->rcut[0][t]<<" ";
       fout<<endl;
@@ -59,14 +60,14 @@ class OctahedralParameter
     {
       const int N=nb_list->N;
       const int u=0; // first shell bonds
-      ntype rijSq,rikSq, sum_my_oct, sum_ratio_sl, counts_ratio_sl;
-      ntype cos_k;
+      ntype rijSq,rikSq, sum_my_oct, sum_ratio_sl, counts_ratio_sl, sum_qPDO;
+      ntype cos_k, deltaR;
       vec rij,rik;
       int i,jj,kk, j,k, num_neigh;
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
       for(i=0;i<N;i++)
       {
-        sum_my_oct = sum_ratio_sl = 0.0;
+        sum_my_oct = sum_ratio_sl = sum_qPDO = 0.0;
         counts_collinear[i]=0.0;
         num_neigh = ps[i].neigh_list[u].size();
         if(num_neigh<6) {
@@ -87,19 +88,26 @@ class OctahedralParameter
             rikSq = ps[i].rijSq_list[u][kk];
             // angle j-i-k (polar)
             cos_k = (rij*rik) / sqrt(rijSq*rikSq);
+            // error for distortion
+            //cerr<<"  rij2="<<rijSq<<" rik2="<<rikSq<<endl; //debug
+            deltaR = (sqrt(rijSq) - sqrt(rikSq)) / (sqrt(rijSq) + sqrt(rikSq));
+            deltaR = (deltaR<0?-deltaR:deltaR); // absolute value
 
             if(cos_k<my_cos_th) { // if closer to 180°
               sum_my_oct+=SQUARE(cos_k+1) / 3.0;
+              sum_qPDO+=(deltaR + SQUARE(cos_k+1)) / 3.0;
               sum_ratio_sl += (rijSq<rikSq ? sqrt(rijSq/rikSq) : sqrt(rikSq/rijSq) );
               counts_collinear[i] += 1;
             } else { // else closer to 90°
               sum_my_oct+=SQUARE(cos_k) / 12.0;
+              sum_qPDO+=(deltaR + SQUARE(cos_k)) / 12.0;
             }
 
           }
         }
 
-        my_q_oct[i] = 1.0-sum_my_oct;
+        my_q_oct[i] = sum_my_oct;
+        qPDO[i] = sum_qPDO;
         if(counts_collinear[i]==0){
           ratio_sl[i] = 0.0;
           /*
@@ -145,7 +153,7 @@ class OctahedralParameter
       ss.str(std::string()); ss << string_out << tag << ".dat"; fout.open(ss.str(), ios::app);
       for(i=0;i<N;i++)
       {
-        fout << timestep <<" "<< i <<" "<< ps[i].label << " " << my_q_oct[i]<< " "<<ratio_sl[i] << endl;
+        fout << timestep <<" "<< i <<" "<< ps[i].label << " " << my_q_oct[i]<< " "<<ratio_sl[i]<< " "<<qPDO[i] << endl;
       }
       fout.close();
       if(debug) cout << "*** "<<myName<<" computation DONE ***\n";
