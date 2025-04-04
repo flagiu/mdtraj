@@ -95,12 +95,12 @@ class OctahedralParameter
 
             if(cos_k<my_cos_th) { // if closer to 180°
               sum_my_oct+=SQUARE(cos_k+1) / 3.0;
-              sum_qPDO+=(deltaR + SQUARE(cos_k+1)) / 3.0;
+              sum_qPDO+=(deltaR * SQUARE(cos_k+1)) / 3.0;
               sum_ratio_sl += (rijSq<rikSq ? sqrt(rijSq/rikSq) : sqrt(rikSq/rijSq) );
               counts_collinear[i] += 1;
             } else { // else closer to 90°
               sum_my_oct+=SQUARE(cos_k) / 12.0;
-              sum_qPDO+=(deltaR + SQUARE(cos_k)) / 12.0;
+              sum_qPDO+=(deltaR * SQUARE(cos_k)) / 12.0;
             }
 
           }
