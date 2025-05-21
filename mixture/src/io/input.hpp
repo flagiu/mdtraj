@@ -694,8 +694,8 @@ read_lammpsdata_frame(fstream &i, bool resetN, bool reset_nTypes)
   // This must be mapped to our convention: 0,1,...,ntypes-1
   string line, x, a,b,c,d,e,f;
   stringstream ss;
-  ntype xlo,ylo,zlo, xlob,ylob;
-  ntype xhi,yhi,zhi, xhib,yhib;
+  ntype xlo,ylo,zlo;
+  ntype xhi,yhi,zhi;
   ntype xy,xz,yz;
   int nlines_per_frame=0;
 
@@ -754,12 +754,6 @@ read_lammpsdata_frame(fstream &i, bool resetN, bool reset_nTypes)
   istringstream(line) >> a >> b >> c >> d >> e >> f;
   if(d=="xy" && e=="xz" && f=="yz"){
     xy=stof(a); xz=stof(b); yz=stof(c);
-    xlob=xlo; xhib=xhi; // if triclinic: xlo is a lower bound, etc.
-    ylob=ylo; yhib=yhi;
-    xlo = xlob - min(min(0.0,xy), min(xz,xy+xz) );
-    xhi = xhib - max( max(0.0,xy), max(xz,xy+xz) );
-    ylo = ylob - min(0.0,yz);
-    yhi = yhib - max(0.0,yz);
     getline(i,line); nlines_per_frame++; // empty line
     if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (empty): "<<line<<endl;}
   } // else is empty
