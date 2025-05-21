@@ -4,7 +4,7 @@ using namespace std;
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
-  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
+  fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpsdata -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
   				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-adf -altbc -bo -cn -edq -l -msd -nna -nnd -oct -pmp -Qself -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut -p1half -period] [ -dynamic_types -nodynamics -out_lammpsdump -out_xyz -pbc_out -fskip -tag -timings]\n", argv0);
 }
@@ -32,7 +32,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a ");
   fprintf(stderr, "\n      \t [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done]");
   fprintf(stderr, "\n      \t file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat). ONLY MONOSPECIES.");
-  fprintf(stderr, "\n -lammpstrj \t LAMMPS format. It expects the output of a 'dump atom' command.");
+  fprintf(stderr, "\n -lammpsdata \t LAMMPS 'data' format in 'atomic' mode. It expects the output of a 'write_data' command.");
+  fprintf(stderr, "\n -lammpstrj \t LAMMPS 'dump' format. It expects the output of a 'dump atom' command.");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
   fprintf(stderr, "\n -xdatcarV \t XDATCAR format, with constant box.");
   fprintf(stderr, "\n -xyz \t .xyz format. Box size is supplied via -box. Particle labels must be 0,1,2,... .");
@@ -456,7 +457,19 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    s_in = string(argv[i]);
 	  }
 
-	  else if ( !strcmp(argv[i], "-lammpstrj") )
+    else if ( !strcmp(argv[i], "-lammpsdata") )
+    {
+	    i++;
+	    if (i == argc)
+    	{
+    	  fprintf(stderr, "ERROR: '-lammpsdata' must be followed by file name!\n");
+    	  exit(-1);
+    	}
+      filetype = FileType::LAMMPSDATA;
+	    s_in = string(argv[i]);
+	  }
+
+    else if ( !strcmp(argv[i], "-lammpstrj") )
     {
 	    i++;
 	    if (i == argc)

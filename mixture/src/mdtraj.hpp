@@ -18,7 +18,7 @@ const string root_path="/home/flavio/programmi/mdtraj/mixture";
 #define MAX_N_TYPES 10
 #define MAX_N_ANGMOM 5
 enum class FileType {
-  NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSTRJ, YUHAN, RUNNER
+  NONE, XYZ, XYZ_CP2K, CONTCAR, POSCAR, XDATCAR, XDATCARV, ALPHANES, ALPHANES9, JMD, LAMMPSDATA, LAMMPSTRJ, YUHAN, RUNNER
 };
 
 template<class ntype, class ptype>
@@ -346,6 +346,7 @@ public:
   void read_alphanes_frame(fstream &i, bool resetN);
   void read_alphanes9_frame(fstream &i, bool resetN);
   void read_jmd_frame(fstream &i, bool resetN);
+  void read_lammpsdata_frame(fstream &i, bool resetN, bool reset_nTypes);
   void read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes);
   void read_yuhan_frame(fstream &i, bool resetN, bool isFirstFrame);
   void read_runner_frame(fstream &i, bool resetN);

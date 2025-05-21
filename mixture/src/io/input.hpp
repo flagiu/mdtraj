@@ -42,6 +42,9 @@ read_frame(fstream &i, bool resetN, bool reset_nTypes, int frameIdx)
     case FileType::JMD:
       read_jmd_frame(i, resetN);
       break;
+    case FileType::LAMMPSDATA:
+      read_lammpsdata_frame(i, resetN, reset_nTypes);
+      break;
     case FileType::LAMMPSTRJ:
       read_lammpstrj_frame(i, resetN, reset_nTypes);
       break;
@@ -680,6 +683,162 @@ read_jmd_frame(fstream &i, bool resetN)
   for(auto &p: ps) p.read_3cols(i); // N particle lines
   return;
 }
+
+//----------------------------------------------------------------------------//
+
+template <class ntype, class ptype>
+void Trajectory<ntype, ptype>::
+read_lammpsdata_frame(fstream &i, bool resetN, bool reset_nTypes)
+{
+  // Assumes that particles are labelled as 1,2,...,ntypes
+  // This must be mapped to our convention: 0,1,...,ntypes-1
+  string line, x, a,b,c,d,e,f;
+  stringstream ss;
+  ntype xlo,ylo,zlo, xlob,ylob;
+  ntype xhi,yhi,zhi, xhib,yhib;
+  ntype xy,xz,yz;
+  int nlines_per_frame=0;
+
+  getline(i,line); nlines_per_frame++; // 1. free comment, possibly ending in: 'timestep = %d'
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (comment):"<<line<<endl;}
+  ss << line;
+  while(ss>>x)
+  {
+    if(x=="timestep"){
+      if(ss>>x && x=="="){ // next one is '='
+        if(ss>>x){ // next one is timestep
+          timestep = stoi(x);
+        }
+      }
+    }
+  }
+  ss.str(std::string()); ss.clear(); // clear the string stream!
+  getline(i,line); nlines_per_frame++; // 2. empty line
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (empty): "<<line<<endl;}
+  getline(i,line); nlines_per_frame++; // 3. %d atoms
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%d atoms): "<<line<<endl;}
+  istringstream(line) >> a >> b;
+  N = stoi(a);
+  getline(i,line); nlines_per_frame++; // 4. %d atom types
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%d atom types): "<<line<<endl;}
+  istringstream(line) >> a >> b >> c;
+  nTypes = stoi(a);
+  if(nTypes>MAX_N_TYPES) {
+    cerr << "[ Error: exceeded max number of allowed types ("<<MAX_N_TYPES<<"). Change MAX_N_TYPES and recompile if you need more. ]\n\n";
+    exit(1);
+  }
+  getline(i,line); nlines_per_frame++; // 5. empty line
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (empty):"<<line<<endl;}
+
+  getline(i,line); nlines_per_frame++; // 6. %f %f xlo xhi
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%f %f xlo xhi): "<<line<<endl;}
+  istringstream(line) >> a >> b >> c >> d;
+  if(c=="xlo" && d=="xhi"){
+    xlo=stof(a); xhi=stof(b);
+  }
+  getline(i,line); nlines_per_frame++; // 7. %f %f ylo yhi
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%f %f ylo yhi): "<<line<<endl;}
+  istringstream(line) >> a >> b >> c >> d;
+  if(c=="ylo" && d=="yhi"){
+    ylo=stof(a); yhi=stof(b);
+  }
+  getline(i,line); nlines_per_frame++; // 8. %f %f zlo zhi
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%f %f zlo zhi): "<<line<<endl;}
+  istringstream(line) >> a >> b >> c >> d;
+  if(c=="zlo" && d=="zhi"){
+    zlo=stof(a); zhi=stof(b);
+  }
+  xy=xz=yz=0.0;
+  getline(i,line); nlines_per_frame++; // 9. maybe %f %f %f xy xz yz
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%f %f %f xy xz yz, or empty): "<<line<<endl;}
+  istringstream(line) >> a >> b >> c >> d >> e >> f;
+  if(d=="xy" && e=="xz" && f=="yz"){
+    xy=stof(a); xz=stof(b); yz=stof(c);
+    xlob=xlo; xhib=xhi; // if triclinic: xlo is a lower bound, etc.
+    ylob=ylo; yhib=yhi;
+    xlo = xlob - min(min(0.0,xy), min(xz,xy+xz) );
+    xhi = xhib - max( max(0.0,xy), max(xz,xy+xz) );
+    ylo = ylob - min(0.0,yz);
+    yhi = yhib - max(0.0,yz);
+    getline(i,line); nlines_per_frame++; // empty line
+    if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (empty): "<<line<<endl;}
+  } // else is empty
+  box[0][0] = xhi - xlo;
+  box[1][1] = yhi - ylo;
+  box[2][2] = zhi - zlo;
+  box[0][1] = xy;
+  box[0][2] = xz;
+  box[1][2] = yz;
+  box[1][0] = box[2][0] = box[2][1] = 0.0;
+  set_L_from_box();
+
+  getline(i,line); nlines_per_frame++; // maybe 'Masses'
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" ('Masses', or 'Atoms # atomic'): "<<line<<endl;}
+  if(line=="Masses"){
+    getline(i,line); nlines_per_frame++; // empty line
+    if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (empty): "<<line<<endl;}
+    // type & mass for each type
+    for(int ti=0;ti<nTypes;ti++){
+      getline(i,line); nlines_per_frame++;
+      if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%d %f): "<<line<<endl;}
+      istringstream(line) >> a >> b;
+      /*if(stoi(a)==ti+1){
+        mass[ti] = stof(b); // masses are not implemented
+      }*/
+    }
+    getline(i,line); nlines_per_frame++; // empty line
+    if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (empty): "<<line<<endl;}
+    getline(i,line); nlines_per_frame++; // Atoms # atomic
+    if(debug){ cerr<<"Line n."<<nlines_per_frame<<" ('Atoms # atomic'): "<<line<<endl;}
+  } // else: Atoms # atomic
+  istringstream(line) >> a >> b >> c;
+  if(a!="Atoms" || b!="#" || c!="atomic"){
+    cerr << "Error:  I expected this line: Atoms # atomic \n";
+    cerr << "       but I found this line: "<<line<<"\n";
+    exit(1);
+  }
+  getline(i,line); nlines_per_frame++; // empty
+  if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (empty): "<<line<<endl;}
+
+  // then N atoms
+  if(resetN) {
+    ps.resize(N);
+    nframes = nlines / (nlines_per_frame+N);
+  }
+  int iatom;
+  for(int iline=0;iline<N;iline++)
+  {
+    getline(i,line); nlines_per_frame++;
+    if(debug){ cerr<<"Line n."<<nlines_per_frame<<" (%d %d %f %f %f ...): "<<line<<endl;}
+    ss << line;
+    // format: id type x y z ...
+    ss >> x; iatom=stoi(x)-1;
+    if(iatom>=N || iatom<0){
+      cerr<<"ERROR: atom index is "<<iatom<<" but N is "<<N<<endl;
+      cerr<<"       full line:"<<line<<"\n";
+      exit(1);
+    }
+    ss >> x; ps[iatom].label = stoi(x)-1;
+    if(ps[iatom].label>=nTypes || ps[iatom].label<0){
+      cerr<<"ERROR: atom type is "<<ps[iatom].label<<" but nTypes is "<<nTypes<<endl;
+      cerr<<"       full line:"<<line<<"\n";
+      exit(1);
+    }
+    ss >> x; ps[iatom].r[0] = stof(x) - xlo;
+    ss >> x; ps[iatom].r[1] = stof(x) - ylo;
+    ss >> x; ps[iatom].r[2] = stof(x) - zlo;
+    ss.str(std::string()); ss.clear(); // clear the string stream!
+    // given only the wrapped cartesian:
+    ps[iatom].s = boxInv * ps[iatom].r;
+    ps[iatom].su = ps[iatom].s;
+    ps[iatom].ru = ps[iatom].r;
+    ps[iatom].pi<<0,0,0;
+    Nt[ps[iatom].label]++;
+  }
+
+}
+
+//------------------------------------------------------------//
 
 template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::

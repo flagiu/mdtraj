@@ -78,8 +78,8 @@ ax.set_aspect('equal', adjustable='box')
 cb = fig.colorbar(c, ax=ax, shrink=0.8, aspect=20*0.8) # 0.8 is experimental
 plt.tight_layout()
 
-fig.savefig(args.outname+".pdf")
+fig.savefig(args.outname+".eps")
 fig.savefig(args.outname+".png")
-print("Figure saved on %s.png , %s.pdf\n"%(args.outname,args.outname))
+print("Figure saved on %s.png , %s.eps\n"%(args.outname,args.outname))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)
