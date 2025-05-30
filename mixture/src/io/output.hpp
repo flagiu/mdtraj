@@ -66,7 +66,7 @@ print_out_lammpsdump(string string_out) {
   fout<<"ITEM: NUMBER OF ATOMS\n";
   fout<<N<<endl;
 
-  if(pbc_out) fout<<"ITEM: BOX BOUNDS pp pp pp xy xz yz\n";
+  if(pbc_out) fout<<"ITEM: BOX BOUNDS xy xz yz pp pp pp\n";
   else        fout<<"ITEM: BOX BOUNDS xy xz yz\n";
   ntype xy,xz,yz, xlo,ylo,zlo, xhi,yhi,zhi, xlob,ylob,zlob, xhib,yhib,zhib;
   xlo=ylo=zlo=0.0;
@@ -86,21 +86,33 @@ print_out_lammpsdump(string string_out) {
   fout<<ylob<<" "<<yhib<<" "<<xz<<endl;
   fout<<zlob<<" "<<zhib<<" "<<yz<<endl;
 
-  if(c_oct){
-    fout<<"ITEM: ATOMS type x y z qoct\n";
-  } else {
-    fout<<"ITEM: ATOMS type x y z\n";
+  fout<<"ITEM: ATOMS type x y z";
+  // if computed, dump also the following per-atom quantities IN THIS ORDER
+  if(c_coordnum) fout<<" CN";
+  if(c_oct) fout<<" qoct";
+  if(c_bondorient) {
+    for(int l_=0;l_<num_l;l_++) {
+      fout<<" q"<<std::to_string(l_list[l_]);
+    }
   }
+  fout<<endl;
   for(auto i=0;i<N;i++) {
     if(pbc_out) {
       // apply PBC to the position and translate x=0 to x=L/2 for better OVITO visualization
       ps[i].r = ps[i].r - box*round(boxInv*ps[i].r-0.5);
     }
-    if(c_oct){
-      fout << setprecision(10) << ps[i].label <<" "<< ps[i].r[0] <<" "<< ps[i].r[1] <<" "<< ps[i].r[2] <<" "<<oct_calculator->my_q_oct[i] << endl;
-    } else {
-      ps[i].write_xyz(fout);
+    fout << setprecision(10) << ps[i].label <<" "<< ps[i].r[0] <<" "<< ps[i].r[1] <<" "<< ps[i].r[2];
+    if(c_coordnum){
+      fout<<" "<<n_b_list->neigh_anytype[0][i];
+    }if(c_oct){
+      fout<<" "<<oct_calculator->my_q_oct[i];
     }
+    if(c_bondorient) {
+      for(int l_=0;l_<num_l;l_++) {
+        fout<<" "<<bond_parameters[l_]->ql[i];
+      }
+    }
+    fout << endl;
   }
   fout.close();
   return;

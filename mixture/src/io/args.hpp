@@ -5,7 +5,7 @@ template <class ntype, class ptype>
 void Trajectory<ntype, ptype>::print_usage(char argv0[])
 {
   fprintf(stderr, "\nUsage: %s [-d -h -v] [-alphanes -alphanes9 -contcar -jmd -lammpsdata -lammpstrj -poscar -xdatcar -xdatcarV -xyz -xyz_cp2k -yuhan]"
-  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-adf -altbc -bo -cn -edq -l -msd -nna -nnd -oct -pmp -Qself -rdf -rmin -rmax -sq -sqt]"
+  				  " [-box1 -box3 -box6 -box9 -image_convention -remove_rot_dof] [-adf -altbc -bo -cn -edq -l -msd -nna -nnd -oct -oct_continuous -pmp -Qself -rdf -rmin -rmax -sq -sqt]"
 				  " [-rcut -p1half -period] [ -dynamic_types -nodynamics -out_lammpsdump -out_xyz -pbc_out -fskip -tag -timings]\n", argv0);
 }
 
@@ -70,6 +70,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -oct \t Compute a custom Octahedral order parameter on exactly 6 nearest neighbours");
   fprintf(stderr, "\n      \t q_oct(i)=SUM_{j!=k}[ 1/3 H(angle-135°)(cos(angle))^2 + 1/12 H(135°-angle)(cos(angle)+1)^2 ]");
   fprintf(stderr, "\n      \t with H=heavyside function.  OUTPUT: %s.dat.", s_oct.c_str() );
+  fprintf(stderr, "\n -oct_continuous \t Compute a continuous version of q_oct:");
+  fprintf(stderr, "\n      \t q_oct(i)= 1/15 SUM_{j!=k}[ 1 - cos^2(2*angle) ].  OUTPUT: %s.dat.", s_oct.c_str() );
   fprintf(stderr, "\n -pmp \t Compute Pattern Matching Parameter 'q_tetrahedral' and 'q_octahedral' https://doi.org/10.3389/fmats.2017.00034 .  OUTPUT: %s.{dat,ave}.", s_pmp.c_str() );
   fprintf(stderr, "\n -Qself \t Compute the self-overlap parameter Q_s(t) and its susceptibility (uses the same routine for MSDU). INPUT: cutoff. OUTPUT: %s.ave.", s_overlap.c_str() );
   fprintf(stderr, "\n -rdf \t Compute the Radial Distribution Function g(r). INPUT: bin_width, max_distance. OUTPUT: %s.{traj,ave}.", s_rdf.c_str() );
@@ -102,7 +104,8 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n             \t WARNING: dynamic averages will be junk.");
   fprintf(stderr, "\n -out_lammpsdump \t Produces an output *.dump file.");
   fprintf(stderr, "\n                 \t If combined with -clusters, the particle type will reflect crystallinity.");
-  fprintf(stderr, "\n                 \t If combined with -oct, the per-atom variable q_oct will be printed next to x,y,z.");
+  fprintf(stderr, "\n                 \t If combined with -cn , -oct or -oct_continuous, -bo:");
+  fprintf(stderr, "\n                 \t  per-atom variables (CN,q_oct,q3,q4,...) will be printed next to x,y,z.");
   fprintf(stderr, "\n -out_xyz \t Produces an output traj.xyz file.");
   fprintf(stderr, "\n -out_alphanes \t [TO BE COMPLETED] Produce the following self-explaining");
   fprintf(stderr, "\n               \t files: type.dat, box.dat, pos.dat. Box is rotated if");
@@ -186,8 +189,14 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
         }
 	  else if ( !strcmp(argv[i], "-edq") )
 	      c_edq = true;
-    else if ( !strcmp(argv[i], "-oct") )
+    else if ( !strcmp(argv[i], "-oct") ){
 	      c_oct = true;
+        oct_continous = false;
+      }
+    else if ( !strcmp(argv[i], "-oct_continuous") ){
+	      c_oct = true;
+        oct_continous = true;
+      }
     else if ( !strcmp(argv[i], "-pmp") )
 	      c_pmp = true;
 	  else if ( !strcmp(argv[i], "-box1") )

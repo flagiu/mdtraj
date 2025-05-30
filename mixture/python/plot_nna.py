@@ -6,9 +6,7 @@ import numpy as np
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
 
-outpng="nna.png"
-outpdf="nna.pdf"
-outdat="nna.ave"
+xlim=(60,180)
 type_colors=["darkgreen","purple","red","blue","black"]
 typePair_colors={
     (0,0):type_colors[0],
@@ -30,6 +28,9 @@ parser.add_argument('--inlabels',  type=argparse.FileType('r'), required=False, 
 )
 parser.add_argument('--bins',  type=int, required=False, default=100,
         help="Number of bins for each neighbour histogram. [default: %(default)s]"
+)
+parser.add_argument('--outname',  type=str, required=False, default="nna",
+                     help="Prefix for output name. [default: %(default)s]"
 )
 parser.add_argument('--yshift',  type=float,
                      default=5.0, required=False,
@@ -53,6 +54,10 @@ parser.add_argument('--fskip1', type=float,
 )
 
 args = parser.parse_args()
+
+outdat=args.outname+".ave"
+if args.xlim is not None:
+    xlim=args.xlim
 
 labels=[]
 Nt=[]
@@ -103,6 +108,7 @@ for nt in range(ntypes): # for each type of central atom
         #values,_ = np.histogram(angle_forAnyNeighType, bins=angle_bins, density=True)
         baseline_values=yshift+np.zeros(len(angle_centers))
         ax.axhline(baseline_values[0],color='k',lw=0.5)
+        ax.text(xlim[1],yshift," %d-0-%d"%(nn1+1,nn2+1),ha="left",va="bottom",fontsize=10)
         neigh1_type = X[:,3+3*mm+0]
         neigh2_type = X[:,3+3*mm+1]
         for nt_other1 in range(ntypes):
@@ -122,14 +128,13 @@ for nt in range(ntypes): # for each type of central atom
 f.close()
 print("Saved average nna into %s"%(outdat))
 
-ax.set_xlim(60,180)
+ax.set_xlim(xlim)
 ax.set_xticks([60,90,120,150,180], minor=False)
 ax.set_xticks([75,105,135,165], minor=True)
 ax.grid(axis='x', which='major')
 
 #ax.set_yscale("log")
 ax.tick_params(which='both', direction='in')
-if args.xlim is not None: ax.set_xlim(args.xlim)
 if args.ylim is not None: ax.set_ylim(args.ylim)
 if ntypes>1:
     for nt in range(ntypes):
@@ -137,7 +142,7 @@ if ntypes>1:
 #ax.grid(axis='both', which='major')
 fig.tight_layout()
 
-fig.savefig(outpng)
-fig.savefig(outpdf)
-print(" Figure saved on %s , %s\n"%(outpng, outpdf))
+fig.savefig(args.outname+".png")
+fig.savefig(args.outname+".pdf")
+print(" Figure saved on %s\n"%(args.outname))
 #plt.show()

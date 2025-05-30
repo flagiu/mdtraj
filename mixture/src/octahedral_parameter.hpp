@@ -22,22 +22,25 @@ class OctahedralParameter
   public:
     vector<ntype> my_q_oct, counts_collinear, ratio_sl;
     ntype my_cos_th, ALTBC_cos_th;
+    bool continuous;
 
     OctahedralParameter(){
       myName = "OctahedralParameter";
       my_cos_th = cos(3./4.*M_PI); // negative! Threshold to decide if closer to 90°or 180°
       rad2deg = 180./M_PI;
       ALTBC_cos_th = cos((180.-25.)/rad2deg);
+      continuous=false;
     }
     virtual ~OctahedralParameter(){}
 
-    void init(Neigh_and_Bond_list<ntype,ptype> *nb_list_, string string_out_,
+    void init(Neigh_and_Bond_list<ntype,ptype> *nb_list_, string string_out_, bool continuous_,
       string tag_, bool debug_, bool verbose_)
     {
       string_out = string_out_;
       tag = tag_;
       debug = debug_;
       verbose = verbose_;
+      continuous = continuous_;
       nb_list = nb_list_;
       const int N=nb_list->N;
       my_q_oct.resize(N);
@@ -91,12 +94,20 @@ class OctahedralParameter
             cos_k = (rij*rik) / sqrt(rijSq*rikSq);
 
             if(cos_k<my_cos_th) { // if closer to 180°
-              sum_my_oct+=SQUARE(cos_k+1) / 3.0;
+              if(!continuous){
+                sum_my_oct+=SQUARE(cos_k+1) / 3.0;
+              }
               sum_ratio_sl += (rijSq<rikSq ? sqrt(rijSq/rikSq) : sqrt(rikSq/rijSq) );
               counts_collinear[i] += 1;
 	  //    r1r2[m++] = (rijSq<rikSq ? sqrt(rijSq/rikSq) : sqrt(rikSq/rijSq) );
             } else { // else closer to 90°
-              sum_my_oct+=SQUARE(cos_k) / 12.0;
+              if(!continuous){
+                sum_my_oct+=SQUARE(cos_k) / 12.0;
+              }
+            }
+            // NEW CONTINUOUS DEFINITION
+            if(continuous){
+              sum_my_oct += (1-SQUARE( 2*SQUARE(cos_k) -1 ))/15.0;
             }
 
           }

@@ -6,9 +6,6 @@ import numpy as np
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.labelsize'] = 'large'
 
-outpng="nnd.png"
-outpdf="nnd.pdf"
-outdat="nnd.ave"
 type_colors=["darkgreen","purple","red","blue","black"]
 
 parser = argparse.ArgumentParser(
@@ -24,6 +21,9 @@ parser.add_argument('--inlabels',  type=argparse.FileType('r'), required=False, 
 )
 parser.add_argument('--bins',  type=int, required=False, default=100,
         help="Number of bins for each neighbour histogram. [default: %(default)s]"
+)
+parser.add_argument('--outname',  type=str, required=False, default="nnd",
+                     help="Prefix for output name. [default: %(default)s]"
 )
 parser.add_argument('--yshift',  type=float,
                      default=5.0, required=False,
@@ -47,7 +47,7 @@ parser.add_argument('--fskip1', type=float,
 )
 
 args = parser.parse_args()
-
+outdat=args.outname+".ave"
 labels=[]
 Nt=[]
 lines = args.inlabels.readlines()
@@ -115,7 +115,7 @@ if ntypes>1:
 #ax.grid(axis='both', which='major')
 fig.tight_layout()
 
-fig.savefig(outpng)
-fig.savefig(outpdf)
-print(" Figure saved on %s , %s\n"%(outpng, outpdf))
+fig.savefig(args.outname+".png")
+fig.savefig(args.outname+".pdf")
+print(" Figure saved on %s\n"%(args.outname))
 #plt.show()

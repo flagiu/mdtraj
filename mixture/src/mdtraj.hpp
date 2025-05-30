@@ -39,7 +39,7 @@ public:
   int nframes, timestep;
   bool c_coordnum, c_nna,c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
   bool c_altbc, c_sq, c_sqt, c_edq, c_clusters, c_pmp, c_oct; // compute or not
-  bool dynamic_types;
+  bool dynamic_types, oct_continous;
   string s_in, s_out, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
   string s_nna,s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_overlap, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq, s_pmp, s_oct; // for file naming
@@ -142,6 +142,7 @@ public:
     cerr << " c_oct = \t " << c_oct << endl;
     cerr << " c_clusters = \t " << c_clusters << endl;
     cerr << " dynamic_types = \t " << dynamic_types << endl;
+    cerr << " oct_continous = \t " << oct_continous << endl;
     cerr << " angular momentum for ql: l = \t " << l << endl;
     cerr << " qldot threshold = \t " << qldot_th << endl;
     cerr << " box (a|b|c) = \t "; box.show();
@@ -193,6 +194,7 @@ public:
     c_pmp = false;
     c_oct = false;
     c_clusters = false;
+    oct_continous = false;
     dynamic_types = false;
 
     filetype=FileType::NONE;
@@ -569,7 +571,7 @@ public:
     }
     if(c_oct) {
       oct_calculator = new OctahedralParameter<ntype,ptype>();
-      oct_calculator->init(n_b_list, s_oct, tag, debug, verbose);
+      oct_calculator->init(n_b_list, s_oct, oct_continous, tag, debug, verbose);
       oct_correlator = new AtomicTimeCorrelator<ntype>();
       oct_correlator->init(dtframe, nframes, period, N, logtime, &logt,
         s_oct+"_time", tag,debug,verbose);

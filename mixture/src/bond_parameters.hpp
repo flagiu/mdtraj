@@ -47,13 +47,13 @@ class Bond_Parameters
     Neigh_and_Bond_list<ntype,ptype> *nb_list;
     int l, l_deg; // angular momentum and its degeneracy
     bool l_is_odd;
-    vecflex<ntype> ql, ql_ave, Ql_dot;
     vector< vecflex< complex<ntype> > > qlm, qlm_ave; // a collection of l_deg vectors of local average qlm=<Ylm> with a cutoff function
     string string_bondcorr_out, string_bondorient_out, string_nxtal_out, myName, tag;
     fstream fout;
     stringstream ss;bool debug, verbose;
 
   public:
+    vecflex<ntype> ql, ql_ave, Ql_dot;
     vecflex<ntype> Cl_ij, ql_dot;
     ntype qldot_th;
 
