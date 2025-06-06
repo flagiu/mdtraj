@@ -29,9 +29,10 @@ void Trajectory<ntype, ptype>::print_summary()
   fprintf(stderr, "\n -contcar \t Concatenation of CONTCAR files containing lattice, positions, velocities,");
   fprintf(stderr, "\n          \t lattice velocities and gear-predictor-corrector data.");
   fprintf(stderr, "\n -poscar \t Concatenation of POSCAR files.");
-  fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects a ");
-  fprintf(stderr, "\n      \t [rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done]");
-  fprintf(stderr, "\n      \t file (first row: time N Lx Ly Lz; then N rows for coordinates; repeat). ONLY MONOSPECIES.");
+  fprintf(stderr, "\n -jmd \t John Russo's Molecular Dynamics format. It expects 2 arguments:");
+  fprintf(stderr, "\n      \t 1) a `[rm tmp; ls pos_* | sort -V | while read el; do cat $el >> tmp; done]` file");
+  fprintf(stderr, "\n      \t    contanining: first row: time N Lx Ly Lz; then N rows for coordinates; repeat).");
+  fprintf(stderr, "\n      \t 2) a type file containing 1 column with the number of atoms of each type.");
   fprintf(stderr, "\n -lammpsdata \t LAMMPS 'data' format in 'atomic' mode. It expects the output of a 'write_data' command.");
   fprintf(stderr, "\n -lammpstrj \t LAMMPS 'dump' format. It expects the output of a 'dump atom' command.");
   fprintf(stderr, "\n -xdatcar \t XDATCAR format.");
@@ -459,11 +460,17 @@ void Trajectory<ntype, ptype>::args(int argc, char** argv)
 	    i++;
 	    if (i == argc)
       {
-    	  fprintf(stderr, "ERROR: '-jmd' must be followed by file name!\n");
+    	  fprintf(stderr, "ERROR: '-jmd' must be followed by file name and type names!\n");
     	  exit(-1);
     	}
       filetype = FileType::JMD;
 	    s_in = string(argv[i]);
+      i++;if (i == argc)
+      {
+    	  fprintf(stderr, "ERROR: '-jmd' must be followed by 2 arguments!\n");
+    	  exit(-1);
+    	}
+      s_jmd_types = string(argv[i]);
 	  }
 
     else if ( !strcmp(argv[i], "-lammpsdata") )

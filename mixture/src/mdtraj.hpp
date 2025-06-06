@@ -5,6 +5,7 @@
 #include<cstring>
 #include<complex>
 #include<cmath>
+#include<filesystem>
 #include "lib/utility.hpp"
 #include "lib/vecflex.hpp"
 #include "lib/particle.hpp"
@@ -40,7 +41,7 @@ public:
   bool c_coordnum, c_nna,c_nnd, c_bondorient, c_msd, c_rdf, c_adf, c_rmin, c_rmax;
   bool c_altbc, c_sq, c_sqt, c_edq, c_clusters, c_pmp, c_oct; // compute or not
   bool dynamic_types, oct_continous;
-  string s_in, s_out, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
+  string s_in, s_out, s_jmd_types, s_rcut, s_rcut_clusters, tag, s_logtime, s_atom_label, s_box, s_ndens, s_coordnum, s_clusters;
   string s_nna,s_nnd, s_bondorient, s_bondcorr, s_nxtal, s_msd, s_ngp, s_overlap, s_rdf, s_adf;
   string s_rmin, s_tbc, s_altbc, s_sq, s_sqt, s_log, s_rmax, s_edq, s_pmp, s_oct; // for file naming
   bool ignore_double_frames, logtime, nodynamics, out_box, out_xyz, out_alphanes, out_lammpsdump;
@@ -171,6 +172,7 @@ public:
     cerr << " timings = \t " << timings << endl;
     cerr << " tag = \t " << tag << endl;
     cerr << " s_in = \t " << s_in << endl;
+    cerr << " s_jmd_types = \t " << s_jmd_types << endl;
     cerr << endl;
   }
 
@@ -199,6 +201,7 @@ public:
 
     filetype=FileType::NONE;
     s_in="__NOT_DEFINED__";
+    s_jmd_types="__NOT_DEFINED__";
 
     s_ndens="ndens";
     s_box="box";

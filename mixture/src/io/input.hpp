@@ -620,9 +620,22 @@ read_jmd_frame(fstream &i, bool resetN)
 {
   string line, x;
   stringstream ss;
-  int ncols, ncol;
-
-  nTypes = 1; // ONLY MONO-SPECIES IMPLEMENTED!!!
+  int ncols, ncol, iType, countWithinType;
+  if(resetN){
+    N=0;
+    iType=0;
+    fstream fff;
+    fff.open(s_jmd_types, ios::in);
+    while( getline(fff,line) ){
+      Nt[iType]=stoi(line);
+      N+=Nt[iType];
+      iType++;
+    }
+    nTypes=iType;
+    fff.close();
+    ps.resize(N);
+    nframes = nlines / (N+1);
+  }
 
   getline(i,line);
   if(debug) cerr << "\n  Line 1: " << line << endl;
@@ -671,16 +684,18 @@ read_jmd_frame(fstream &i, bool resetN)
     cerr << "ERROR: ncols="<<ncols<<" not accepted for Line 1 of JMD-formatted frame.\n";
     exit(1);
   }
-
   set_L_from_box();
-
-  if(resetN) {
-    ps.resize(N);
-    nframes = nlines / (N+1);
-    Nt[0]=N; // ONLY MONOSPECIES IMPLEMENTED
+  iType=0;
+  countWithinType=0;
+  for(auto j=0;j<N;j++){
+    ps[j].read_3cols(i); // N particle lines
+    ps[j].label = iType;
+    countWithinType++;
+    if(countWithinType>=Nt[iType]){
+      iType++;
+      countWithinType=0;
+    }
   }
-
-  for(auto &p: ps) p.read_3cols(i); // N particle lines
   return;
 }
 
