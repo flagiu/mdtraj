@@ -115,7 +115,7 @@ if ntypes>1:
 #ax.grid(axis='both', which='major')
 fig.tight_layout()
 
+fig.savefig(args.outname+".eps")
 fig.savefig(args.outname+".png")
-fig.savefig(args.outname+".pdf")
-print(" Figure saved on %s\n"%(args.outname))
+print("Figure saved on %s.png , %s.eps\n"%(args.outname,args.outname))
 #plt.show()

@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(
                     description = 'Plots each trajectory r^2(t) and the average MSD=<r^2(t)>.',
                     epilog='End of the summary.'
 )
-parser.add_argument('--file',  type=argparse.FileType('r'),
+parser.add_argument('--inavg',  type=argparse.FileType('r'),
                      default="msd.ave", required=False,
                      help="Input file with average trajectory (columns:t, MSD for each type, MSD error for each type, MSD of Center-of-Mass). [default: %(default)s]"
 )
@@ -31,13 +31,16 @@ parser.add_argument('--ignore',  type=str, nargs="*",
                      default=[], required=False,
                      help="Ignore the following atom types in the plot. INPUT: one or more strings (0,1,...,ntypes-1, or labels). [default: %(default)s]"
 )
-parser.add_argument('--fitD',  type=bool,
-                     default=True, required=False,
-                     help="Do a linear fit to deduce the diffusion coefficient D. Remember to check dt! [default: %(default)s]"
+parser.add_argument('--fitD', type=bool, required=False, default=False, action=argparse.BooleanOptionalAction,
+                    help="Do a linear fit to deduce the diffusion coefficient D. Remember to check dt! [default: %(default)s]"
+)
+
+parser.add_argument('--outname',  type=str,
+                     default="msd", required=False,
+                     help="Prefix for the output file. [default: %(default)s]"
 )
 
 nminD=int(3)
-outname="msd"
 
 args = parser.parse_args()
 
@@ -62,7 +65,7 @@ ign_types=np.zeros(len(ign_labels), dtype=int)
 print("  List of types to be ignored:",ign_labels)
 #---------------------------------------------------------------------------------------------------------#
 
-X = np.loadtxt(args.file, unpack=False).T
+X = np.loadtxt(args.inavg, unpack=False).T
 t = args.dt*X[0]
 assert (X.shape[0]-2)//2==len(Nt) # number of types
 
@@ -105,19 +108,19 @@ for i in range(len(Nt)):
 ax.legend()
 ax.tick_params(which='both', direction='in')
 #ax.grid(axis='both', which='major')
-fig.savefig(outname+".png")
-fig.savefig(outname+".pdf")
-print("Figure saved on %s.png , %s.pdf\n"%(outname,outname))
+fig.savefig(args.outname+".eps")
+fig.savefig(args.outname+".png")
+print("Figure saved on %s.png , %s.eps\n"%(args.outname,args.outname))
 
 if args.fitD:
     fmt="%.0f"
     for i in range(len(Nt)): fmt+=" %f %f"
-    np.savetxt(outname+"_D.dat", Ddata, header="n (last points for fit), D for each type, D error for each type", fmt=fmt)
-    print("Diffusion Coefficient data saved on %s_D.dat\n"%(outname))
+    np.savetxt(args.outname+"_D.dat", Ddata, header="n (last points for fit), D for each type, D error for each type", fmt=fmt)
+    print("Diffusion Coefficient data saved on %s_D.dat\n"%(args.outname))
     axD.legend()
     axD.tick_params(which='both', direction='in')
-    figD.savefig(outname+"_D.png")
-    figD.savefig(outname+"_D.pdf")
-    print("Figure saved on %s_D.png , %s_D.pdf\n"%(outname,outname))
+    figD.savefig(args.outname+"_D.eps")
+    figD.savefig(args.outname+"_D.png")
+    print("Figure saved on %s_D.png , %s_D.eps\n"%(args.outname,args.outname))
 
 #plt.show()

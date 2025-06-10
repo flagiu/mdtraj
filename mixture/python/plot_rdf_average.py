@@ -46,13 +46,14 @@ parser.add_argument('--yshift',  type=float,
                      default=0.0, required=False,
                      help="Shift vertically the different g(r)'s by this amount. [default: %(default)s]"
 )
+parser.add_argument('--outname',  type=str,
+                     default="rdf", required=False,
+                     help="Prefix for the output file. [default: %(default)s]"
+)
 
 args = parser.parse_args()
 
 print("Plotting g(r) average ...")
-
-outpng="rdf.png"
-outpdf="rdf.pdf"
 
 X = np.loadtxt(args.inavg.name)
 r = X[:,0]
@@ -107,8 +108,8 @@ ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major')
 plt.tight_layout()
 
-fig.savefig(outpng)
-fig.savefig(outpdf)
-print("Figure saved on %s , %s\n"%(outpng, outpdf))
+fig.savefig(args.outname+".eps")
+fig.savefig(args.outname+".png")
+print("Figure saved on %s.png , %s.eps\n"%(args.outname,args.outname))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)

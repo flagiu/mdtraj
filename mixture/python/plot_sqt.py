@@ -44,8 +44,10 @@ parser.add_argument('--xlog',  type=int, default=1, required=False,
 parser.add_argument('--fmt',  type=str, default="-", required=False,
                      help="Use the given format for errorbar plotting. [default: %(default)s]"
 )
-
-outname="sqt"
+parser.add_argument('--outname',  type=str,
+                     default="sqt", required=False,
+                     help="Prefix for the output file. [default: %(default)s]"
+)
 
 #-------------------------------------#
 args = parser.parse_args()
@@ -136,6 +138,7 @@ def add_upperxticks_to_cbar(cbar,ticks):
 
 fig, axes = plt.subplots(2,2, figsize=(10,5),gridspec_kw={'height_ratios': [1, 9]} ) # figsize is experimental
 ax = axes[1][0]
+ax.axhline(0, color="k", ls="--", lw=0.5, zorder=-999)
 ax.set_xlabel(r"$q$ $[\AA^{-1}]$")
 ax.set_ylabel(r"$S(q,t)$")
 cmap = mpl.cm.viridis
@@ -169,6 +172,7 @@ colors = cmap(norm(q))
 for ii in range(len(q_selected_idx)):
     i = q_selected_idx[ii]
     lab = r"$q=%.2f$ $\AA^{-1}$"%q_selected[ii]
+    axes[1][0].axvline(q_selected[ii],ls='--',lw=0.5,color='k',zorder=-1)
     col = colors[i]
     if args.normalize==1:
         y = sqt[i] / sq[i]
@@ -182,8 +186,9 @@ for ii in range(len(q_selected_idx)):
     ax.errorbar(t,y+ii*args.yshift,y_, fmt=args.fmt, color=col, label=lab, alpha=0.5)
 if args.normalize==1:
     ax.set_ylim(-0.1,1.1)
-    ax.axhline(np.exp(-1), color="k", linestyle="--", linewidth=0.5, zorder=-999)
+    ax.axhline(np.exp(-1), color="k", ls="--", lw=0.5, zorder=-999)
 ax.tick_params(which='both', direction='in')
+ax.axhline(0, color="k", ls="--", lw=0.5, zorder=-999)
 #ax.grid(axis='both', which='major')
 cbar_q=fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=axes[0][1],
                     orientation="horizontal", label=r"q [$\AA^{-1}$]")
@@ -193,7 +198,7 @@ if args.xlog:
 
 plt.tight_layout()
 
-fig.savefig(outname+".png")
-fig.savefig(outname+".pdf")
-print("Figure saved on %s.png , %s.pdf\n"%(outname, outname))
+fig.savefig(args.outname+".eps")
+fig.savefig(args.outname+".png")
+print("Figure saved on %s.png , %s.eps\n"%(args.outname,args.outname))
 #plt.show()

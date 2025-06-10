@@ -54,11 +54,14 @@ parser.add_argument('--famous_angles',  type=float, nargs="*",
                      default=[109.5], required=False,
                      help="Mark these angles (in degrees) with vertical dotted lines. [default: %(default)s]"
 )
+parser.add_argument('--outname',  type=str,
+                     default="adf", required=False,
+                     help="Prefix for the output file. [default: %(default)s]"
+)
 
 args = parser.parse_args()
 
 print("Plotting ADF average ...")
-outname="adf"
 
 X = np.loadtxt(args.inavg.name)
 x = X[:,0]
@@ -162,8 +165,8 @@ ax.tick_params(which='both', direction='in')
 ax.grid(axis='both', which='major', alpha=0.3)
 plt.tight_layout()
 
-fig.savefig(outname+".png")
-fig.savefig(outname+".png")
-print("Figure saved on %s.png , %s.pdf\n"%(outname,outname))
+fig.savefig(args.outname+".eps")
+fig.savefig(args.outname+".png")
+print("Figure saved on %s.png , %s.eps\n"%(args.outname,args.outname))
 #plt.show()
 #subprocess.call(f"xdg-open {outpng}", shell=True)
