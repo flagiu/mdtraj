@@ -21,12 +21,13 @@ class OctahedralParameter
 
   public:
     vector<ntype> my_q_oct, counts_collinear, ratio_sl;
-    ntype my_cos_th, ALTBC_cos_th;
+    ntype my_cos_th, ALTBC_cos_th, normalization;
     bool continuous;
 
     OctahedralParameter(){
       myName = "OctahedralParameter";
-      my_cos_th = cos(3./4.*M_PI); // negative! Threshold to decide if closer to 90°or 180°
+      my_cos_th = -2./3.; cos(3./4.*M_PI); // negative! Threshold to decide if closer to 90°or 180°
+      normalization = 324./(13.*15.); // = 108/65;  324/13 comes from the addend; 1/15 comes from te number of angles
       rad2deg = 180./M_PI;
       ALTBC_cos_th = cos((180.-25.)/rad2deg);
       continuous=false;
@@ -113,7 +114,7 @@ class OctahedralParameter
           }
         }
 
-        my_q_oct[i] = sum_my_oct;
+        my_q_oct[i] = normalization * sum_my_oct;
         if(counts_collinear[i]==0){
           ratio_sl[i] = 0.0;
           /*
