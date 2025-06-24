@@ -114,7 +114,7 @@ class OctahedralParameter
           }
         }
 
-        my_q_oct[i] = normalization * sum_my_oct;
+        my_q_oct[i] = 1.0 - normalization * sum_my_oct;
         if(counts_collinear[i]==0){
           ratio_sl[i] = 0.0;
           /*
