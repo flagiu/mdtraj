@@ -26,8 +26,8 @@ class OctahedralParameter
 
     OctahedralParameter(){
       myName = "OctahedralParameter";
-      my_cos_th = -2./3.; cos(3./4.*M_PI); // negative! Threshold to decide if closer to 90°or 180°
-      normalization = 324./(13.*15.); // = 108/65;  324/13 comes from the addend; 1/15 comes from te number of angles
+      my_cos_th = -2./3.; //cos(3./4.*M_PI); // negative! Threshold to decide if closer to 90°or 180°
+      normalization = 216./65.; // = 216/65;  2*324/13 comes from the integral of the weight; 1/15 comes from te number of angles
       rad2deg = 180./M_PI;
       ALTBC_cos_th = cos((180.-25.)/rad2deg);
       continuous=false;

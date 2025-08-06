@@ -54,17 +54,23 @@ class ED_Bond_Parameter
       const int u=0; // first shell bonds
       ntype rijSq, rikSq, costheta, q_unnormalized;
       vec rij, rik;
-      int i,j,k,a,b;
+      int i,j,k,a,b, num_neigh;
       if(debug) cout << "\n*** "<<myName<<" computation STARTED ***\n";
+
       for(i=0;i<N;i++)
       {
+        num_neigh = ps[i].neigh_list[u].size();
+        if(num_neigh<4) {
+          cerr<<"ERROR: less than 4 nearest neighbors. Increase the cutoff radius.\n";
+          exit(1);
+        }
         q_unnormalized = 0.0;
-        for(a=0; a<ps[i].neigh_list[u].size() ;a++)
+        for(a=0; a<4 ;a++) //ps[i].neigh_list[u].size()
         {
           //j = ps[i].neigh_list[u][a];
           rij = ps[i].rij_list[u][a];
           rijSq = ps[i].rijSq_list[u][a];
-          for(b=a+1;b<ps[i].neigh_list[u].size();b++)
+          for(b=a+1;b<4;b++) //ps[i].neigh_list[u].size()
           {
             //k = ps[i].neigh_list[u][b];
             rik = ps[i].rij_list[u][b];
