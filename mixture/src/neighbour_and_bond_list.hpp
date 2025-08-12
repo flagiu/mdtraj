@@ -360,14 +360,14 @@ class Neigh_and_Bond_list
       if(verbose)
       {
         ss.str(std::string()); ss << string_cn_out << tag << ".dat"; fout.open(ss.str(), ios::out);
-        fout << "#Timestep | Particle idx | Coordination number for each type pair: 00 | 01 | 02 ... . # cutoffs = ";
+        fout << "#Timestep | Particle idx | Particle type | Coordination number for each neighbor type ... . # cutoffs = ";
         for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
         fout<<endl;
         fout.close();
       }
 
       ss.str(std::string()); ss << string_cn_out << tag << ".ave"; fout.open(ss.str(), ios::out);
-      fout << "#Timestep | <coordination number> for each type pair | Fluctuations for each. # cutoffs = ";
+      fout << "#Timestep | <coordination number> and its fluctuations for each type pair. # cutoffs = ";
       for(int t=0;t<nTypePairs;t++) fout<<rcut[0][t]<<" ";
       fout<<endl;
       fout.close();
@@ -416,8 +416,11 @@ class Neigh_and_Bond_list
         ss.str(std::string()); ss << string_cn_out << tag << ".dat"; fout.open(ss.str(), ios::app);
         for(i=0;i<N;i++)
         {
-          fout << timestep << " " << i;
-          for(t=0;t<nTypePairs;t++) fout << " " << neigh[0][t][i];
+          fout << timestep << " " << i << " " << ps[i].label;
+          for(int tj=0;tj<nTypes;tj++) {
+		  t=types2int(ps[i].label, tj);
+		  fout << " " << neigh[0][t][i];
+	  }
           fout << endl;
         }
         fout.close();
@@ -425,8 +428,25 @@ class Neigh_and_Bond_list
 
       ss.str(std::string()); ss << string_cn_out << tag << ".ave"; fout.open(ss.str(), ios::app);
       fout << timestep;
-      for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].mean();
-      for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].std()/sqrt(N);
+      ntype x1,x2,count;
+      for(int ti=0;ti<nTypes;ti++){
+	      for(int tj=ti;tj<nTypes;tj++){
+		      t=types2int(ti,tj);
+		      x1=x2=count=0.0;
+		      for(i=0;i<N;i++){
+			if(ps[i].label==ti){
+				x1 += neigh[u][t][i];
+				x2 += SQUARE(neigh[u][t][i]);
+				count += 1;
+			}
+		      }
+		      x1/=count;
+		      x2/=count;
+		      fout << " " << x1 << " " << sqrt( (x2-x1*x1)/(count-1));
+	      }
+      }
+//      for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].mean();
+//      for(t=0;t<nTypePairs;t++) fout << " " << neigh[u][t].std()/sqrt(N-1);
       fout << endl;
       fout.close();
       if(debug) cerr << "*** COORDNUM computation for timestep " << timestep << " ENDED ***\n";
