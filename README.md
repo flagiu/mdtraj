@@ -60,6 +60,3 @@ The subfolder examples/ contains some **example** of application to real or toy 
 
 ## Acknowledgements
 The development of this code was supported by the ICSC - *Centro Nazionale di Ricerca in High Performance Computing, Big Data, and Quantum Computing* funded by the European Union - NextGenerationEU.
-
-## Copyright
-This project is licensed under the terms of the GNU General Public License v3.0. See LICENSE.md for details.
