@@ -4,14 +4,9 @@
 
 This program computes statistical quantities over a Molecular Dynamics TRAJectory.
 
-- Current limited to:
-	- constant number of particles
-	- uniform timestep; or special logarithmic timesteps (see mixture/examples/log_timesteps/) for g(r),S(q),S(q,t),MSD(t).
-	- S(q),S(q,t) for cubic boxes only; and they consider all atoms as belonging to the same type.
+## Disclaimer
 
-- Bugs to be corrected:
-	- some empty files are created during 'altbc' and 'bond_order' (maybe it's already fixed?)
-	- sometimes I find an unpredicted jump in MSD(t) when trajectory is not unwrapped.
+This code is not bug-free, nor extensively and accurately tested by the author.
 
 ## Requirements
 
@@ -40,23 +35,31 @@ Run helper message for instructions:
 path-to-this-repo/version/bin/mdtraj -h
 ```
 
-The subfolders python/ and shell/ contain some utility scripts (to be used before/after the main program) for plotting or extra calculations. Default units are: Angstrom, picoseconds.
+Most of the input comes from the **command line**, except some features requiring **parameters files** (e.g. see the -rcut command).
 
-The subfolder examples/ contains some example of application to real or toy systems:
+The subfolders python/ and shell/ contain some **utility scripts** (to be used before/after the main program) for plotting or extra calculations. Default units are: Angstrom, picoseconds.
+
+The subfolder examples/ contains some **example** of application to real or toy systems:
 - (notype) LJ particles in different 3d cell shapes: cubic, orthorombic, triclinic.
 - (both) Toy particles displaced along a 3d cubic lattice with small random gaussian noise.
 - (mixture) Binary LJ mixture.
 - (mixture) Short sample of a Phase-Change Heterostructure.
 - (mixture) Water molecules.
+- (mixture) Logarithmic timestep.
 
-## Future development
+**Some limitations** of the current version are:
+- different frames should have the same number of particles
+- S(q) and S(q,t) make sense for cubic boxes only; and they deal with particles as monospecies, ignoring their type.
 
-- More input formats for multi-species.
-- More analysis tools for multi-species.
+## Future development ideas
 - S(q),S(q,t) with non-cubic boxes?
 - S(q),S(q,t) with mixtures? How? Weighted by mass?
-- Add example with antimony?
-- Add logarithmically-spaced timestep?
 - Add more input formats? GROMACS, ...
 - Add structural quasi-entropy? [Oganov,Valle,2008]
 - Add crystalline clusters analysis like pyscal?
+
+## Acknowledgements
+The development of this code was supported by the ICSC - *Centro Nazionale di Ricerca in High Performance Computing, Big Data, and Quantum Computing* funded by the European Union - NextGenerationEU.
+
+## Copyright
+This project is licensed under the terms of the GNU General Public License v3.0. See LICENSE.md for details.
