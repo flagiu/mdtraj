@@ -856,12 +856,17 @@ read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
   enum class LAMMPS_ATOM_ENTRIES {
     ID, TYPE, X,Y,Z, XS,YS,ZS, IX,IY,IZ, XU,YU,ZU, VX,VY,VZ
   };
+  enum class LAMMPS_BOX_ENTRIES {
+    XX, YY, ZZ, XY, XZ, YZ, P, ABC, ORIGIN
+  };
   // Assumes that particles are labelled as 1,2,...,ntypes
   // This must be mapped to our convention: 0,1,...,ntypes-1
-  string line, x, a,b,c;
-  LAMMPS_ATOM_ENTRIES entries[15];
+  string line, x, a,b,c,d;
+  LAMMPS_ATOM_ENTRIES entries[17];
+  LAMMPS_BOX_ENTRIES box_entries[9];
   stringstream ss;
-  int ncols, num_atomic_entries, x_count, xs_count, xu_count, pi_count, v_count;
+  int ncols, num_atomic_entries, num_box_entries;
+  int x_count, xs_count, xu_count, pi_count, v_count;
   ntype xlo,ylo,zlo, xlob,ylob;
   ntype xhi,yhi,zhi, xhib,yhib;
   ntype xy,xz,yz;
@@ -881,78 +886,128 @@ read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
 
   // ITEM: BOX BOUNDS ...
   getline(i,line);
+  bool thereis_pbc=false, thereis_xxyyzz=false, thereis_xyz=false, thereis_abc=false, thereis_origin=false;
   ncols=0;
+  num_box_entries=0;
   if(debug) cerr << "\n  Line 5: " << line << endl;
   ss << line;
   while( ss >> x )
   {
-    if(ncols>=3) if(debug) cerr << x << endl;
+    if(ncols>2) { // skip "ITEM: BOX BOUNDS"
+      if(debug) cerr << x << endl;
+      if      (x=="xx")   { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::XX; thereis_xxyyzz=true;}
+      else if (x=="yy") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::YY; thereis_xxyyzz=true;}
+      else if (x=="zz") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::ZZ; thereis_xxyyzz=true;}
+
+      else if (x=="xy") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::XY; thereis_xyz=true;}
+      else if (x=="xz") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::XZ; thereis_xyz=true;}
+      else if (x=="yz") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::YZ; thereis_xyz=true;}
+
+      else if (x=="p") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::P; thereis_pbc=true;}
+
+      else if (x=="abc") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::ABC; thereis_abc=true; }
+      else if (x=="origin") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::ORIGIN; thereis_origin=true;}
+
+      else
+      {
+        cerr << " [ERROR: lammps entry '"<<x<<"' for atoms not recognized.]\n";
+        exit(1);
+      }
+      num_box_entries++;
+    }
     ncols++;
   }
   ss.str(std::string()); ss.clear(); // clear the string stream!
+  if(debug){
+    cerr << endl;
+    cerr << "[ mdtraj ] Results of box reading:\n";
+    cerr << "[ mdtraj ]   thereis_xxyyzz = "<<thereis_xxyyzz<<endl;
+    cerr << "[ mdtraj ]   thereis_xyz = "<<thereis_xyz<<endl;
+    cerr << "[ mdtraj ]   thereis_pbc = "<<thereis_pbc<<endl;
+    cerr << "[ mdtraj ]   thereis_abc = "<<thereis_abc<<endl;
+    cerr << "[ mdtraj ]   thereis_origin = "<<thereis_origin<<endl;
+    cerr << endl;
+  }
+  if((thereis_xxyyzz||thereis_xyz) && (thereis_abc||thereis_origin)){
+    cerr << " [ERROR: incompatible lammps entries in line: "<<line<<" ]\n";
+    exit(1);
+  }
+  if(!(thereis_xxyyzz||thereis_xyz) & !(thereis_abc||thereis_origin)){
+    cerr << " [ERROR: no valid entry in this line: "<<line<<"]\n";
+    exit(1);
+  }
 
   xy=xz=yz=0.0;
-  switch (ncols) {
-    case 3:
-      cerr << "WARNING: dump file has non-periodic cubic box\n";
-      getline(i,line); istringstream(line) >> a >> b;
-      xlo = stof(a);
-      xhi = stof(b);
-
-      getline(i,line); istringstream(line) >> a >> b;
-      ylo = stof(a);
-      yhi = stof(b);
-
-      getline(i,line); istringstream(line) >> a >> b;
-      zlo = stof(a);
-      zhi = stof(b);
-      break;
-
-    case 6:
-      getline(i,line); istringstream(line) >> a >> b;
-      xlo = stof(a);
-      xhi = stof(b);
-
-      getline(i,line); istringstream(line) >> a >> b;
-      ylo = stof(a);
-      yhi = stof(b);
-
-      getline(i,line); istringstream(line) >> a >> b;
-      zlo = stof(a);
-      zhi = stof(b);
-      break;
-    case 9:
+  if(thereis_xxyyzz||thereis_xyz){ // xlo xhi xy
+    if(thereis_xyz){
       getline(i,line); istringstream(line) >> a >> b >> c;
       xlob = stof(a);
       xhib = stof(b);
       xy = stof(c);
-
       getline(i,line); istringstream(line) >> a >> b >> c;
       ylob = stof(a);
       yhib = stof(b);
       xz = stof(c);
-
       getline(i,line); istringstream(line) >> a >> b >> c;
       zlo = stof(a);
       zhi = stof(b);
       yz = stof(c);
+    } else { // xlo xhi
+      getline(i,line); istringstream(line) >> a >> b;
+      xlo = stof(a);
+      xhi = stof(b);
+      getline(i,line); istringstream(line) >> a >> b;
+      ylo = stof(a);
+      yhi = stof(b);
+      getline(i,line); istringstream(line) >> a >> b;
+      zlo = stof(a);
+      zhi = stof(b);
+    }
+    xlo = xlob - min(min(0.0,xy), min(xz,xy+xz) );
+    xhi = xhib - max( max(0.0,xy), max(xz,xy+xz) );
+    ylo = ylob - min(0.0,yz);
+    yhi = yhib - max(0.0,yz);
+    box[0][0] = xhi - xlo;
+    box[1][1] = yhi - ylo;
+    box[2][2] = zhi - zlo;
+    box[0][1] = xy;
+    box[0][2] = xz;
+    box[1][2] = yz;
+    box[1][0] = box[2][0] = box[2][1] = 0.0;
+  } else if(thereis_abc){
+    if(thereis_origin){ // ax ay az origin_x
+      getline(i,line); istringstream(line)>>a>>b>>c>>d;
+      box[0][0] = stof(a);
+      box[0][1] = stof(b);
+      box[0][2] = stof(c);
+      xlo = stof(d);
+      getline(i,line); istringstream(line)>>a>>b>>c>>d;
+      box[1][0] = stof(a);
+      box[1][1] = stof(b);
+      box[1][2] = stof(c);
+      ylo = stof(d);
+      getline(i,line); istringstream(line)>>a>>b>>c>>d;
+      box[2][0] = stof(a);
+      box[2][1] = stof(b);
+      box[2][2] = stof(c);
+      zlo = stof(d);
+    } else { // ax ay az
+      getline(i,line); istringstream(line)>>a>>b>>c;
+      box[0][0] = stof(a);
+      box[0][1] = stof(b);
+      box[0][2] = stof(c);
+      getline(i,line); istringstream(line)>>a>>b>>c;
+      box[1][0] = stof(a);
+      box[1][1] = stof(b);
+      box[1][2] = stof(c);
+      getline(i,line); istringstream(line)>>a>>b>>c;
+      box[2][0] = stof(a);
+      box[2][1] = stof(b);
+      box[2][2] = stof(c);
+    }
 
-      xlo = xlob - min(min(0.0,xy), min(xz,xy+xz) );
-      xhi = xhib - max( max(0.0,xy), max(xz,xy+xz) );
-      ylo = ylob - min(0.0,yz);
-      yhi = yhib - max(0.0,yz);
-      break;
-    default:
-      cerr << "[ Error: box format not recognized with "<<ncols<<" columns in ITEM]\n\n";
-      exit(1);
   }
-  box[0][0] = xhi - xlo;
-  box[1][1] = yhi - ylo;
-  box[2][2] = zhi - zlo;
-  box[0][1] = xy;
-  box[0][2] = xz;
-  box[1][2] = yz;
-  box[1][0] = box[2][0] = box[2][1] = 0.0;
+
   set_L_from_box();
 
   if(resetN) {
