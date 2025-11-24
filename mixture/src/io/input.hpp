@@ -857,7 +857,7 @@ read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
     ID, TYPE, X,Y,Z, XS,YS,ZS, IX,IY,IZ, XU,YU,ZU, VX,VY,VZ
   };
   enum class LAMMPS_BOX_ENTRIES {
-    XX, YY, ZZ, XY, XZ, YZ, P, ABC, ORIGIN
+    XX, YY, ZZ, XY, XZ, YZ, PP, ABC, ORIGIN
   };
   // Assumes that particles are labelled as 1,2,...,ntypes
   // This must be mapped to our convention: 0,1,...,ntypes-1
@@ -903,7 +903,7 @@ read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
       else if (x=="xz") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::XZ; thereis_xyz=true;}
       else if (x=="yz") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::YZ; thereis_xyz=true;}
 
-      else if (x=="p") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::P; thereis_pbc=true;}
+      else if (x=="pp") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::PP; thereis_pbc=true;}
 
       else if (x=="abc") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::ABC; thereis_abc=true; }
       else if (x=="origin") { box_entries[num_box_entries]=LAMMPS_BOX_ENTRIES::ORIGIN; thereis_origin=true;}
