@@ -932,13 +932,13 @@ read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
     cerr << " [ERROR: incompatible lammps entries in line: "<<line<<" ]\n";
     exit(1);
   }
-  if(!(thereis_xxyyzz||thereis_xyz) & !(thereis_abc||thereis_origin)){
+  if(!(thereis_xxyyzz||thereis_xyz||thereis_pbc) & !(thereis_abc||thereis_origin)){
     cerr << " [ERROR: no valid entry in this line: "<<line<<"]\n";
     exit(1);
   }
 
   xy=xz=yz=0.0;
-  if(thereis_xxyyzz||thereis_xyz){ // xlo xhi xy
+  if(thereis_xxyyzz||thereis_xyz||thereis_pbc){ // xlo xhi xy
     if(thereis_xyz){
       getline(i,line); istringstream(line) >> a >> b >> c;
       xlob = stof(a);
@@ -954,11 +954,11 @@ read_lammpstrj_frame(fstream &i, bool resetN, bool reset_nTypes)
       yz = stof(c);
     } else { // xlo xhi
       getline(i,line); istringstream(line) >> a >> b;
-      xlo = stof(a);
-      xhi = stof(b);
+      xlob = stof(a);
+      xhib = stof(b);
       getline(i,line); istringstream(line) >> a >> b;
-      ylo = stof(a);
-      yhi = stof(b);
+      ylob = stof(a);
+      yhib = stof(b);
       getline(i,line); istringstream(line) >> a >> b;
       zlo = stof(a);
       zhi = stof(b);
