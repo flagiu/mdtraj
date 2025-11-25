@@ -626,6 +626,7 @@ public:
           n_b_list->clusterize(timestep, ps, ss.str(),
                               bond_parameters[l_]->ql_dot, bond_parameters[l_]->qldot_th);
           if(out_lammpsdump){ // visualization of clusters
+            /*
             int c;
             vector<int> original_labels;
             original_labels.resize(ps.size());
@@ -636,9 +637,10 @@ public:
               if(c>=0) ps[i].label = 2+(int)(n_b_list->cluster_permutation_by_size[c]);
               else     ps[i].label = 1;
             }
+            */
             ss.str(std::string()); ss<<s_clusters<<s_l_list[l_];
             print_out_lammpsdump(ss.str());
-            for(auto i=0;i<ps.size();i++) ps[i].label=original_labels[i]; //!!!
+            //for(auto i=0;i<ps.size();i++) ps[i].label=original_labels[i]; //!!!
           }
         }
       }

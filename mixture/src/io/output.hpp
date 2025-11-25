@@ -101,7 +101,14 @@ print_out_lammpsdump(string string_out) {
       // apply PBC to the position and translate x=0 to x=L/2 for better OVITO visualization
       ps[i].r = ps[i].r - box*round(boxInv*ps[i].r-0.5);
     }
-    fout << setprecision(10) << ps[i].label <<" "<< ps[i].r[0] <<" "<< ps[i].r[1] <<" "<< ps[i].r[2];
+    //string label = std::to_string(ps[i].label+1);
+    int label = ps[i].label+1; // dump convention starts from 1
+    if(c_clusters){
+      int c = n_b_list->cluster_of_particle[i];
+      if(c>=0) label = 2+(int)(n_b_list->cluster_permutation_by_size[c]);
+      else     label = 1;
+    }
+    fout << setprecision(10) << label <<" "<< ps[i].r[0] <<" "<< ps[i].r[1] <<" "<< ps[i].r[2];
     if(c_coordnum){
       fout<<" "<<n_b_list->neigh_anytype[0][i];
     }if(c_oct){
